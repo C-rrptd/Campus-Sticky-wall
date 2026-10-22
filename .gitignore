@@ -1,0 +1,16 @@
+# Secrets — never commit real keys
+.env
+.env.*
+!.env.example
+supabase/.env
+supabase/functions/.env
+*.pem
+*.key
+
+# Local state and build output
+supabase/.branches/
+supabase/.temp/
+.wrangler/
+dist/
+node_modules/
+.DS_Store

@@ -1,0 +1,32 @@
+<!-- Profile settings. -->
+<template id="tpl-profile">
+  <section class="profile-view">
+    <h1 class="page-title">Profile settings</h1>
+    <nav class="subnav" aria-label="Account">
+      <a href="#/account">Dashboard</a>
+      <a href="#/profile">Profile</a>
+      <a href="#/referrals">Referrals</a>
+      <a href="#/advertise">My campaigns</a>
+    </nav>
+    <form class="card stack narrow" data-ref="form" novalidate>
+      <label class="field"><span class="field__label">Display name</span><input name="display_name" maxlength="40" minlength="2" required></label>
+      <label class="field"><span class="field__label">Avatar image URL (https, optional)</span><input name="avatar_url" type="url" maxlength="500"></label>
+      <fieldset class="field">
+        <legend class="field__label">Social links (optional)</legend>
+        <div class="stack" data-ref="socials"></div>
+      </fieldset>
+      <div class="field" data-ref="location"></div>
+      <label class="check">
+        <input type="checkbox" name="donor_recognition">
+        <span>Show my name and total donations on the donor leaderboard (off by default)</span>
+      </label>
+      <p class="field__error" data-ref="error" role="alert"></p>
+      <button class="btn btn--primary" type="submit">Save profile</button>
+    </form>
+    <div class="card narrow">
+      <h2>Delete account</h2>
+      <p class="small">To delete your account, email us from your account address. Payment records are kept for financial reconciliation as described in our <a href="#/privacy">privacy notice</a>; your notes are detached from your account.</p>
+      <a class="btn" data-ref="deleteMail" href="#">Request account deletion</a>
+    </div>
+  </section>
+</template>

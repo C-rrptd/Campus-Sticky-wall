@@ -1,0 +1,18 @@
+<!-- Official announcements (public). -->
+<template id="tpl-announcements">
+  <section>
+    <h1 class="page-title">Announcements</h1>
+    <p class="page-lead">Official news from the Campus Sticky Wall team.</p>
+    <div class="stack" data-ref="list" aria-busy="true"></div>
+    <p class="wall-empty" data-ref="empty" hidden>No announcements right now.</p>
+    <p class="wall-error" data-ref="error" role="alert" hidden></p>
+  </section>
+</template>
+
+<template id="tpl-announcement">
+  <article class="card announcement" data-ref="root">
+    <p class="announcement__meta"><span class="badge badge--official">Official</span> <span class="badge" data-ref="pinned" hidden>Pinned</span> <time data-ref="time"></time></p>
+    <h2 class="announcement__title" data-ref="title"></h2>
+    <p class="announcement__body" data-ref="body"></p>
+  </article>
+</template>

@@ -1,0 +1,42 @@
+<!-- A single sticky note. All text is inserted with textContent by notes.js. -->
+<template id="tpl-note-card">
+  <article class="note" data-ref="root">
+    <span class="note__tape" aria-hidden="true"></span>
+    <span class="note__stickers" aria-hidden="true"></span>
+    <p class="note__body" data-ref="body"></p>
+    <footer class="note__meta">
+      <span class="note__author">— <span data-ref="author"></span></span>
+      <a class="note__social" data-ref="social" target="_blank" rel="noopener noreferrer nofollow" hidden>profile ↗</a>
+      <span class="note__amount" data-ref="amount" hidden></span>
+      <time class="note__time" data-ref="time"></time>
+    </footer>
+    <div class="note__actions">
+      <button type="button" class="note__btn" data-ref="vote" aria-pressed="false" aria-label="Vote for this note">
+        ▲ <span data-ref="votes">0</span>
+      </button>
+      <button type="button" class="note__btn" data-ref="bookmark" aria-pressed="false" aria-label="Bookmark this note">☆</button>
+      <button type="button" class="note__btn note__btn--quiet" data-ref="report" aria-label="Report this note">Report</button>
+    </div>
+  </article>
+</template>
+
+<template id="tpl-report-form">
+  <div class="stack">
+    <label class="field">
+      <span class="field__label">Why are you reporting this note?</span>
+      <select name="reason" required>
+        <option value="spam">Spam or advertising</option>
+        <option value="harassment">Harassment or bullying</option>
+        <option value="hate">Hate speech</option>
+        <option value="sexual">Sexual content</option>
+        <option value="personal_info">Shares someone’s personal information</option>
+        <option value="scam">Scam or fraud</option>
+        <option value="other">Something else</option>
+      </select>
+    </label>
+    <label class="field">
+      <span class="field__label">Details (optional)</span>
+      <textarea name="details" maxlength="500" rows="3"></textarea>
+    </label>
+  </div>
+</template>

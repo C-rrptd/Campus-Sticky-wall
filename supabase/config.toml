@@ -1,0 +1,76 @@
+# Supabase CLI configuration (local development + function deployment settings).
+# Contains NO secrets. Production secrets are set with `supabase secrets set`.
+project_id = "campus-sticky-wall"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+# Must match the deployed site (assets/js/config.js siteUrl).
+site_url = "http://localhost:8080"
+additional_redirect_urls = ["http://localhost:8080", "http://127.0.0.1:8080"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+
+[auth.rate_limit]
+email_sent = 4
+sign_in_sign_ups = 30
+token_verifications = 30
+
+[storage]
+enabled = true
+file_size_limit = "1MiB"
+
+# Every function authenticates the caller itself (see _shared/auth.ts). The
+# gateway JWT check is disabled because guests call several functions with
+# only the publishable key, and Midtrans calls the webhook without any JWT.
+[functions.create-publication]
+verify_jwt = false
+[functions.create-payment]
+verify_jwt = false
+[functions.midtrans-webhook]
+verify_jwt = false
+[functions.create-donation]
+verify_jwt = false
+[functions.create-ad-order]
+verify_jwt = false
+[functions.create-advertiser-campaign]
+verify_jwt = false
+[functions.redeem-referral-credit]
+verify_jwt = false
+[functions.manage-guest-publication]
+verify_jwt = false
+[functions.leaderboard-data]
+verify_jwt = false
+[functions.admin-api]
+verify_jwt = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+
+[edge_runtime.secrets]
+MIDTRANS_SERVER_KEY = "env(MIDTRANS_SERVER_KEY)"
+MIDTRANS_IS_PRODUCTION = "env(MIDTRANS_IS_PRODUCTION)"
+SITE_URL = "env(SITE_URL)"
+ALLOWED_ORIGINS = "env(ALLOWED_ORIGINS)"

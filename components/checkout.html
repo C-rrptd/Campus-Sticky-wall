@@ -1,0 +1,33 @@
+<!-- Checkout and receipt. Payment success is only ever shown from server state. -->
+<template id="tpl-checkout">
+  <section class="checkout-view">
+    <h1 class="page-title" data-ref="title">Checkout</h1>
+    <div class="card narrow stack">
+      <div class="status-banner" data-ref="banner" role="status"></div>
+      <p class="small muted">Order <code data-ref="ref"></code></p>
+      <table class="table table--summary">
+        <tbody data-ref="items"></tbody>
+        <tfoot><tr><th scope="row">Total</th><td data-ref="total"></td></tr></tfoot>
+      </table>
+      <div data-ref="notePreview"></div>
+      <label class="check" data-ref="creditRow" hidden>
+        <input type="checkbox" data-ref="useCredit">
+        <span>Use a free-publication credit (−Rp5.000)</span>
+      </label>
+      <div data-ref="methods" hidden>
+        <p class="small">Payment methods available for this amount:</p>
+        <ul class="method-list" data-ref="methodList"></ul>
+      </div>
+      <p class="field__error" data-ref="error" role="alert"></p>
+      <div class="row">
+        <button type="button" class="btn btn--primary" data-ref="pay" hidden>Pay securely with Midtrans</button>
+        <button type="button" class="btn" data-ref="refresh" hidden>Check payment status</button>
+        <button type="button" class="btn btn--danger" data-ref="withdraw" hidden>Take my note down</button>
+      </div>
+      <div class="notice" data-ref="receipt" hidden>
+        <p><strong>Save your receipt link.</strong> It’s the only way to see this order without an account:</p>
+        <div class="copy-row"><input readonly data-ref="receiptLink" aria-label="Receipt link"><button type="button" class="btn" data-ref="copyReceipt">Copy</button></div>
+      </div>
+    </div>
+  </section>
+</template>

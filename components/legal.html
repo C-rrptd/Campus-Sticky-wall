@@ -1,0 +1,34 @@
+<!-- Static legal pages. Review with a legal adviser before launch; this is not legal advice. -->
+<template id="tpl-privacy">
+  <section class="card prose narrow">
+    <h1>Privacy notice</h1>
+    <p>This summary mirrors PRIVACY.md in the project repository.</p>
+    <h2>What we collect</h2>
+    <ul>
+      <li><strong>Notes</strong>: the text, display name, colour, decorations, optional social link and the amount you chose. Published notes are public.</li>
+      <li><strong>Accounts</strong> (optional): email, display name, optional avatar and social links, optional location preference, votes and bookmarks (private).</li>
+      <li><strong>Payments</strong>: order amounts and status. Card and wallet details are handled by Midtrans; we never see or store card numbers.</li>
+      <li><strong>Guest receipts</strong>: a random receipt token. We store only a hash of it.</li>
+      <li><strong>Advertisers</strong>: business name, contact email, campaign content and targeting.</li>
+    </ul>
+    <h2>What is public</h2>
+    <p>Published notes (and the amount, if you chose to show it). Leaderboards are visible to signed-in users only. Donor names appear only if you opt in, and you can opt out at any time.</p>
+    <h2>Retention and deletion</h2>
+    <p>You can request account deletion. Payment records are retained for financial reconciliation; notes are detached from deleted accounts.</p>
+    <h2>Providers</h2>
+    <p>Supabase (database, authentication, hosting of backend functions) and Midtrans (payments).</p>
+  </section>
+</template>
+
+<template id="tpl-terms">
+  <section class="card prose narrow">
+    <h1>Terms of use</h1>
+    <ul>
+      <li>Be kind. Harassment, hate speech, personal information about others, scams and illegal content are removed.</li>
+      <li>You choose your publication price (minimum Rp5.000). Payment publishes a note; it does not buy votes or ranking.</li>
+      <li>We may remove notes or campaigns that break these rules. Refunds for removed content are handled case by case.</li>
+      <li>Sponsored content is always labelled. Advertisers are responsible for their offers.</li>
+      <li>Donations are voluntary and do not purchase any benefit.</li>
+    </ul>
+  </section>
+</template>

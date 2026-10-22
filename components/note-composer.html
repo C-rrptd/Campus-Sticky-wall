@@ -1,0 +1,97 @@
+<!-- Compose a sticky note with a customer-chosen price (minimum Rp5.000, no maximum). -->
+<template id="tpl-note-composer">
+  <section class="composer">
+    <h1 class="page-title">Post a sticky note</h1>
+    <p class="page-lead">No account needed. <strong>You choose how much you pay to publish</strong> — anything from Rp5.000 upwards.</p>
+
+    <div class="composer__layout">
+      <form class="composer__form card" data-ref="form" novalidate>
+        <label class="field">
+          <span class="field__label">Your note</span>
+          <textarea name="body" data-ref="body" rows="5" maxlength="500" required placeholder="Write something for your campus…"></textarea>
+          <span class="field__hint"><span data-ref="count">0</span>/500</span>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Name shown on the note</span>
+          <input name="author_name" data-ref="author" maxlength="40" required autocomplete="nickname" placeholder="e.g. Rani from Agronomy">
+        </label>
+
+        <label class="field">
+          <span class="field__label">How much do you want to pay to publish? (Rp)</span>
+          <span class="money-input">
+            <span class="money-input__prefix" aria-hidden="true">Rp</span>
+            <input name="amount" data-ref="amount" inputmode="numeric" autocomplete="off" value="5000"
+                   aria-describedby="amount-hint amount-error" required>
+          </span>
+          <span class="field__hint" id="amount-hint">Minimum Rp5.000. There is no maximum — pay what you like. Digits only (dots are fine, e.g. 25.000).</span>
+          <span class="field__error" id="amount-error" data-ref="amountError" role="alert"></span>
+        </label>
+
+        <fieldset class="field">
+          <legend class="field__label">Note colour</legend>
+          <div class="swatches" data-ref="colors">
+            <label class="swatch swatch--yellow"><input type="radio" name="color" value="yellow" checked><span>Yellow</span></label>
+            <label class="swatch swatch--pink"><input type="radio" name="color" value="pink"><span>Pink</span></label>
+            <label class="swatch swatch--blue"><input type="radio" name="color" value="blue"><span>Blue</span></label>
+            <label class="swatch swatch--green"><input type="radio" name="color" value="green"><span>Green</span></label>
+            <label class="swatch swatch--orange"><input type="radio" name="color" value="orange"><span>Orange</span></label>
+            <label class="swatch swatch--purple"><input type="radio" name="color" value="purple"><span>Purple</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend class="field__label">Decorations (optional, paid)</legend>
+          <div class="decorations" data-ref="decorations"><p class="muted">Loading decorations…</p></div>
+        </fieldset>
+
+        <label class="field">
+          <span class="field__label">Social link (optional)</span>
+          <input name="social_link" data-ref="social" type="url" inputmode="url" placeholder="https://instagram.com/yourname">
+          <span class="field__hint">Instagram, X, TikTok, LinkedIn, GitHub, YouTube, Facebook or Threads.</span>
+        </label>
+
+        <div class="field" data-ref="campusField"></div>
+
+        <label class="check">
+          <input type="checkbox" name="show_amount" data-ref="showAmount" checked>
+          <span>Show the amount I paid on my note</span>
+        </label>
+
+        <label class="check" data-ref="creditRow" hidden>
+          <input type="checkbox" name="use_credit" data-ref="useCredit">
+          <span>Use one free-publication credit (−Rp5.000) · <span data-ref="creditCount">0</span> available</span>
+        </label>
+
+        <p class="field__error" data-ref="formError" role="alert"></p>
+      </form>
+
+      <aside class="composer__side">
+        <div class="preview-wrap" data-ref="preview"></div>
+        <div class="card summary" aria-live="polite">
+          <h2 class="summary__title">Order summary</h2>
+          <dl class="summary__list">
+            <div><dt>Your publication price</dt><dd data-ref="sumAmount">Rp5.000</dd></div>
+            <div><dt>Decorations</dt><dd data-ref="sumDecos">Rp0</dd></div>
+            <div data-ref="sumCreditRow" hidden><dt>Referral credit</dt><dd data-ref="sumCredit">−Rp5.000</dd></div>
+            <div class="summary__total"><dt>Total due</dt><dd data-ref="sumTotal">Rp5.000</dd></div>
+          </dl>
+          <p class="muted small">Final amounts are calculated by our server before payment.</p>
+          <label class="check">
+            <input type="checkbox" data-ref="confirm">
+            <span>I confirm I want to pay <strong data-ref="confirmAmount">Rp5.000</strong> for this note.</span>
+          </label>
+          <button type="button" class="btn btn--primary btn--block" data-ref="submit">Continue to payment</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+</template>
+
+<template id="tpl-decoration-option">
+  <label class="deco-option">
+    <input type="checkbox" name="decorations" data-ref="input">
+    <span class="deco-option__name" data-ref="name"></span>
+    <span class="deco-option__price" data-ref="price"></span>
+  </label>
+</template>

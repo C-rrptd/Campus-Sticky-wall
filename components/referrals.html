@@ -1,0 +1,43 @@
+<!-- Referral link, counts and history. -->
+<template id="tpl-referrals">
+  <section class="referrals-view">
+    <h1 class="page-title">Invite friends</h1>
+    <nav class="subnav" aria-label="Account">
+      <a href="#/account">Dashboard</a>
+      <a href="#/profile">Profile</a>
+      <a href="#/referrals">Referrals</a>
+      <a href="#/advertise">My campaigns</a>
+    </nav>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Your referral link</h2>
+        <div class="copy-row">
+          <input readonly data-ref="link" aria-label="Your referral link">
+          <button type="button" class="btn" data-ref="copy">Copy</button>
+          <button type="button" class="btn" data-ref="share" hidden>Share</button>
+        </div>
+        <p class="small">Code: <strong data-ref="code">—</strong></p>
+        <h3>How it works</h3>
+        <ul class="small">
+          <li>Your friend creates an account with your link and verifies their email.</li>
+          <li>They receive <strong>one free-publication credit</strong> worth Rp5.000 off a note.</li>
+          <li>You don’t receive money or credits — successful referrals count toward the referral leaderboard.</li>
+          <li>Self-referrals, unverified accounts and duplicate accounts don’t count.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Your numbers</h2>
+        <dl class="stats">
+          <div><dt>Successful referrals</dt><dd data-ref="successful">0</dd></div>
+          <div><dt>Waiting for email verification</dt><dd data-ref="pending">0</dd></div>
+          <div><dt>Your credits available</dt><dd data-ref="available">0</dd></div>
+          <div><dt>Your credits redeemed</dt><dd data-ref="redeemed">0</dd></div>
+        </dl>
+        <h3>Recent referrals</h3>
+        <ul class="plain-list small" data-ref="history"></ul>
+        <h3>Your credit history</h3>
+        <ul class="plain-list small" data-ref="credits"></ul>
+      </div>
+    </div>
+  </section>
+</template>

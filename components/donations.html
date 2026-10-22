@@ -1,0 +1,31 @@
+<!-- Voluntary donations (separate from any purchase). -->
+<template id="tpl-donations">
+  <section class="donations-view">
+    <h1 class="page-title">Support Campus Sticky Wall</h1>
+    <p class="page-lead">Donations are voluntary and separate from posting notes. They help us keep the wall running.</p>
+    <form class="card stack narrow" data-ref="form" novalidate>
+      <div class="chips" role="group" aria-label="Suggested amounts" data-ref="chips">
+        <button type="button" class="chip" data-amount="5000">Rp5.000</button>
+        <button type="button" class="chip" data-amount="10000">Rp10.000</button>
+        <button type="button" class="chip" data-amount="25000">Rp25.000</button>
+      </div>
+      <label class="field">
+        <span class="field__label">Amount (Rp)</span>
+        <span class="money-input"><span class="money-input__prefix" aria-hidden="true">Rp</span>
+          <input name="amount" data-ref="amount" inputmode="numeric" autocomplete="off" placeholder="Enter an amount"></span>
+        <span class="field__hint" data-ref="limits"></span>
+      </label>
+      <label class="check" data-ref="recognitionRow" hidden>
+        <input type="checkbox" data-ref="recognition">
+        <span>Show my name and donation total on the donor leaderboard</span>
+      </label>
+      <p class="small muted" data-ref="guestNote">Guest donations are anonymous and never appear on leaderboards.</p>
+      <label class="check">
+        <input type="checkbox" data-ref="confirm">
+        <span>I confirm I want to donate <strong data-ref="confirmAmount">—</strong>.</span>
+      </label>
+      <p class="field__error" data-ref="error" role="alert"></p>
+      <button class="btn btn--primary" type="submit">Continue to payment</button>
+    </form>
+  </section>
+</template>

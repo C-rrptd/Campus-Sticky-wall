@@ -1,0 +1,95 @@
+<!-- Promotions feed and the advertiser campaign form. -->
+<template id="tpl-promotions">
+  <section class="promotions-view">
+    <div class="wall-toolbar">
+      <div>
+        <h1 class="page-title">Promotions</h1>
+        <p class="page-lead">Student discounts, campus events, workshops and opportunities near you. All listings are paid placements.</p>
+      </div>
+      <div class="wall-toolbar__controls">
+        <label class="field field--inline">
+          <span class="field__label">Category</span>
+          <select data-ref="category">
+            <option value="">All</option>
+            <option value="student_discount">Student discounts</option>
+            <option value="local_business">Local businesses</option>
+            <option value="campus_event">Campus events</option>
+            <option value="workshop">Workshops</option>
+            <option value="competition">Competitions</option>
+            <option value="recruitment">Internships &amp; jobs</option>
+            <option value="student_service">Student services</option>
+            <option value="club_event">Clubs &amp; organisations</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <div data-ref="location"></div>
+      </div>
+    </div>
+    <div class="promo-grid" data-ref="grid" aria-live="polite" aria-busy="true"></div>
+    <p class="wall-empty" data-ref="empty" hidden>No promotions for this area yet. Try a wider area — or <a href="#/advertise">promote something here</a>.</p>
+    <p class="wall-error" data-ref="error" role="alert" hidden></p>
+    <aside class="card cta">
+      <h2>Reach students on your campus</h2>
+      <p>Book a placement for one campus, a city, a province or the whole country. Fixed prices, clear durations, reviewed before going live.</p>
+      <a class="btn btn--primary" href="#/advertise">Advertise with us</a>
+    </aside>
+  </section>
+</template>
+
+<template id="tpl-advertise">
+  <section class="advertise-view">
+    <h1 class="page-title">Advertise on Campus Sticky Wall</h1>
+    <p class="page-lead">Create a campaign, pay securely, and we review it before it goes live. Paid placements are always labelled “Sponsored”.</p>
+    <div class="composer__layout">
+      <form class="card stack" data-ref="form" novalidate>
+        <label class="field"><span class="field__label">Advertiser / business name</span><input name="advertiser_name" maxlength="80" required></label>
+        <label class="field"><span class="field__label">Contact email</span><input name="contact_email" type="email" maxlength="200" required></label>
+        <label class="field"><span class="field__label">Title</span><input name="title" maxlength="80" required></label>
+        <label class="field"><span class="field__label">Description</span><textarea name="description" maxlength="500" rows="4" required></textarea></label>
+        <label class="field">
+          <span class="field__label">Category</span>
+          <select name="category" required>
+            <option value="student_discount">Student discount</option>
+            <option value="local_business">Local business</option>
+            <option value="campus_event">Campus event</option>
+            <option value="workshop">Workshop</option>
+            <option value="competition">Competition</option>
+            <option value="recruitment">Internship / recruitment</option>
+            <option value="student_service">Student service</option>
+            <option value="club_event">Club / organisation event</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label class="field"><span class="field__label">Destination link (https)</span><input name="destination_url" type="url" required placeholder="https://"></label>
+        <label class="field">
+          <span class="field__label">Image (optional, PNG/JPG/WebP, max 1 MB)</span>
+          <input name="creative" type="file" accept="image/png,image/jpeg,image/webp" data-ref="creative">
+        </label>
+        <label class="field">
+          <span class="field__label">Package</span>
+          <select name="product_id" data-ref="product" required></select>
+        </label>
+        <div class="field" data-ref="targets"></div>
+        <label class="field"><span class="field__label">Preferred start date</span><input name="requested_start" type="date" data-ref="start" required></label>
+        <p class="field__error" data-ref="error" role="alert"></p>
+        <button type="submit" class="btn btn--primary" data-ref="submit">Continue to payment</button>
+      </form>
+      <aside class="composer__side">
+        <div class="card summary">
+          <h2 class="summary__title">Price</h2>
+          <dl class="summary__list">
+            <div><dt>Package</dt><dd data-ref="sumProduct">—</dd></div>
+            <div><dt>Locations</dt><dd data-ref="sumTargets">0</dd></div>
+            <div><dt>Duration</dt><dd data-ref="sumDuration">—</dd></div>
+            <div class="summary__total"><dt>Total</dt><dd data-ref="sumTotal">Rp0</dd></div>
+          </dl>
+          <p class="muted small">Your campaign starts on approval (or your start date, if later) and runs for the package duration.</p>
+        </div>
+        <div class="card">
+          <h2 class="summary__title">Your campaigns</h2>
+          <ul class="plain-list" data-ref="mine"><li class="muted">Loading…</li></ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+</template>

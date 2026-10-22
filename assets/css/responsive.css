@@ -1,0 +1,30 @@
+/* Breakpoints: tablet <= 900px, phone <= 640px. */
+
+@media (max-width: 900px) {
+  .composer__layout { grid-template-columns: minmax(0, 1fr); }
+  .composer__side { position: static; }
+  .grid-2 { grid-template-columns: minmax(0, 1fr); }
+
+  .nav-toggle { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; }
+  .site-header__inner { flex-wrap: wrap; }
+  .main-nav { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: var(--space-1); padding-bottom: var(--space-3); }
+  .main-nav.is-open { display: flex; }
+  .main-nav a { padding: var(--space-2); }
+  .main-nav__spacer { display: none; }
+  .account-menu { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 640px) {
+  main { padding: var(--space-4) var(--space-3) var(--space-6); }
+  .wall { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-5) var(--space-3); }
+  .wall-toolbar__controls, .location-picker { width: 100%; }
+  .location-picker .field--inline { flex: 1 1 45%; flex-direction: column; align-items: stretch; }
+  .location-picker select { max-width: none; width: 100%; }
+  .field--inline { flex-wrap: wrap; }
+  .copy-row { flex-wrap: wrap; }
+  .card { padding: var(--space-3); }
+  .stats--grid { grid-template-columns: minmax(0, 1fr); }
+  .note { transform: none; }
+  .table { font-size: 0.85rem; }
+  .brand__name { font-size: 1rem; }
+}

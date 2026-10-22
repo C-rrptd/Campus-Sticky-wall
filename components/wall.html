@@ -1,0 +1,27 @@
+<!-- The public sticky-note wall. -->
+<template id="tpl-wall">
+  <section class="wall-view">
+    <div data-ref="pinned"></div>
+    <div class="wall-toolbar">
+      <div>
+        <h1 class="page-title">The Wall</h1>
+        <p class="page-lead">Notes from students, pinned by students. Anyone can post — you choose what you pay (from Rp5.000).</p>
+      </div>
+      <div class="wall-toolbar__controls">
+        <label class="field field--inline">
+          <span class="field__label">Sort</span>
+          <select data-ref="sort">
+            <option value="newest">Newest</option>
+            <option value="top">Most voted</option>
+            <option value="contribution">Highest contribution</option>
+          </select>
+        </label>
+        <div data-ref="location"></div>
+      </div>
+    </div>
+    <div class="wall" data-ref="grid" aria-live="polite" aria-busy="true"></div>
+    <p class="wall-empty" data-ref="empty" hidden>No notes here yet. <a href="#/compose">Be the first to post one!</a></p>
+    <p class="wall-error" data-ref="error" role="alert" hidden></p>
+    <div class="wall-more"><button type="button" class="btn" data-ref="more" hidden>Load more notes</button></div>
+  </section>
+</template>

@@ -1,0 +1,74 @@
+<!-- Shared shell: header/navigation, account menu, dialogs. Templates only; no scripts. -->
+<template id="tpl-header">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="#/" aria-label="Campus Sticky Wall home">
+        <span class="brand__pin" aria-hidden="true"></span>
+        <span class="brand__name">Campus Sticky Wall</span>
+      </a>
+      <button class="nav-toggle" type="button" data-ref="navToggle" aria-expanded="false" aria-controls="main-nav">
+        <span class="visually-hidden">Menu</span><span aria-hidden="true">☰</span>
+      </button>
+      <nav id="main-nav" class="main-nav" data-ref="nav" aria-label="Main">
+        <a href="#/" data-nav="/">Wall</a>
+        <a href="#/promotions" data-nav="/promotions">Promotions</a>
+        <a href="#/leaderboard" data-nav="/leaderboard">Leaderboard</a>
+        <a href="#/announcements" data-nav="/announcements">News</a>
+        <a href="#/donate" data-nav="/donate">Support us</a>
+        <a href="#/admin" data-nav="/admin" data-ref="adminLink" hidden>Admin</a>
+        <span class="main-nav__spacer"></span>
+        <a class="btn btn--primary btn--small" href="#/compose" data-nav="/compose">+ Post a note</a>
+        <a href="#/auth" data-nav="/auth" data-ref="signInLink">Sign in</a>
+        <div class="account-menu" data-ref="accountMenu" hidden>
+          <a href="#/account" data-nav="/account" data-ref="accountName">Account</a>
+          <button type="button" class="link-button" data-ref="signOut">Sign out</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+</template>
+
+<template id="tpl-config-error">
+  <section class="panel panel--error" role="alert">
+    <h1>Campus Sticky Wall is not configured yet</h1>
+    <p>The site cannot reach its backend because public configuration is missing:</p>
+    <ul data-ref="list"></ul>
+    <p>Set these values in <code>assets/js/config.js</code> (see README.md, “Configure the frontend”).</p>
+  </section>
+</template>
+
+<template id="tpl-view-error">
+  <section class="panel panel--error" role="alert">
+    <h1 data-ref="title">Something went wrong</h1>
+    <p data-ref="message">This page could not be loaded.</p>
+    <p><button type="button" class="btn" data-ref="retry">Try again</button> <a href="#/">Back to the wall</a></p>
+  </section>
+</template>
+
+<template id="tpl-not-found">
+  <section class="panel">
+    <h1>Page not found</h1>
+    <p>That page doesn’t exist. <a href="#/">Go back to the wall.</a></p>
+  </section>
+</template>
+
+<template id="tpl-signin-required">
+  <section class="panel">
+    <h1 data-ref="title">Sign in required</h1>
+    <p data-ref="message">This feature is available to registered accounts.</p>
+    <p><a class="btn btn--primary" href="#/auth">Sign in or create an account</a></p>
+  </section>
+</template>
+
+<template id="tpl-dialog">
+  <dialog class="dialog" data-ref="dialog">
+    <form method="dialog" class="dialog__form" data-ref="form">
+      <h2 class="dialog__title" data-ref="title"></h2>
+      <div class="dialog__body" data-ref="body"></div>
+      <div class="dialog__actions">
+        <button type="submit" value="cancel" class="btn" data-ref="cancel" formnovalidate>Cancel</button>
+        <button type="submit" value="ok" class="btn btn--primary" data-ref="ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+</template>

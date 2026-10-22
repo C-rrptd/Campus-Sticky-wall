@@ -1,0 +1,6 @@
+# Cloudflare Pages project (static site only; no Pages Functions).
+# Build first:  scripts/build-site.sh dist   (with PUBLIC_* variables set)
+# Deploy:       npx wrangler pages deploy
+name = "campus-sticky-wall"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-01"

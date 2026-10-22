@@ -1,0 +1,104 @@
+/* Design tokens, reset, typography and layout primitives. */
+:root {
+  --paper: #f3ead7;
+  --paper-dark: #e6d9bd;
+  --ink: #2b2520;
+  --ink-soft: #5d544b;
+  --muted: #7b7166;
+  --line: #d6c7a8;
+  --card: #fffdf7;
+  --accent: #c2410c;
+  --accent-ink: #ffffff;
+  --accent-soft: #fde7d6;
+  --focus: #1d4ed8;
+  --ok: #166534;
+  --ok-soft: #dcfce7;
+  --err: #b91c1c;
+  --err-soft: #fee2e2;
+  --info-soft: #e0ecff;
+
+  --note-yellow: #fff3a3;
+  --note-pink: #ffd3e1;
+  --note-blue: #cfe6ff;
+  --note-green: #d6f5c9;
+  --note-orange: #ffdcb3;
+  --note-purple: #e6d8ff;
+
+  --radius: 10px;
+  --radius-small: 6px;
+  --shadow: 0 1px 2px rgba(43, 37, 32, 0.12), 0 6px 16px rgba(43, 37, 32, 0.08);
+  --shadow-note: 0 2px 3px rgba(43, 37, 32, 0.18), 0 10px 18px rgba(43, 37, 32, 0.12);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --max: 1200px;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-note: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(rgba(120, 90, 40, 0.06) 1px, transparent 1px),
+    radial-gradient(rgba(120, 90, 40, 0.04) 1px, transparent 1px);
+  background-size: 22px 22px, 37px 37px;
+  background-position: 0 0, 11px 17px;
+  display: flex;
+  flex-direction: column;
+}
+
+main { flex: 1; width: 100%; max-width: var(--max); margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); }
+main:focus { outline: none; }
+
+h1, h2, h3 { line-height: 1.2; margin: 0 0 var(--space-3); }
+h2 { font-size: 1.2rem; }
+h3 { font-size: 1rem; margin-top: var(--space-4); }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+img { max-width: 100%; height: auto; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* Headings receive programmatic focus on navigation (for screen readers); no ring. */
+[tabindex="-1"]:focus { outline: none; }
+
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.skip-link { position: absolute; left: -999px; top: 0; z-index: 100; background: var(--card); padding: var(--space-2) var(--space-3); }
+.skip-link:focus { left: var(--space-3); top: var(--space-3); }
+
+[hidden] { display: none !important; }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+.stack > * + * { margin-top: var(--space-3); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.row--tight { gap: var(--space-1); }
+.narrow { max-width: 640px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.card--wide { grid-column: 1 / -1; }
+.plain-list { list-style: none; padding: 0; margin: 0; }
+.plain-list > li { padding: var(--space-2) 0; border-bottom: 1px dashed var(--line); }
+.plain-list > li:last-child { border-bottom: 0; }
+
+.boot { color: var(--muted); text-align: center; padding: var(--space-7) 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
