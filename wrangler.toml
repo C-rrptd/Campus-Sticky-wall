@@ -1,6 +1,7 @@
-# Cloudflare Pages project (static site only; no Pages Functions).
-# Build first:  scripts/build-site.sh dist   (with PUBLIC_* variables set)
-# Deploy:       npx wrangler pages deploy
-name = "campus-sticky-wall"
-pages_build_output_dir = "dist"
-compatibility_date = "2026-09-01"
+# ...
+[vars]
+CLOUDFLARE_API_TOKEN = "cfat_bemFA6Py1lrrzlF3pgVwZNnavKuQfROSu8aIeuukdc910231"
+PUBLIC_SITE_URL = "https://campus-sticky-wall.pages.dev"
+PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2XS-29fFMJ8z6p8FQRHcvg_39C8oMtO"
+PUBLIC_SUPABASE_URL = "https://knpdfledhawndelifvqy.supabase.co/rest/v1/"
+# ...
