@@ -1,6 +1,6 @@
 name = "campus-sticky-wall"
 compatibility_date = "2026-10-22"
-pages_build_output_dir = "dist"
+pages_build_output_dir = "./dist"
 
 [vars]
 PUBLIC_SITE_URL = "https://campus-sticky-wall.pages.dev"
