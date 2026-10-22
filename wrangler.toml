@@ -5,4 +5,4 @@ pages_build_output_dir = "./dist"
 [vars]
 PUBLIC_SITE_URL = "https://campus-sticky-wall.pages.dev"
 PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2XS-29fFMJ8z6p8FQRHcvg_39C8oMtO"
-PUBLIC_SUPABASE_URL = "https://supabase.com/dashboard/project/knpdfledhawndelifvqy"
+PUBLIC_SUPABASE_URL = "https://knpdfledhawndelifvqy.supabase.co"
