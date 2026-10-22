@@ -1,13 +1,5 @@
-# Deploys the backend (database migrations + Edge Functions) to Supabase
-# whenever supabase/ changes on main. The website itself is built and hosted
-# by Cloudflare Pages from the same repository.
-#
-# Repository secrets (GitHub → Settings → Secrets and variables → Actions):
-#   SUPABASE_ACCESS_TOKEN  personal access token (supabase.com → Account → Access Tokens)
-#   SUPABASE_DB_PASSWORD   database password chosen when creating the project
-#   SUPABASE_PROJECT_ID    project ref (the <ref> in https://<ref>.supabase.co)
-# Function secrets (Midtrans key etc.) are NOT stored here: set them once in
-# Supabase → Edge Functions → Secrets.
+
+# Deploys database migrations and Edge Functions to Supabase.
 name: Deploy Supabase backend
 
 on:
@@ -25,8 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,11 +27,8 @@ jobs:
         with:
           version: latest
 
-      - name: Link project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
-
       - name: Apply database migrations
-        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
 
       - name: Deploy Edge Functions
         run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
