@@ -1,7 +1,8 @@
-# ...
+name = "campus-sticky-wall"
+compatibility_date = "2026-10-22"
+pages_build_output_dir = "dist"
+
 [vars]
-CLOUDFLARE_API_TOKEN = "cfat_bemFA6Py1lrrzlF3pgVwZNnavKuQfROSu8aIeuukdc910231"
 PUBLIC_SITE_URL = "https://campus-sticky-wall.pages.dev"
 PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2XS-29fFMJ8z6p8FQRHcvg_39C8oMtO"
-PUBLIC_SUPABASE_URL = "https://knpdfledhawndelifvqy.supabase.co/rest/v1/"
-# ...
+PUBLIC_SUPABASE_URL = "https://supabase.com/dashboard/project/knpdfledhawndelifvqy"
