@@ -7,9 +7,9 @@
 // file during deployment as described in README.md).
 
 export const config = Object.freeze({
-  supabaseUrl: "",
-  supabasePublishableKey: "",
-  siteUrl: "",
+  supabaseUrl: "https://knpdfledhawndelifvqy.supabase.co",
+  supabasePublishableKey: "sb_publishable_2XS-29fFMJ8z6p8FQRHcvg_39C8oMtO",
+  siteUrl: "https://campus-sticky-wall.pages.dev/",
   creativeBucket: "campaign-creatives",
 });
 
