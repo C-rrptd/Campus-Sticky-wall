@@ -3,7 +3,7 @@
 // (Edge Function + SQL require_admin()) and written to the audit log.
 
 import { cloneTemplate } from "./component-loader.js";
-import { currentUser, isAdmin } from "./auth.js";
+import { currentUser, isAdmin, isOwner } from "./auth.js";
 import { getClient, invoke, query } from "./supabase-client.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, promptReason, refs, toast } from "./utils.js";
 import { parseRupiah } from "./validation.js";
@@ -31,6 +31,29 @@ function button(label, onClick, cls = "btn btn--small") {
 
 function actions(...nodes) {
   return el("div", { class: "row row--tight" }, ...nodes.filter(Boolean));
+}
+
+/** Owner-only permanent delete. Admins get no button; the server rejects them anyway. */
+function ownerDelete(state, kind, id, what, reload) {
+  if (!state.owner) return null;
+  return button("Delete", async () => {
+    const input = el("input", { name: "confirm", required: true, pattern: "DELETE", autocomplete: "off", placeholder: "DELETE" });
+    let effects = [];
+    try { effects = (await api("owner_delete_preview", { kind, id: String(id) }))?.effects ?? []; } catch (err) { toast(errorMessage(err), "error"); return; }
+    const body = el("div", { class: "stack" },
+      el("p", {}, `Permanently delete this ${what}? This cannot be undone. Payment and credit history is kept.`),
+      effects.length ? el("ul", { class: "small" }, ...effects.map((t) => el("li", {}, t))) : null,
+      el("label", { class: "field" }, el("span", { class: "field__label" }, "Type DELETE to confirm"), input));
+    const data = await openDialog({ title: `Delete ${what}`, body, okLabel: "Delete permanently", danger: true });
+    if (!data || data.get("confirm") !== "DELETE") return;
+    try {
+      await api("owner_delete", { kind, id: String(id), confirm: "DELETE" });
+      toast(`${what} deleted.`, "success");
+    } catch (err) {
+      toast(errorMessage(err), "error");
+    }
+    reload();
+  }, "btn btn--small btn--danger");
 }
 
 function amountInput(name, value, placeholder = "") {
@@ -81,11 +104,12 @@ const panels = {
           r.status === "pending_moderation" && act(r, "approve"),
           r.status === "pending_moderation" && act(r, "reject", true),
           ["published", "pending_moderation"].includes(r.status) && act(r, "remove", true),
-          r.status === "removed" && act(r, "restore")) },
+          r.status === "removed" && act(r, "restore"),
+          ownerDelete(state, "note", r.id, "note", reload)) },
       ], rows));
   },
 
-  async reports(panel, reload) {
+  async reports(panel, reload, state) {
     const rows = await api("list_reports", { status: "open" });
     panel.replaceChildren(table([
       { label: "Reason", key: "reason" },
@@ -102,7 +126,8 @@ const panels = {
           reload();
         }, "btn btn--small btn--danger"),
         button("Resolve", async () => { await api("resolve_report", { report_id: r.id, status: "resolved" }); reload(); }),
-        button("Dismiss", async () => { await api("resolve_report", { report_id: r.id, status: "dismissed" }); reload(); })) },
+        button("Dismiss", async () => { await api("resolve_report", { report_id: r.id, status: "dismissed" }); reload(); }),
+        ownerDelete(state, "report", r.id, "report", reload)) },
     ], rows, "No open reports."));
   },
 
@@ -131,7 +156,7 @@ const panels = {
     state.orderFilter ??= { kind: "", status: "", review_only: false };
     const f = state.orderFilter;
     const kind = el("select", {}, ...["", "publication", "donation", "advertising"].map((k) => el("option", { value: k, selected: k === f.kind || null }, k || "all kinds")));
-    const status = el("select", {}, ...["", "awaiting_payment", "challenge", "paid", "completed_free", "failed", "canceled", "expired", "partially_refunded", "refunded", "reversed"]
+    const status = el("select", {}, ...["", "awaiting_payment", "challenge", "paid", "completed_free", "payment_waived", "failed", "canceled", "expired", "partially_refunded", "refunded", "reversed"]
       .map((s) => el("option", { value: s, selected: s === f.status || null }, s || "all statuses")));
     const review = el("input", { type: "checkbox", checked: f.review_only || null });
     const apply = button("Filter", async () => { Object.assign(f, { kind: kind.value, status: status.value, review_only: review.checked }); reload(); });
@@ -152,6 +177,12 @@ const panels = {
         ["awaiting_payment", "challenge", "paid", "partially_refunded"].includes(r.status) && button("Reconcile with Midtrans", async () => {
           const res = await api("reconcile_order", { order_ref: r.order_ref });
           toast(`Result: ${res.result}`, "info");
+          reload();
+        }),
+        r.kind === "publication" && r.status === "awaiting_payment" && button("Waive payment", async () => {
+          const reason = await promptReason("Waive payment for this sticky post? The note publishes without a payment and is recorded as waived, not paid.", { required: true, okLabel: "Waive payment" });
+          if (reason === null) return;
+          try { await api("waive_order", { order_ref: r.order_ref, reason }); toast("Payment waived.", "success"); } catch (err) { toast(errorMessage(err), "error"); }
           reload();
         }),
         r.review_required && button("Clear review flag", async () => {
@@ -191,7 +222,8 @@ const panels = {
         ["pending_review", "draft"].includes(r.status) && act(r, "reject", true),
         r.status === "active" && act(r, "pause"),
         r.status === "paused" && act(r, "resume"),
-        ["active", "paused", "pending_review"].includes(r.status) && act(r, "cancel", true)) },
+        ["active", "paused", "pending_review"].includes(r.status) && act(r, "cancel", true),
+        ownerDelete(state, "campaign", r.id, "campaign", reload)) },
     ], rows));
   },
 
@@ -297,7 +329,7 @@ const panels = {
         saveCfg));
   },
 
-  async locations(panel, reload) {
+  async locations(panel, reload, state) {
     const c = getClient();
     const [countries, regions, cities, campuses] = await Promise.all([
       query(c.from("countries").select("code,name").order("name")),
@@ -325,28 +357,32 @@ const panels = {
       await api("upsert_location", { level, id, name: row.name, short_name: row.short_name ?? null, enabled: false });
       reload();
     }, "btn btn--small btn--danger");
+    const del = (level, id) => ownerDelete(state, level, id, level, reload);
+    const manage = (level, id) => actions(disable(level, id), del(level, id));
     panel.replaceChildren(
       el("p", { class: "small muted" }, "Adding a country is a data change: add the country, then its regions, cities and campuses."),
       form("country"),
       form("region", countries.map((x) => ({ value: x.code, label: x.name }))),
       form("city", regions.map((x) => ({ value: x.id, label: `${x.name} (${x.country_code})` }))),
       form("campus", cities.map((x) => ({ value: x.id, label: x.name }))),
+      el("h2", {}, "Countries"),
+      table([{ label: "Country", key: "name" }, { label: "Code", key: "code" }, { label: "", render: (x) => manage("country", x.code) }], countries),
       el("h2", {}, "Campuses"),
       table([{ label: "Campus", render: (x) => x.short_name ? `${x.short_name} — ${x.name}` : x.name },
         { label: "City", render: (x) => cities.find((ci) => ci.id === x.city_id)?.name ?? "" },
-        { label: "", render: (x) => disable("campus", x.id) }], campuses),
+        { label: "", render: (x) => manage("campus", x.id) }], campuses),
       el("h2", {}, "Cities"),
       table([{ label: "City", key: "name" }, { label: "Region", render: (x) => regions.find((r) => r.id === x.region_id)?.name ?? "" },
-        { label: "", render: (x) => disable("city", x.id) }], cities),
+        { label: "", render: (x) => manage("city", x.id) }], cities),
       el("h2", {}, "Regions"),
-      table([{ label: "Region", key: "name" }, { label: "Country", key: "country_code" }, { label: "", render: (x) => disable("region", x.id) }], regions),
+      table([{ label: "Region", key: "name" }, { label: "Country", key: "country_code" }, { label: "", render: (x) => manage("region", x.id) }], regions),
     );
   },
 
-  async announcements(panel, reload) {
+  async announcements(panel, reload, state) {
     const items = await api("list_announcements");
     const title = el("input", { maxlength: "120", placeholder: "Title" });
-    const body = el("textarea", { rows: "4", maxlength: "4000", placeholder: "Announcement text" });
+    const body = el("textarea", { rows: "4", maxlength: "4000", placeholder: "News text" });
     const pinned = el("input", { type: "checkbox" });
     let editing = null;
     const save = button("Save draft", async () => {
@@ -355,30 +391,36 @@ const panels = {
       toast("Saved. Publish it from the list.", "success");
       reload();
     }, "btn btn--primary");
+    const preview = button("Preview", async () => {
+      await openDialog({ title: title.value.trim() || "Preview", okLabel: "Close", body: el("p", { style: "white-space:pre-wrap" }, body.value) });
+    });
     const setStatus = (a, status) => button(status, async () => { await api("set_announcement_status", { id: a.id, status }); reload(); });
     panel.replaceChildren(
-      el("div", { class: "stack narrow card" }, el("h2", {}, "Write an announcement"), title, body, el("label", { class: "check" }, pinned, " Pinned on the wall"), save),
+      el("div", { class: "stack narrow card" }, el("h2", {}, "Write news"), title, body, el("label", { class: "check" }, pinned, " Pinned on the wall"), actions(save, preview)),
       table([
         { label: "Title", key: "title" },
         { label: "Status", key: "status" },
         { label: "Pinned", render: (a) => (a.pinned ? "yes" : "") },
         { label: "Published", render: (a) => formatDate(a.published_at) },
+        { label: "Last edited by", render: (a) => a.updated_by_name ?? "" },
         { label: "Actions", render: (a) => actions(
           button("Edit", () => { editing = a.id; title.value = a.title; body.value = a.body; pinned.checked = a.pinned; save.textContent = "Save changes"; title.focus(); }),
           a.status !== "published" && setStatus(a, "published"),
           a.status === "published" && setStatus(a, "draft"),
-          a.status !== "archived" && setStatus(a, "archived")) },
+          a.status !== "archived" && setStatus(a, "archived"),
+          ownerDelete(state, "announcement", a.id, "news item", reload)) },
       ], items));
   },
 
-  async referrals(panel, reload) {
+  async referrals(panel, reload, state) {
     const rows = await api("list_referrals", { limit: 200 });
     panel.replaceChildren(table([
       { label: "Referred", key: "referred_name" },
       { label: "Referrer", key: "referrer_name" },
       { label: "Code", key: "code" },
       { label: "Status", render: (r) => `${r.status}${r.reject_reason ? ` (${r.reject_reason})` : ""}` },
-      { label: "Credit", key: "credit_status" },
+      { label: "Credit (old)", key: "credit_status" },
+      { label: "Referral credits", render: (r) => String(r.reward_credits ?? 0) },
       { label: "Created", render: (r) => formatDate(r.created_at, true) },
       { label: "", render: (r) => r.credit_status === "available" ? button("Revoke credit", async () => {
         const reason = await promptReason("Revoke this unredeemed credit?", { required: true, danger: true, okLabel: "Revoke" });
@@ -386,6 +428,16 @@ const panels = {
         await api("revoke_credit", { credit_id: r.credit_id, reason });
         reload();
       }, "btn btn--small btn--danger") : "" },
+      { label: "", render: (r) => Number(r.reward_credits) > 0 ? button("Revoke referral credits", async () => {
+        const reason = await promptReason("Revoke the UNUSED referral credits from this referral? Credits already used on orders are not affected.", { required: true, danger: true, okLabel: "Revoke" });
+        if (reason === null) return;
+        try {
+          const res = await api("revoke_referral_credits", { referred_user_id: r.referred_user_id, reason });
+          toast(`${res?.revoked ?? 0} credit(s) revoked.`, "success");
+        } catch (err) { toast(errorMessage(err), "error"); }
+        reload();
+      }, "btn btn--small btn--danger") : "" },
+      { label: "Entry", render: (r) => ownerDelete(state, "referral", r.referred_user_id, "referral entry", reload) ?? "" },
     ], rows));
   },
 
@@ -412,7 +464,7 @@ const panels = {
       el("ul", { class: "small" }, ...Object.entries(d.definitions ?? {}).map(([k, v]) => el("li", {}, el("strong", {}, k.replace(/_/g, " ")), `: ${v}`))));
   },
 
-  async audit(panel) {
+  async audit(panel, reload, state) {
     const rows = await api("audit_log", { limit: 200 });
     panel.replaceChildren(table([
       { label: "When", render: (r) => formatDate(r.created_at, true) },
@@ -420,7 +472,20 @@ const panels = {
       { label: "Action", key: "action" },
       { label: "Target", render: (r) => `${r.target_type ?? ""} ${r.target_id ?? ""}` },
       { label: "Reason", key: "reason" },
+      { label: "", render: (r) => ownerDelete(state, "audit_entry", r.id, "audit log entry", reload) ?? "" },
     ], rows));
+  },
+
+  // Append-only trail of Owner deletions. It has no delete control anywhere.
+  async security(panel) {
+    const rows = await api("security_events", { limit: 200 });
+    panel.replaceChildren(table([
+      { label: "When", render: (r) => formatDate(r.created_at, true) },
+      { label: "Action", key: "action" },
+      { label: "Type", key: "target_type" },
+      { label: "Target", key: "target_id" },
+      { label: "Details", render: (r) => JSON.stringify(r.details) },
+    ], rows, "No security events."));
   },
 };
 
@@ -436,8 +501,9 @@ export async function mount(view, { signal }) {
   }
   view.append(cloneTemplate("tpl-admin"));
   const r = refs(view);
-  const state = { tab: "overview" };
+  const state = { tab: "overview", owner: await isOwner() };
   let req = 0;
+  if (!state.owner) r.tabs.querySelectorAll("[data-owner-only]").forEach((t) => t.remove());
 
   const show = async () => {
     const id = ++req;

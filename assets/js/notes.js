@@ -4,7 +4,7 @@
 
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
-import { getClient, invoke, query } from "./supabase-client.js";
+import { getClient, invoke, query, rpc } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, isAllowedSocialUrl, textLength, validateNote, validatePublicationAmount } from "./validation.js";
@@ -141,7 +141,7 @@ export async function mountComposer(view, { signal, navigate }) {
   view.append(cloneTemplate("tpl-note-composer"));
   const r = refs(view);
   const user = currentUser();
-  const state = { decorations: [], credits: 0 };
+  const state = { decorations: [], credits: 0, freePosts: 0, freeDecos: 0 };
 
   // Optional campus tag
   const campus = buildCampusSelect({ value: getLocationPref().campus ?? "", signal });
@@ -168,7 +168,17 @@ export async function mountComposer(view, { signal, navigate }) {
     const chosen = new Set(new FormData(r.form).getAll("decorations").map(String));
     let decos = 0n;
     for (const d of state.decorations) if (chosen.has(d.id)) decos += BigInt(String(d.price));
-    const credit = r.useCredit.checked && amount.ok ? (amount.value < CREDIT_VALUE ? amount.value : CREDIT_VALUE) : 0n;
+    // Old Rp5.000 credit and referral credits are mutually exclusive.
+    if (r.usePostCredit.checked && r.useCredit.checked) r.useCredit.checked = false;
+    const paidDecos = state.decorations.filter((d) => chosen.has(d.id) && BigInt(String(d.price)) > 0n)
+      .map((d) => BigInt(String(d.price))).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+    const decoUse = Math.max(0, Math.min(Number(r.decoCredits.value) || 0, state.freeDecos, paidDecos.length));
+    r.decoCredits.max = String(Math.min(state.freeDecos, paidDecos.length));
+    if (String(decoUse) !== r.decoCredits.value && r.decoCredits.value !== "") r.decoCredits.value = String(decoUse);
+    let refCredit = 0n;
+    if (r.usePostCredit.checked && amount.ok) refCredit += amount.value;
+    for (let i = 0; i < decoUse; i++) refCredit += paidDecos[i];
+    const credit = (r.useCredit.checked && amount.ok ? (amount.value < CREDIT_VALUE ? amount.value : CREDIT_VALUE) : 0n) + refCredit;
     r.sumAmount.textContent = amount.ok ? formatRupiah(amount.value) : "—";
     r.sumDecos.textContent = formatRupiah(decos);
     r.sumCreditRow.hidden = credit === 0n;
@@ -176,7 +186,7 @@ export async function mountComposer(view, { signal, navigate }) {
     const total = amount.ok ? amount.value + decos - credit : null;
     r.sumTotal.textContent = total === null ? "—" : formatRupiah(total);
     r.confirmAmount.textContent = total === null ? "—" : formatRupiah(total);
-    r.submit.textContent = total === 0n ? "Publish with my free credit" : "Continue to payment";
+    r.submit.textContent = total === 0n ? "Publish with my free credits" : "Continue to payment";
     const key = `${amount.ok ? amount.digits : ""}|${[...chosen].sort()}|${credit}`;
     if (r.confirm.dataset.key !== key) {
       // The customer must re-confirm whenever the amount changes.
@@ -193,13 +203,15 @@ export async function mountComposer(view, { signal, navigate }) {
 
   // Decorations (enabled only, prices from the database)
   try {
-    state.decorations = await query(getClient().from("decorations").select("id,name,description,price::text").order("sort_order"));
+    state.decorations = await query(getClient().from("decorations").select("id,name,description,category,price::text").order("sort_order"));
     r.decorations.replaceChildren(...state.decorations.map((d) => {
       const opt = cloneTemplate("tpl-decoration-option");
       const o = refs(opt);
       o.input.value = d.id;
       o.name.textContent = d.name;
-      o.price.textContent = `+${formatRupiah(String(d.price))}`;
+      o.cat.textContent = d.category ?? "";
+      if (/^[a-z0-9-]{2,40}$/.test(d.id)) o.swatch.classList.add(`deco-${d.id}`);
+      o.price.textContent = String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`;
       if (d.description) o.name.title = d.description;
       return opt;
     }));
@@ -217,6 +229,18 @@ export async function mountComposer(view, { signal, navigate }) {
       r.creditRow.hidden = state.credits === 0;
     } catch {
       r.creditRow.hidden = true;
+    }
+    try {
+      const s = await rpc("my_referral_summary");
+      state.freePosts = Number(s?.free_posts_left ?? 0);
+      state.freeDecos = Number(s?.free_decorations_left ?? 0);
+      r.postLeft.textContent = String(state.freePosts);
+      r.decoLeft.textContent = String(state.freeDecos);
+      r.refRow.hidden = state.freePosts + state.freeDecos === 0;
+      r.usePostCredit.disabled = state.freePosts === 0;
+      r.decoCredits.disabled = state.freeDecos === 0;
+    } catch {
+      r.refRow.hidden = true;
     }
     if (!r.author.value) r.author.value = user.user_metadata?.display_name ?? "";
   }
@@ -244,10 +268,12 @@ export async function mountComposer(view, { signal, navigate }) {
         confirm_amount: amount.digits,
         decorations: data.getAll("decorations").map(String),
         use_credit: r.useCredit.checked,
+        use_post_credit: r.usePostCredit.checked,
+        deco_credits: Math.max(0, Math.floor(Number(r.decoCredits.value) || 0)),
         campus_id: campus.select.value || null,
       });
       rememberReceipt(res.order.order_ref, res.access_token);
-      if (res.order.status === "completed_free") toast("Published with your free credit!", "success");
+      if (res.order.status === "completed_free") toast("Published with your free credits!", "success");
       navigate("/checkout", { order: res.order.order_ref });
     } catch (err) {
       r.formError.textContent = errorMessage(err);

@@ -44,6 +44,7 @@ Related documents:
 | `assets/js/supabase-client.js` | Browser client (publishable key only), plus `rpc`/`query`/`invoke` wrappers with normalised errors. |
 | `assets/js/{wall,notes,promotions,checkout,donations,account,referrals,leaderboard,announcements,admin,auth,location}.js` | Feature views. |
 | `assets/js/{validation,utils,config}.js` | Client-side validation for usability only, safe DOM helpers, and public configuration. |
+| `supabase/migrations/006…007` | Owner role, payment waivers, Owner-only deletion + security log, News attribution, 45 decorations (006); referral credits (007). |
 | `supabase/migrations/001…005` | Schema, RLS, payments and referrals, promotions and locations, indexes, admin functions, and the function-execute allowlist. |
 | `supabase/functions/*` | Edge Functions (see [SECURITY.md](SECURITY.md#edge-functions)). Each has `handler.ts` (logic) and a small `index.ts` entry point that serves it. `_shared/` holds auth, validation, Midtrans and security helpers. |
 | `scripts/bootstrap-admin.ts` | Grants admin to an existing verified account (run from a trusted machine). |

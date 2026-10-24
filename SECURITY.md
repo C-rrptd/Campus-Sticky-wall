@@ -90,3 +90,6 @@ Only `sb_publishable_…` keys, or legacy JWT keys whose role is exactly `anon`,
 ## Reporting a vulnerability
 
 Email the contact address configured in the admin settings. Do not file a public issue.
+
+## Part 1 additions
+Owner role, waivers, Owner-only deletion and the append-only security log are described in [docs/PART1_RELEASE.md](docs/PART1_RELEASE.md).

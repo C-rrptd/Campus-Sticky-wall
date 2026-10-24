@@ -9,7 +9,7 @@ import { isEmail, validatePassword } from "./validation.js";
 import { cloneTemplate } from "./component-loader.js";
 import { busy, errorMessage, refs, toast } from "./utils.js";
 
-const state = { user: null, adminChecked: null, isAdmin: false };
+const state = { user: null, adminChecked: null, isAdmin: false, isOwner: false };
 const listeners = new Set();
 
 export async function initAuth() {
@@ -22,6 +22,7 @@ export async function initAuth() {
     if (changed) {
       state.adminChecked = null;
       state.isAdmin = false;
+      state.isOwner = false;
     }
     if (event === "PASSWORD_RECOVERY") window.location.hash = "#/auth?mode=update";
     if (changed || event === "USER_UPDATED") listeners.forEach((cb) => cb(state.user));
@@ -48,12 +49,20 @@ export async function isAdmin() {
   if (state.adminChecked === state.user.id) return state.isAdmin;
   try {
     const rows = await query(getClient().from("user_roles").select("role").eq("user_id", state.user.id));
-    state.isAdmin = rows.some((r) => r.role === "admin");
+    state.isAdmin = rows.some((r) => r.role === "admin" || r.role === "owner");
+    state.isOwner = rows.some((r) => r.role === "owner");
   } catch {
     state.isAdmin = false;
+    state.isOwner = false;
   }
   state.adminChecked = state.user.id;
   return state.isAdmin;
+}
+
+/** UI hint only; the server re-checks every owner action. */
+export async function isOwner() {
+  await isAdmin();
+  return state.isOwner;
 }
 
 export async function signOut() {

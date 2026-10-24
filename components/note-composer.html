@@ -63,6 +63,19 @@
           <span>Use one free-publication credit (−Rp5.000) · <span data-ref="creditCount">0</span> available</span>
         </label>
 
+        <fieldset class="field" data-ref="refRow" hidden>
+          <legend>Referral credits</legend>
+          <label class="check">
+            <input type="checkbox" name="use_post_credit" data-ref="usePostCredit">
+            <span>Use a free post credit (post is free) · <strong data-ref="postLeft">0</strong> free posts left</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Free decorations to use · <strong data-ref="decoLeft">0</strong> free decorations left</span>
+            <input type="number" name="deco_credits" min="0" step="1" value="0" inputmode="numeric" data-ref="decoCredits">
+            <span class="small muted">Applied to your most expensive paid decorations first. Free decorations never use a credit.</span>
+          </label>
+        </fieldset>
+
         <p class="field__error" data-ref="formError" role="alert"></p>
       </form>
 
@@ -73,7 +86,7 @@
           <dl class="summary__list">
             <div><dt>Your publication price</dt><dd data-ref="sumAmount">Rp5.000</dd></div>
             <div><dt>Decorations</dt><dd data-ref="sumDecos">Rp0</dd></div>
-            <div data-ref="sumCreditRow" hidden><dt>Referral credit</dt><dd data-ref="sumCredit">−Rp5.000</dd></div>
+            <div data-ref="sumCreditRow" hidden><dt>Credits</dt><dd data-ref="sumCredit">−Rp5.000</dd></div>
             <div class="summary__total"><dt>Total due</dt><dd data-ref="sumTotal">Rp5.000</dd></div>
           </dl>
           <p class="muted small">Final amounts are calculated by our server before payment.</p>
@@ -91,7 +104,8 @@
 <template id="tpl-decoration-option">
   <label class="deco-option">
     <input type="checkbox" name="decorations" data-ref="input">
-    <span class="deco-option__name" data-ref="name"></span>
+    <span class="deco-swatch" data-ref="swatch" aria-hidden="true"></span>
+    <span class="deco-option__name"><span data-ref="name"></span><span class="deco-option__cat" data-ref="cat"></span></span>
     <span class="deco-option__price" data-ref="price"></span>
   </label>
 </template>

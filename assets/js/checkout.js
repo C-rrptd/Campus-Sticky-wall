@@ -27,6 +27,7 @@ const STATUS = {
   awaiting_payment: { kind: "info", text: "Waiting for payment." },
   challenge: { kind: "info", text: "Your payment is being reviewed by the payment provider. We’ll update this page when it’s confirmed." },
   paid: { kind: "success", text: "Payment confirmed. Thank you!" },
+  payment_waived: { kind: "success", text: "Payment waived by the site team — no payment needed." },
   completed_free: { kind: "success", text: "Completed with your free credit — no payment needed." },
   failed: { kind: "error", text: "The payment failed. Nothing was charged for this order; you can create a new one." },
   canceled: { kind: "error", text: "This order was cancelled." },
@@ -126,7 +127,9 @@ export async function mount(view, { params, signal, navigate }) {
     }
 
     const hasCredit = order.discount_amount !== "0";
-    if (user && order.kind === "publication" && editable && (hasCredit || (await availableCredits()) > 0)) {
+    // Referral credits are chosen on the compose page; to change them, write a new note.
+    const hasReferralCredits = (order.items ?? []).some((i) => i.type === "credit" && String(i.name).startsWith("Referral credit:"));
+    if (user && order.kind === "publication" && editable && !hasReferralCredits && (hasCredit || (await availableCredits()) > 0)) {
       r.creditRow.hidden = false;
       r.useCredit.checked = hasCredit;
     } else r.creditRow.hidden = true;

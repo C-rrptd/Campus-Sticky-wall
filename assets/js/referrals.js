@@ -33,7 +33,7 @@ export function referralLink(code) {
   return `${base}/?ref=${encodeURIComponent(code)}#/auth?mode=register`;
 }
 
-const STATUS = { pending_verification: "Waiting for email verification", qualified: "Successful", rejected: "Not eligible" };
+const STATUS = { pending_verification: "Waiting for their first post", qualified: "Successful", rejected: "Not eligible" };
 
 export async function mount(view, { signal }) {
   const user = currentUser();
@@ -59,6 +59,8 @@ export async function mount(view, { signal }) {
   const link = referralLink(data.code);
   r.link.value = link;
   r.code.textContent = data.code;
+  r.freePosts.textContent = String(data.free_posts_left ?? 0);
+  r.freeDecos.textContent = String(data.free_decorations_left ?? 0);
   r.successful.textContent = String(data.successful_referrals);
   r.pending.textContent = String(data.pending_referrals);
   r.available.textContent = String(data.credits_available);
@@ -68,7 +70,7 @@ export async function mount(view, { signal }) {
   if (navigator.share) {
     r.share.hidden = false;
     r.share.addEventListener("click", () => {
-      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — your first note gets Rp5.000 off.", url: link }).catch(() => {});
+      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — we both get 2 free posts and 2 free decorations after your first note.", url: link }).catch(() => {});
     }, { signal });
   }
 
@@ -76,6 +78,6 @@ export async function mount(view, { signal }) {
     ? data.referred_by_you_recent.map((a) => el("li", {}, `${formatDate(a.created_at)} · ${STATUS[a.status] ?? a.status}`))
     : [el("li", { class: "muted" }, "No referrals yet — share your link!")]));
   r.credits.replaceChildren(...(data.credit_history.length
-    ? data.credit_history.map((c) => el("li", {}, `${formatDate(c.created_at)} · ${c.status}${c.redeemed_at ? ` (used ${formatDate(c.redeemed_at)})` : ""}`))
-    : [el("li", { class: "muted" }, "You have no credits. Join through a friend’s link to get one.")]));
+    ? data.credit_history.map((c) => el("li", {}, `${formatDate(c.created_at)} · ${c.label ?? "Credit"} · ${c.status}${c.redeemed_at ? ` (used ${formatDate(c.redeemed_at)})` : ""}`))
+    : [el("li", { class: "muted" }, "No referral credits yet. Publish your first note after joining through a friend’s link, or invite a friend.")]));
 }

@@ -4,7 +4,7 @@
 
 | When | Task | How |
 |---|---|---|
-| Daily | Moderate | Admin → **Moderation** (in `pre` mode, queue for approval) and **Reports**. Removing a note does not refund it; decide refunds case by case in the Midtrans dashboard. |
+| Daily | Moderate | Admin → **Moderation** (in `pre` mode, queue for approval) and **Reports**. Removing a note does not refund it. Under the Terms of Use, refunds are not provided for deleted notes or campaigns or for content removed for rule violations, except where applicable law requires; do not promise refunds to users. Any exception is made by the Owner in the Midtrans dashboard. |
 | Daily | Review campaigns | Admin → **Campaigns** (status `pending_review`). Approve only paid campaigns. The schedule starts at approval or at the requested date, whichever is later. |
 | Daily | Payment exceptions | Admin → **Payments** → tick "needs review". Causes: `amount_or_currency_mismatch`, `fraud_challenge`, `payment_after_close` (money arrived for an expired/cancelled order: refund it in Midtrans or fulfil it manually), `partial_refund_amount_unknown`. Use **Reconcile with Midtrans** to re-read the status, then **Clear review flag** with a reason (audited). |
 | Every 15 min | Expire unpaid orders | `pg_cron` job (see README) or Admin → Overview → "Expire stale unpaid orders". Releases reserved credits. |

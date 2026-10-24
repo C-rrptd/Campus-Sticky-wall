@@ -27,6 +27,8 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     amount: v.amount(body.amount),
     decorations: v.idList(body.decorations, "Decorations", 10),
     use_credit: v.bool(body.use_credit, "use_credit", false),
+    use_post_credit: v.bool(body.use_post_credit, "use_post_credit", false),
+    deco_credits: typeof body.deco_credits === "number" && Number.isInteger(body.deco_credits) && body.deco_credits >= 0 && body.deco_credits <= 10 ? body.deco_credits : 0,
     campus_id: v.uuid(body.campus_id, "Campus", true),
   };
   if (body.confirm_amount !== input.amount) {
@@ -35,7 +37,25 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
 
   const accessToken = randomToken();
-  const order = await rpc(deps.db, "create_publication_order", {
+  const useReferral = input.use_post_credit || input.deco_credits > 0;
+  if (useReferral && input.use_credit) {
+    return json(req, 400, { error: { code: "CREDIT_CONFLICT", message: "Choose either the old Rp5.000 credit or referral credits, not both." } }, deps.env);
+  }
+  // Referral credits (free post / free decorations): reserved in the same transaction as the order.
+  const order = useReferral ? await rpc(deps.db, "create_publication_order_credits", {
+    p_user_id: user?.id ?? null,
+    p_author_name: input.author_name,
+    p_body: input.body,
+    p_color: input.color,
+    p_social_link: input.social_link,
+    p_show_amount: input.show_amount,
+    p_amount: input.amount,
+    p_decorations: input.decorations,
+    p_guest_token_hash: await sha256Hex(accessToken),
+    p_campus_id: input.campus_id,
+    p_use_post_credit: input.use_post_credit,
+    p_deco_credits: input.deco_credits,
+  }) : await rpc(deps.db, "create_publication_order", {
     p_user_id: user?.id ?? null,
     p_author_name: input.author_name,
     p_body: input.body,

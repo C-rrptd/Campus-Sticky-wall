@@ -91,3 +91,11 @@ These are separate `kind = donation` orders with their own confirmation. The def
 | credits_issued / credits_redeemed | Referral-to-publication conversion inputs |
 | campaign_impressions / clicks | Approximate, client-reported |
 | campaign_renewals | Paid ad orders whose owner had an earlier paid ad order |
+
+
+## Referral credits (Part 1, migration 007) — supersedes the reward in section 4
+- Inviter and invited friend each receive 2 free post credits and 2 free decoration credits.
+- Qualifies once, when the friend has a verified email and their first sticky post is published. Self-referrals, suspended referrers and unverified accounts do not qualify.
+- A post credit makes the note's publication price free (no amount is shown on the note). A decoration credit makes one paid decoration free (highest price first). Free decorations never consume a credit.
+- Post and decoration credits are independent and can be mixed with paid items. They cannot be used for ads or donations, have no cash value and cannot be combined with the old Rp5.000 credit on the same order.
+- The old Rp5.000 verify-time credit is no longer issued; already-issued ones remain valid.

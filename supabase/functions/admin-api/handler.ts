@@ -97,6 +97,25 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
   revoke_credit: ["admin_revoke_credit", (p) => ({ p_credit_id: v.uuid(p.credit_id, "credit_id"), p_reason: reason(p.reason) })],
   audit_log: ["admin_audit_entries", (p) => ({ p_limit: int(p.limit, 100, 500), p_offset: int(p.offset, 0, 100000) })],
   leaderboard_diagnostics: ["admin_leaderboard_diagnostics", () => ({})],
+  revoke_referral_credits: ["admin_revoke_referral_credits", (p) => ({
+    p_referred_user_id: v.uuid(p.referred_user_id, "referred_user_id") as string,
+    p_reason: v.str(p.reason, "Reason", { min: 5, max: 500, multiline: true }),
+  })],
+  waive_order: ["admin_waive_order", (p) => ({
+    p_order_ref: v.orderRef(p.order_ref),
+    p_reason: v.str(p.reason, "Reason", { min: 5, max: 500, multiline: true }),
+  })],
+  // Owner-only: SQL re-checks require_owner(); an Admin's call is rejected with 403.
+  owner_delete: ["owner_delete_record", (p) => ({
+    p_kind: v.oneOf(p.kind, "kind", ["report", "note", "announcement", "campaign", "referral", "audit_entry", "country", "region", "city", "campus"] as const),
+    p_id: v.str(p.id, "id", { min: 1, max: 40 }),
+    p_confirm: v.str(p.confirm, "confirm", { min: 1, max: 20 }),
+  })],
+  owner_delete_preview: ["owner_delete_preview", (p) => ({
+    p_kind: v.oneOf(p.kind, "kind", ["report", "note", "announcement", "campaign", "referral", "audit_entry", "country", "region", "city", "campus"] as const),
+    p_id: v.str(p.id, "id", { min: 1, max: 40 }),
+  })],
+  security_events: ["owner_list_security_events", (p) => ({ p_limit: int(p.limit, 100, 500) })],
   revenue_report: ["admin_revenue_report", (p) => {
     const from = typeof p.from === "string" && !Number.isNaN(Date.parse(p.from)) ? p.from : null;
     const to = typeof p.to === "string" && !Number.isNaN(Date.parse(p.to)) ? p.to : null;
