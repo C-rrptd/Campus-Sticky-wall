@@ -78,3 +78,32 @@ export function creativeUrl(path) {
   if (!path || !/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(png|jpe?g|webp)$/.test(path)) return null;
   return `${config.supabaseUrl}/storage/v1/object/public/${config.creativeBucket}/${path}`;
 }
+
+const MEDIA_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "video/mp4": "mp4", "video/webm": "webm" };
+export const MEDIA_MAX_FILES = 4;
+export const MEDIA_MAX_BYTES = 25 * 1024 * 1024;
+
+/** Error text for a file that can't be attached, or null when it is fine. */
+export function mediaProblem(file) {
+  if (!MEDIA_EXT[file.type]) return `${file.name}: use JPG, PNG, WebP, GIF, MP4 or WebM.`;
+  if (file.size > MEDIA_MAX_BYTES) return `${file.name}: files can be at most 25 MB.`;
+  return null;
+}
+
+/** Public URL of an uploaded note attachment (path is "<user-id>/<file>"). */
+export function mediaUrl(path) {
+  if (!path || !/^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,100}$/.test(path)) return null;
+  return `${config.supabaseUrl}/storage/v1/object/public/note-media/${path}`;
+}
+
+/** Upload files into the signed-in user's folder; resolves to [{path, kind}]. */
+export async function uploadNoteMedia(files, userId) {
+  const out = [];
+  for (const file of files) {
+    const path = `${userId}/${crypto.randomUUID()}.${MEDIA_EXT[file.type]}`;
+    const { error } = await getClient().storage.from("note-media").upload(path, file, { contentType: file.type });
+    if (error) throw new ApiError("UPLOAD_FAILED", `Couldn’t upload ${file.name}. Please try again.`, 0);
+    out.push({ path, kind: file.type.startsWith("video/") ? "video" : "image" });
+  }
+  return out;
+}

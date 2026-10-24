@@ -72,7 +72,7 @@ path, url = sys.argv[1], sys.argv[2].rstrip("/")
 src = open(path).read()
 src, n = re.subn(r" wss://\*\.supabase\.co", "", src)
 src, m = re.subn(r"https://\*\.supabase\.co", url, src)
-assert m == 2, "expected connect-src and img-src wildcards"
+assert m == 3, "expected connect-src, img-src and media-src wildcards"
 open(path, "w").write(src)
 PY
 fi

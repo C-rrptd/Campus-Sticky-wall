@@ -25,7 +25,8 @@ do $$ begin
   assert not has_function_privilege('anon', 'public.admin_waive_order(text,text)', 'execute'), 'anon can waive';
   assert not has_function_privilege('anon', 'public.apply_referral_credits(uuid,uuid,boolean,int)', 'execute'), 'anon can apply credits';
   assert not has_function_privilege('authenticated', 'public.apply_referral_credits(uuid,uuid,boolean,int)', 'execute'), 'client can apply credits';
-  assert not has_function_privilege('authenticated', 'public.create_publication_order_credits(uuid,text,text,text,text,boolean,text,text[],text,uuid,boolean,int)', 'execute'), 'client can call order+credits directly';
+  assert not has_function_privilege('authenticated', 'public.create_publication_order_credits(uuid,text,text,text,text,boolean,text,text[],text,uuid,boolean,int,jsonb)', 'execute'), 'client can call order+credits directly';
+  assert not has_function_privilege('anon', 'public.create_publication_order(uuid,text,text,text,text,boolean,text,text[],boolean,text,uuid,jsonb)', 'execute'), 'anon can create orders';
 end $$;
 
 -- ---- people ----------------------------------------------------------------
@@ -128,6 +129,21 @@ select pg_temp.must(:'sg' = 'completed_free', 'fully covered order must complete
 do $$ begin
   assert (select status from public.notes where body = 'free all') = 'published', 'free order must publish';
   assert (select count(*) from public.referral_credits where user_id = '00000000-0000-0000-0000-0000000000b1' and status = 'redeemed') = 2, 'credits redeemed';
+end $$;
+-- ---- note media (009) ------------------------------------------------------
+select public.create_publication_order('00000000-0000-0000-0000-0000000000b2','I','with media','yellow',null,true,'5000','{}'::text[],false,repeat('5',64),null,
+  '[{"path":"00000000-0000-0000-0000-0000000000b2/a1.gif","kind":"image","evil":"x"},{"path":"00000000-0000-0000-0000-0000000000b2/v1.mp4","kind":"video"}]'::jsonb) ->> 'order_ref' as om \gset
+do $$ begin
+  assert (select jsonb_array_length(media) from public.notes where body = 'with media') = 2, 'media stored';
+  assert not (select media -> 0 ? 'evil' from public.notes where body = 'with media'), 'extra media keys must be dropped';
+  assert (select media from public.notes where body = 'plain') is null, 'no media = null';
+end $$;
+select pg_temp.expect_err($$select public.create_publication_order('00000000-0000-0000-0000-0000000000b2','I','m','yellow',null,true,'5000','{}'::text[],false,repeat('4',64),null,'[{"path":"../x","kind":"image"}]'::jsonb)$$, 'INVALID_MEDIA');
+select pg_temp.expect_err($$select public.create_publication_order('00000000-0000-0000-0000-0000000000b2','I','m','yellow',null,true,'5000','{}'::text[],false,repeat('4',64),null,'[{"path":"00000000-0000-0000-0000-0000000000b2/a.exe","kind":"script"}]'::jsonb)$$, 'INVALID_MEDIA');
+select pg_temp.expect_err($$select public.create_publication_order('00000000-0000-0000-0000-0000000000b2','I','m','yellow',null,true,'5000','{}'::text[],false,repeat('4',64),null,'[1,2,3,4,5]'::jsonb)$$, 'INVALID_MEDIA');
+do $$ begin
+  assert not exists (select 1 from public.notes where body = 'm'), 'rejected media must not leave a note';
+  assert public.note_json((select n from public.notes n where body = 'with media'), null) -> 'media' is not null, 'note_json exposes media';
 end $$;
 -- leaderboard counts the referral, and still does after the Owner deletes the entry
 do $$ begin assert (public.leaderboard('referrals','all',5) -> 'rows' -> 0 ->> 'value') = '1', 'leaderboard before delete'; end $$;

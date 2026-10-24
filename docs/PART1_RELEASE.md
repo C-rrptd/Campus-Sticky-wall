@@ -3,7 +3,7 @@
 Everything else below was run against Postgres 16 with a stubbed `auth` schema; no browser, Deno or Midtrans checks were run.
 
 ## Deploy order
-1. Review migrations `006`, `007` and `008`. The deploy workflow runs `supabase db push` on merge to `main`, so merging deploys them. Open a pull request first: the new `Test` workflow applies and re-applies them on plain Postgres and runs the assertions.
+1. Review migrations `006`-`009`. The deploy workflow runs `supabase db push` on merge to `main`, so merging deploys them. Open a pull request first: the new `Test` workflow applies and re-applies them on plain Postgres and runs the assertions.
 2. Grant yourself Owner: `ADMIN_EMAIL=you@example.com deno run --allow-env --allow-net scripts/bootstrap-admin.ts --owner` (add `--dry-run` first), or SQL: `insert into public.user_roles (user_id, role, granted_by) select id, 'owner', 'sql' from auth.users where email = 'you@example.com' on conflict do nothing;`
 3. Deploy functions (`admin-api` changed) and the static site (`decorations.css` is new).
 4. Sign out and in again to see the Owner controls.
@@ -36,5 +36,11 @@ Both the inviter and the invited friend get **2 free posts + 2 free decorations*
 - **Limits:** credits are chosen on the compose page. To change them after the order exists, write a new note (the unpaid order expires and releases them). The checkout page hides the old credit toggle on such orders.
 - Migration `008`: the Owner delete dialog now lists what else a delete removes (`owner_delete_preview`), countries can be deleted, News shows the last editor, and the referral leaderboard keeps counting a referral whose entry the Owner deleted.
 
+## Note media (migration 009)
+- Signed-in users can attach up to 4 JPG/PNG/WebP/GIF/MP4/WebM files (25 MB each) to a note. Files go to the public `note-media` bucket under the user's own folder; the note stores `[{path, kind}]` in `notes.media`. Guests cannot attach files (storage upload needs a session).
+- Wall: a note with media shows "Contains media" instead of its text; long text is cut with "…". Clicking a note opens a viewer with the full text and media. Moderators see media links in the admin notes list.
+- CSP gains `media-src`; `scripts/build-site.sh` now expects 3 `*.supabase.co` wildcards.
+- Known limits: attachments are not scanned or moderated before publish (moderators can hide the note); files uploaded for an order that later fails stay in storage; the bucket and its policies are not exercised by the plain-Postgres CI (no `storage` schema).
+
 ## Automated checks
-`.github/workflows/test.yml` (no deploy): applies all migrations and re-applies 006-008 on Postgres 16 with stubbed Supabase roles, runs `supabase/tests/assert_part1.sql` (about 50 assertions: roles, waivers, deletes, append-only log, referral credits, leaderboard), typechecks every edge function with Deno, and parses the browser JavaScript. Not covered: browsers, Midtrans, real Supabase Auth/RLS as the `authenticated` role.
+`.github/workflows/test.yml` (no deploy): applies all migrations and re-applies 006-009 on Postgres 16 with stubbed Supabase roles, runs `supabase/tests/assert_part1.sql` (about 50 assertions: roles, waivers, deletes, append-only log, referral credits, leaderboard), typechecks every edge function with Deno, and parses the browser JavaScript. Not covered: browsers, Midtrans, real Supabase Auth/RLS as the `authenticated` role.

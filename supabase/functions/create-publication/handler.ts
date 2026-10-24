@@ -30,7 +30,12 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     use_post_credit: v.bool(body.use_post_credit, "use_post_credit", false),
     deco_credits: typeof body.deco_credits === "number" && Number.isInteger(body.deco_credits) && body.deco_credits >= 0 && body.deco_credits <= 10 ? body.deco_credits : 0,
     campus_id: v.uuid(body.campus_id, "Campus", true),
+    media: v.mediaList(body.media, "Media", 4),
   };
+  // Uploads need a session (storage policy) and must sit in the caller's own folder.
+  if (input.media.length && (!user || input.media.some((m) => !m.path.startsWith(`${user.id}/`)))) {
+    return json(req, 400, { error: { code: "INVALID_MEDIA", message: "Sign in to attach files." } }, deps.env);
+  }
   if (body.confirm_amount !== input.amount) {
     // The customer must explicitly confirm the exact amount they chose.
     return json(req, 400, { error: { code: "AMOUNT_NOT_CONFIRMED", message: "Please confirm the amount you want to pay." } }, deps.env);
@@ -55,6 +60,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_campus_id: input.campus_id,
     p_use_post_credit: input.use_post_credit,
     p_deco_credits: input.deco_credits,
+    p_media: input.media,
   }) : await rpc(deps.db, "create_publication_order", {
     p_user_id: user?.id ?? null,
     p_author_name: input.author_name,
@@ -67,6 +73,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_use_credit: input.use_credit,
     p_guest_token_hash: await sha256Hex(accessToken),
     p_campus_id: input.campus_id,
+    p_media: input.media,
   });
   return json(req, 201, { order, access_token: accessToken }, deps.env);
 };

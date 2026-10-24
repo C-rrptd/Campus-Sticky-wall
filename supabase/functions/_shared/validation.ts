@@ -76,6 +76,17 @@ export function idList(v: unknown, field: string, max: number): string[] {
   return v as string[];
 }
 
+export function mediaList(v: unknown, field: string, max: number): { path: string; kind: "image" | "video" }[] {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.length > max) throw bad("INVALID_MEDIA", `${field} must be a list (max ${max}).`);
+  return v.map((m) => {
+    const o = m as { path?: unknown; kind?: unknown };
+    if ((o?.kind !== "image" && o?.kind !== "video") || typeof o.path !== "string" ||
+        !/^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,100}$/.test(o.path)) throw bad("INVALID_MEDIA", `${field} contains an invalid file.`);
+    return { path: o.path, kind: o.kind };
+  });
+}
+
 export function orderRef(v: unknown): string {
   if (typeof v !== "string" || !/^[A-Za-z0-9_.~-]{8,50}$/.test(v)) throw bad("INVALID_ORDER", "Invalid order reference.");
   return v;

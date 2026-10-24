@@ -4,7 +4,7 @@
 
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
-import { getClient, invoke, query, rpc } from "./supabase-client.js";
+import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, isAllowedSocialUrl, textLength, validateNote, validatePublicationAmount } from "./validation.js";
@@ -29,7 +29,11 @@ export function renderNote(note, { interactive = true, signal } = {}) {
     if (/^[a-z0-9-]{2,40}$/.test(d)) r.root.classList.add(`deco-${d}`);
   }
   if (note.id) r.root.dataset.noteId = note.id;
-  r.body.textContent = note.body ?? "";
+  const hasMedia = Array.isArray(note.media) && note.media.length > 0;
+  r.body.textContent = truncateBody(note.body ?? "");
+  // A note with media shows only a "Contains media" badge on the wall; the viewer shows everything.
+  r.body.hidden = hasMedia;
+  r.mediaBadge.hidden = !hasMedia;
   r.author.textContent = note.author_name ?? "";
   const social = note.social_link && isAllowedSocialUrl(note.social_link) ? safeUrl(note.social_link, false) : null;
   if (social) {
@@ -53,8 +57,15 @@ export function renderNote(note, { interactive = true, signal } = {}) {
     r.vote.disabled = true;
     r.bookmark.hidden = true;
     r.report.hidden = true;
+    r.body.removeAttribute("role"); r.body.removeAttribute("tabindex"); r.body.removeAttribute("title");
+    r.mediaBadge.removeAttribute("role"); r.mediaBadge.removeAttribute("tabindex"); r.mediaBadge.removeAttribute("title");
     return frag;
   }
+  const open = () => openNoteViewer(note);
+  for (const t of [r.body, r.mediaBadge]) {
+    t.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }, { signal });
+  }
+  r.root.addEventListener("click", (e) => { if (!e.target.closest("button, a")) open(); }, { signal });
   if (note.is_mine) {
     r.vote.disabled = true;
     r.vote.title = "You can’t vote for your own note";
@@ -63,6 +74,43 @@ export function renderNote(note, { interactive = true, signal } = {}) {
   r.bookmark.addEventListener("click", () => toggleBookmark(note, r), { signal });
   r.report.addEventListener("click", () => reportNote(note), { signal });
   return frag;
+}
+
+const PREVIEW_CHARS = 140;
+const PREVIEW_LINES = 4;
+
+/** Short wall preview: "text that is too long…". The full text is shown in the viewer. */
+function truncateBody(text) {
+  const lines = text.split("\n");
+  let out = lines.slice(0, PREVIEW_LINES).join("\n");
+  const cut = lines.length > PREVIEW_LINES || out.length > PREVIEW_CHARS;
+  if (out.length > PREVIEW_CHARS) out = out.slice(0, PREVIEW_CHARS);
+  return cut ? `${out.trimEnd()}…` : out;
+}
+
+/** Enlarged view: full text plus any attached images / GIFs / videos. */
+function openNoteViewer(note) {
+  const color = COLORS.has(note.color) ? note.color : "yellow";
+  const media = (note.media ?? []).map((m) => {
+    const src = mediaUrl(m.path);
+    if (!src) return null;
+    return m.kind === "video"
+      ? el("video", { class: "viewer__media", src, controls: "", preload: "metadata", playsinline: "" })
+      : el("img", { class: "viewer__media", src, alt: "Attached image", loading: "lazy" });
+  }).filter(Boolean);
+  const close = el("button", { type: "button", class: "btn btn--primary" }, "Close");
+  const dialog = el("dialog", { class: `dialog viewer note--${color}`, "aria-label": `Note by ${note.author_name ?? ""}` },
+    el("div", { class: "viewer__body" }, note.body ?? ""),
+    ...media,
+    el("p", { class: "viewer__by" }, `— ${note.author_name ?? ""}`),
+    close);
+  const done = () => { for (const v of dialog.querySelectorAll("video")) v.pause(); dialog.close(); };
+  close.addEventListener("click", done);
+  dialog.addEventListener("click", (e) => { if (e.target === dialog) done(); }); // backdrop click
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  document.body.append(dialog);
+  dialog.showModal();
+  close.focus();
 }
 
 function setPressed(button, on) {
@@ -220,6 +268,11 @@ export async function mountComposer(view, { signal, navigate }) {
     r.decorations.replaceChildren(el("p", { class: "muted" }, "Decorations couldn’t be loaded. You can still post a plain note."));
   }
 
+  if (!user) {
+    r.media.disabled = true;
+    r.mediaHint.textContent = "Sign in to attach photos, GIFs or videos.";
+  }
+
   // Referral credits (signed-in users)
   if (user) {
     try {
@@ -257,7 +310,13 @@ export async function mountComposer(view, { signal, navigate }) {
     if (!amount.ok) { r.formError.textContent = amount.error; r.amount.focus(); return; }
     if (social && !isAllowedSocialUrl(social)) { r.formError.textContent = "Social links must be https links on a supported platform."; return; }
     if (!r.confirm.checked) { r.formError.textContent = "Please confirm the amount you want to pay."; r.confirm.focus(); return; }
+    const files = [...(r.media.files ?? [])];
+    if (files.length > MEDIA_MAX_FILES) { r.formError.textContent = `Attach at most ${MEDIA_MAX_FILES} files.`; return; }
+    const bad = files.map(mediaProblem).find(Boolean);
+    if (bad) { r.formError.textContent = bad; return; }
     try {
+      // shortcut: files uploaded before a failed order stay orphaned in storage, add a cleanup job if it matters.
+      const media = files.length ? await uploadNoteMedia(files, user.id) : [];
       const res = await invoke("create-publication", {
         author_name: fields.author_name.trim(),
         body: fields.body.trim(),
@@ -271,6 +330,7 @@ export async function mountComposer(view, { signal, navigate }) {
         use_post_credit: r.usePostCredit.checked,
         deco_credits: Math.max(0, Math.floor(Number(r.decoCredits.value) || 0)),
         campus_id: campus.select.value || null,
+        media,
       });
       rememberReceipt(res.order.order_ref, res.access_token);
       if (res.order.status === "completed_free") toast("Published with your free credits!", "success");
