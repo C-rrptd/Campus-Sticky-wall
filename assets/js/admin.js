@@ -4,7 +4,7 @@
 
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser, isAdmin, isOwner } from "./auth.js";
-import { getClient, invoke, query } from "./supabase-client.js";
+import { getClient, invoke, mediaUrl, query } from "./supabase-client.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, promptReason, refs, toast } from "./utils.js";
 import { parseRupiah } from "./validation.js";
 
@@ -94,7 +94,8 @@ const panels = {
     }, danger ? "btn btn--small btn--danger" : "btn btn--small");
     panel.replaceChildren(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Status"), filter),
       table([
-        { label: "Note", render: (r) => el("span", { class: "clamp" }, r.body) },
+        { label: "Note", render: (r) => el("span", { class: "clamp" }, r.body, ...(r.media ?? []).map((m, i) =>
+          el("a", { href: mediaUrl(m.path), target: "_blank", rel: "noopener noreferrer" }, ` [${m.kind} ${i + 1}]`))) },
         { label: "Author", key: "author_name" },
         { label: "Paid", render: (r) => formatRupiah(r.amount) },
         { label: "Votes", key: "vote_count" },

@@ -200,3 +200,13 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .location-picker--compact .field__label { font-size: 0.8rem; }
 .location-picker select { max-width: 200px; }
 .promo__image[hidden] + .promo__content { padding-top: 44px; }
+
+/* Media badge, clickable previews and the enlarged viewer */
+.note__body, .note__media { cursor: pointer; }
+.note__media { margin: 0; flex: 1; font-weight: 700; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(255, 255, 255, 0.5); border-radius: 6px; padding: var(--space-3); }
+.viewer { width: min(92vw, 640px); max-height: 90vh; overflow: auto; border: 0; border-radius: 8px; padding: var(--space-4); }
+.viewer::backdrop { background: rgba(0, 0, 0, 0.6); }
+.viewer__body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.15rem; margin-bottom: var(--space-3); }
+.viewer__media { display: block; max-width: 100%; max-height: 60vh; margin: 0 auto var(--space-3); border-radius: 6px; }
+.viewer__by { font-weight: 700; margin: 0 0 var(--space-3); }
+.viewer.note--yellow { background: var(--note-yellow); }

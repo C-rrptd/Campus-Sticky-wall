@@ -28,8 +28,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/tests/stub_auth.sql
       - name: Apply migrations
         run: for f in supabase/migrations/*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
-      - name: Re-apply 006-008 (must be idempotent)
-        run: for f in supabase/migrations/00[678]_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: Re-apply 006-009 (must be idempotent)
+        run: for f in supabase/migrations/00[6789]_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Part 1 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_part1.sql
 
