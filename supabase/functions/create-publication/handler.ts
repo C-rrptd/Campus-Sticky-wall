@@ -31,6 +31,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     deco_credits: typeof body.deco_credits === "number" && Number.isInteger(body.deco_credits) && body.deco_credits >= 0 && body.deco_credits <= 10 ? body.deco_credits : 0,
     campus_id: v.uuid(body.campus_id, "Campus", true),
     media: v.mediaList(body.media, "Media", 4),
+    positions: v.positionMap(body.decoration_positions),
   };
   // Uploads need a session (storage policy) and must sit in the caller's own folder.
   if (input.media.length && (!user || input.media.some((m) => !m.path.startsWith(`${user.id}/`)))) {
@@ -46,22 +47,8 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   if (useReferral && input.use_credit) {
     return json(req, 400, { error: { code: "CREDIT_CONFLICT", message: "Choose either the old Rp5.000 credit or referral credits, not both." } }, deps.env);
   }
-  // Referral credits (free post / free decorations): reserved in the same transaction as the order.
-  const order = useReferral ? await rpc(deps.db, "create_publication_order_credits", {
-    p_user_id: user?.id ?? null,
-    p_author_name: input.author_name,
-    p_body: input.body,
-    p_color: input.color,
-    p_social_link: input.social_link,
-    p_show_amount: input.show_amount,
-    p_amount: input.amount,
-    p_decorations: input.decorations,
-    p_guest_token_hash: await sha256Hex(accessToken),
-    p_campus_id: input.campus_id,
-    p_use_post_credit: input.use_post_credit,
-    p_deco_credits: input.deco_credits,
-    p_media: input.media,
-  }) : await rpc(deps.db, "create_publication_order", {
+  // One transaction: order, referral credits (free post / free decorations), media and sticker positions.
+  const order = await rpc(deps.db, "create_publication_order_full", {
     p_user_id: user?.id ?? null,
     p_author_name: input.author_name,
     p_body: input.body,
@@ -74,6 +61,9 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_guest_token_hash: await sha256Hex(accessToken),
     p_campus_id: input.campus_id,
     p_media: input.media,
+    p_use_post_credit: input.use_post_credit,
+    p_deco_credits: input.deco_credits,
+    p_positions: input.positions,
   });
   return json(req, 201, { order, access_token: accessToken }, deps.env);
 };

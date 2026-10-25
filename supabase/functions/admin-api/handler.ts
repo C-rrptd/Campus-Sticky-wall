@@ -9,6 +9,7 @@ import { type AuthUser, type Db, type Deps, type Handler, requireUser } from "..
 import { fetchTransactionStatus, midtransConfig, parseNotification, statusToRpcArgs } from "../_shared/payments.ts";
 import { HttpError, json, rateLimit, readJson, rpc } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
+import { purgeMediaOrphans } from "../_shared/media.ts";
 
 type P = Record<string, unknown>;
 const int = (x: unknown, d: number, max: number) =>
@@ -129,6 +130,9 @@ async function assertAdmin(userDb: Db, _user: AuthUser) {
   await rpc(userDb, "admin_overview", {});
 }
 
+// Actions after which queued media files are deleted from Storage.
+const PURGE_AFTER = new Set(["overview", "moderate_note", "owner_delete"]);
+
 export const handler: Handler = async (req: Request, deps: Deps) => {
   const body = await readJson(req, 32 * 1024);
   const { user, jwt } = await requireUser(req, deps);
@@ -142,6 +146,8 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   if (sql) {
     const [fn, build] = sql;
     const data = await rpc(userDb, fn, build(params));
+    // Removing/rejecting/deleting a note queues its files; delete them now (also on each overview load).
+    if (PURGE_AFTER.has(action)) await purgeMediaOrphans(deps);
     return json(req, 200, { data }, deps.env);
   }
 

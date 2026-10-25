@@ -46,3 +46,6 @@ Donor recognition is **off by default**. A donor appears on the donor leaderboar
   - Campaigns owned by the user are deleted.
 - Payment records (orders, items, notifications) are kept for accounting. Decide and document your retention period with your adviser.
 - Guests can take down their own note with their receipt link. This hides it from the wall; it is not a refund.
+
+## Media uploaded to notes
+Images, GIFs and videos you attach to a note are stored in public Storage and visible to anyone once the note is published. Photos are re-saved in your browser without camera metadata (such as GPS location). In MP4 videos embedded GPS coordinates are overwritten, but other video metadata is kept, so check videos yourself. Files are deleted when a note is removed, rejected, withdrawn or deleted.

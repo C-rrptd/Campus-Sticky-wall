@@ -28,10 +28,14 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/tests/stub_auth.sql
       - name: Apply migrations
         run: for f in supabase/migrations/*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
-      - name: Re-apply 006-009 (must be idempotent)
-        run: for f in supabase/migrations/00[6789]_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: Re-apply 006 onward (must be idempotent)
+        run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Part 1 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_part1.sql
+      - name: Media cleanup assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_media_cleanup.sql
+      - name: Sticker placement assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_stickers.sql
 
   code:
     runs-on: ubuntu-latest
@@ -41,7 +45,11 @@ jobs:
         with: { deno-version: v2.x }
       - name: Typecheck edge functions and scripts
         run: deno check supabase/functions/*/index.ts scripts/bootstrap-admin.ts
+      - name: Unit tests (Deno)
+        run: deno test supabase/functions/_shared/media_test.ts
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Parse browser JavaScript
         run: for f in assets/js/*.js; do node --check "$f"; done
+      - name: Unit tests (Node)
+        run: node --test tests/*.test.mjs

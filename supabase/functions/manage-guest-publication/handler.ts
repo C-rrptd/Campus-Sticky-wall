@@ -7,6 +7,7 @@
 import { type Deps, type Handler, optionalUser } from "../_shared/auth.ts";
 import { clientIp, HttpError, json, rateLimit, readJson, rpc, sha256Hex } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
+import { purgeMediaOrphans } from "../_shared/media.ts";
 
 export const handler: Handler = async (req: Request, deps: Deps) => {
   const body = await readJson(req);
@@ -22,6 +23,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   const args = { p_order_ref: ref, p_user_id: user?.id ?? null, p_token_hash: token ? await sha256Hex(token) : null };
   try {
     const order = await rpc(deps.db, action === "withdraw" ? "withdraw_own_note" : "get_order_receipt", args);
+    if (action === "withdraw") await purgeMediaOrphans(deps);
     return json(req, 200, { order }, deps.env);
   } catch (err) {
     if (err instanceof HttpError && err.status === 404) {

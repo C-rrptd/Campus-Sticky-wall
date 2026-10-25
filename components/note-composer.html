@@ -54,7 +54,7 @@
         <label class="field">
           <span class="field__label">Photos, GIFs or videos (optional)</span>
           <input type="file" data-ref="media" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
-          <span class="field__hint" data-ref="mediaHint">Up to 4 files, 25 MB each.</span>
+          <span class="field__hint" data-ref="mediaHint">Up to 4 files, 25 MB each. Photos are re-saved without camera data such as GPS. Videos are only scrubbed of embedded GPS coordinates, so check them yourself. Files are public once your note is published.</span>
         </label>
 
         <div class="field" data-ref="campusField"></div>
@@ -72,14 +72,21 @@
         <fieldset class="field" data-ref="refRow" hidden>
           <legend>Referral credits</legend>
           <label class="check">
-            <input type="checkbox" name="use_post_credit" data-ref="usePostCredit">
-            <span>Use a free post credit (post is free) · <strong data-ref="postLeft">0</strong> free posts left</span>
+            <input type="checkbox" name="use_ref_credits" data-ref="useRefCredits">
+            <span>Pay with my referral credits <span class="muted">(optional)</span> · <strong data-ref="postLeft">0</strong> free posts and <strong data-ref="decoLeft">0</strong> free decorations left</span>
           </label>
-          <label class="field">
-            <span class="field__label">Free decorations to use · <strong data-ref="decoLeft">0</strong> free decorations left</span>
-            <input type="number" name="deco_credits" min="0" step="1" value="0" inputmode="numeric" data-ref="decoCredits">
-            <span class="small muted">Applied to your most expensive paid decorations first. Free decorations never use a credit.</span>
-          </label>
+          <div class="stack" data-ref="refOptions" hidden>
+            <label class="check">
+              <input type="checkbox" name="use_post_credit" data-ref="usePostCredit">
+              <span>Use a free post credit (the post itself is free)</span>
+            </label>
+            <label class="field">
+              <span class="field__label">Free decorations to use</span>
+              <input type="number" name="deco_credits" min="0" step="1" value="0" inputmode="numeric" data-ref="decoCredits">
+              <span class="small muted">Applied to your most expensive paid decorations first. Free decorations never use a credit. Anything not covered is paid normally.</span>
+            </label>
+            <p class="small" data-ref="refSummary" aria-live="polite"></p>
+          </div>
         </fieldset>
 
         <p class="field__error" data-ref="formError" role="alert"></p>
@@ -87,6 +94,7 @@
 
       <aside class="composer__side">
         <div class="preview-wrap" data-ref="preview"></div>
+        <p class="small muted sticker-hint" data-ref="stickerHint" hidden>Drag a sticker on the preview to place it, or focus it and use the arrow keys (Shift moves further).</p>
         <div class="card summary" aria-live="polite">
           <h2 class="summary__title">Order summary</h2>
           <dl class="summary__list">

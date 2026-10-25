@@ -2,16 +2,32 @@
 .deco-swatch{position:relative;display:inline-block;flex:none;width:2.6rem;height:2.6rem;font-size:.7rem;border:1px solid var(--line);border-radius:4px;background-color:var(--note-yellow);overflow:hidden}
 .deco-option__cat{display:block;font-size:.75rem;color:var(--muted)}
 .deco-option:focus-within{outline:3px solid var(--focus);outline-offset:2px}
-.note.deco-sticker-sun::after,.deco-swatch.deco-sticker-sun::after{content:"☀";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-sticker-cat::after,.deco-swatch.deco-sticker-cat::after{content:"🐱";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-sticker-coffee::after,.deco-swatch.deco-sticker-coffee::after{content:"☕";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-sticker-rocket::after,.deco-swatch.deco-sticker-rocket::after{content:"🚀";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-sticker-lightbulb::after,.deco-swatch.deco-sticker-lightbulb::after{content:"💡";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-stamp-approved::after,.deco-swatch.deco-stamp-approved::after{content:"✓ OK";position:absolute;right:.6em;bottom:.8em;transform:rotate(-12deg);padding:.1em .4em;border:.15em solid rgba(185,28,28,.75);color:rgba(185,28,28,.85);font-weight:700;font-size:.9em;border-radius:.2em;pointer-events:none}
-.note.deco-stamp-urgent::after,.deco-swatch.deco-stamp-urgent::after{content:"URGENT";position:absolute;left:.6em;bottom:.6em;background:#111827;color:#fde047;font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .7em;pointer-events:none}
-.note.deco-badge-new::after,.deco-swatch.deco-badge-new::after{content:"NEW";position:absolute;top:.5em;right:.5em;background:#dc2626;color:#fff;font-weight:700;font-size:.7em;padding:.15em .6em;border-radius:1em;pointer-events:none}
-.note.deco-badge-star::after,.deco-swatch.deco-badge-star::after{content:"★";position:absolute;top:.4em;right:.4em;width:1.8em;height:1.8em;display:grid;place-items:center;border-radius:50%;background:#fbbf24;color:#78350f;font-size:1.1em;pointer-events:none}
-.note.deco-label-nametag::after,.deco-swatch.deco-label-nametag::after{content:"HELLO";position:absolute;left:.6em;top:.5em;background:#2563eb;color:#fff;font-size:.65em;font-weight:700;padding:.2em .8em;border-radius:.2em;letter-spacing:.15em;pointer-events:none}
+.sticker{position:absolute;transform:translate(-50%,-50%);line-height:1;z-index:2;font-size:1em;pointer-events:none}
+.sticker--editable{pointer-events:auto;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.sticker--editable:active{cursor:grabbing}
+.sticker--editable:hover{outline:2px dashed rgba(43,37,32,.55);outline-offset:4px;border-radius:4px}
+.sticker--editable:focus-visible{outline:3px solid var(--focus);outline-offset:4px;border-radius:4px}
+.sticker-hint{margin:.4rem 0 0}
+.deco-swatch.deco-sticker-sun::after{content:"☀";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-sun::after{content:"☀";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-sticker-cat::after{content:"🐱";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-cat::after{content:"🐱";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-sticker-coffee::after{content:"☕";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-coffee::after{content:"☕";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-sticker-rocket::after{content:"🚀";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-rocket::after{content:"🚀";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-sticker-lightbulb::after{content:"💡";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-lightbulb::after{content:"💡";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-stamp-approved::after{content:"✓ OK";position:absolute;right:.6em;bottom:.8em;transform:rotate(-12deg);padding:.1em .4em;border:.15em solid rgba(185,28,28,.75);color:rgba(185,28,28,.85);font-weight:700;font-size:.9em;border-radius:.2em;pointer-events:none}
+.sticker.deco-stamp-approved::after{content:"✓ OK";transform:rotate(-12deg);padding:.1em .4em;border:.15em solid rgba(185,28,28,.75);color:rgba(185,28,28,.85);font-weight:700;font-size:.9em;border-radius:.2em;}
+.deco-swatch.deco-stamp-urgent::after{content:"URGENT";position:absolute;left:.6em;bottom:.6em;background:#111827;color:#fde047;font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .7em;pointer-events:none}
+.sticker.deco-stamp-urgent::after{content:"URGENT";background:#111827;color:#fde047;font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .7em;}
+.deco-swatch.deco-badge-new::after{content:"NEW";position:absolute;top:.5em;right:.5em;background:#dc2626;color:#fff;font-weight:700;font-size:.7em;padding:.15em .6em;border-radius:1em;pointer-events:none}
+.sticker.deco-badge-new::after{content:"NEW";background:#dc2626;color:#fff;font-weight:700;font-size:.7em;padding:.15em .6em;border-radius:1em;}
+.deco-swatch.deco-badge-star::after{content:"★";position:absolute;top:.4em;right:.4em;width:1.8em;height:1.8em;display:grid;place-items:center;border-radius:50%;background:#fbbf24;color:#78350f;font-size:1.1em;pointer-events:none}
+.sticker.deco-badge-star::after{content:"★";width:1.8em;height:1.8em;display:grid;place-items:center;border-radius:50%;background:#fbbf24;color:#78350f;font-size:1.1em;}
+.deco-swatch.deco-label-nametag::after{content:"HELLO";position:absolute;left:.6em;top:.5em;background:#2563eb;color:#fff;font-size:.65em;font-weight:700;padding:.2em .8em;border-radius:.2em;letter-spacing:.15em;pointer-events:none}
+.sticker.deco-label-nametag::after{content:"HELLO";background:#2563eb;color:#fff;font-size:.65em;font-weight:700;padding:.2em .8em;border-radius:.2em;letter-spacing:.15em;}
 .note.deco-corner-fold::after,.deco-swatch.deco-corner-fold::after{content:"";position:absolute;right:0;bottom:0;width:2.2em;height:2.2em;background:linear-gradient(135deg,transparent 50%,rgba(0,0,0,.14) 50%,rgba(255,255,255,.75));pointer-events:none}
 .note.deco-corner-photo,.deco-swatch.deco-corner-photo{background-image:linear-gradient(#374151,#374151) left .5em top .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) left .5em top .5em/.15em 1.2em no-repeat,linear-gradient(#374151,#374151) right .5em top .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) right .5em top .5em/.15em 1.2em no-repeat,linear-gradient(#374151,#374151) left .5em bottom .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) left .5em bottom .5em/.15em 1.2em no-repeat,linear-gradient(#374151,#374151) right .5em bottom .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) right .5em bottom .5em/.15em 1.2em no-repeat}
 .note.deco-frame-dashed,.deco-swatch.deco-frame-dashed{outline:.15em dashed rgba(43,37,32,.6);outline-offset:-.6em}
@@ -27,19 +43,27 @@
 .note.deco-paper-torn,.deco-swatch.deco-paper-torn{clip-path:polygon(0 0,100% 0,100% 96%,95% 100%,90% 96%,85% 100%,80% 96%,75% 100%,70% 96%,65% 100%,60% 96%,55% 100%,50% 96%,45% 100%,40% 96%,35% 100%,30% 96%,25% 100%,20% 96%,15% 100%,10% 96%,5% 100%,0% 96%,0 96%)}
 .note.deco-doodle-squiggle::after,.deco-swatch.deco-doodle-squiggle::after{content:"";position:absolute;left:1em;right:1em;bottom:.8em;height:.6em;background:linear-gradient(135deg,#ef4444 25%,transparent 25%) -.3em 0/.6em .6em,linear-gradient(225deg,#ef4444 25%,transparent 25%) -.3em 0/.6em .6em;opacity:.7;pointer-events:none}
 .note.deco-doodle-stars,.deco-swatch.deco-doodle-stars{background-image:radial-gradient(circle at 20% 30%,rgba(217,119,6,.4) .14em,transparent .17em),radial-gradient(circle at 70% 60%,rgba(217,119,6,.4) .14em,transparent .17em);background-size:3em 3em,2.2em 2.2em}
-.note.deco-doodle-heart::after,.deco-swatch.deco-doodle-heart::after{content:"♡";position:absolute;left:.5em;bottom:.3em;color:#e11d48;font-size:1.6em;line-height:1;pointer-events:none}
-.note.deco-campus-graduation::after,.deco-swatch.deco-campus-graduation::after{content:"🎓";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-campus-books::after,.deco-swatch.deco-campus-books::after{content:"📚";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-campus-grade::after,.deco-swatch.deco-campus-grade::after{content:"A+";position:absolute;right:.5em;top:.4em;transform:rotate(10deg);color:#dc2626;font:700 1.3em/1 cursive;padding:.1em .3em;border:.12em solid #dc2626;border-radius:50%;pointer-events:none}
+.deco-swatch.deco-doodle-heart::after{content:"♡";position:absolute;left:.5em;bottom:.3em;color:#e11d48;font-size:1.6em;line-height:1;pointer-events:none}
+.sticker.deco-doodle-heart::after{content:"♡";color:#e11d48;font-size:1.6em;line-height:1;}
+.deco-swatch.deco-campus-graduation::after{content:"🎓";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-campus-graduation::after{content:"🎓";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-campus-books::after{content:"📚";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-campus-books::after{content:"📚";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-campus-grade::after{content:"A+";position:absolute;right:.5em;top:.4em;transform:rotate(10deg);color:#dc2626;font:700 1.3em/1 cursive;padding:.1em .3em;border:.12em solid #dc2626;border-radius:50%;pointer-events:none}
+.sticker.deco-campus-grade::after{content:"A+";transform:rotate(10deg);color:#dc2626;font:700 1.3em/1 cursive;padding:.1em .3em;border:.12em solid #dc2626;border-radius:50%;}
 .note.deco-campus-pencil::after,.deco-swatch.deco-campus-pencil::after{content:"";position:absolute;left:0;right:0;bottom:0;height:.7em;background:linear-gradient(90deg,#fbbf24 0 85%,#f9a8a8 85% 92%,#9ca3af 92%);pointer-events:none}
 .note.deco-campus-margin,.deco-swatch.deco-campus-margin{background-image:linear-gradient(90deg,transparent 2em,rgba(220,38,38,.45) 2em,rgba(220,38,38,.45) calc(2em + 1px),transparent calc(2em + 1px))}
 .note.deco-mood-calm,.deco-swatch.deco-mood-calm{background-image:linear-gradient(180deg,transparent 60%,rgba(147,197,253,.45))}
 .note.deco-mood-minimal,.deco-swatch.deco-mood-minimal{box-shadow:inset 0 .15em 0 #2b2520,var(--shadow-note)}
 .note.deco-mood-bold,.deco-swatch.deco-mood-bold{box-shadow:inset .6em 0 0 #c2410c,var(--shadow-note)}
-.note.deco-mood-lol::after,.deco-swatch.deco-mood-lol::after{content:"LOL";position:absolute;right:.6em;bottom:.6em;transform:rotate(8deg);background:#fef08a;border:.12em solid #2b2520;border-radius:1em;font-weight:700;font-size:.8em;padding:.1em .7em;pointer-events:none}
-.note.deco-mood-sleepy::after,.deco-swatch.deco-mood-sleepy::after{content:"💤";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-nature-leaf::after,.deco-swatch.deco-nature-leaf::after{content:"🍃";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-nature-flower::after,.deco-swatch.deco-nature-flower::after{content:"🌸";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.deco-swatch.deco-mood-lol::after{content:"LOL";position:absolute;right:.6em;bottom:.6em;transform:rotate(8deg);background:#fef08a;border:.12em solid #2b2520;border-radius:1em;font-weight:700;font-size:.8em;padding:.1em .7em;pointer-events:none}
+.sticker.deco-mood-lol::after{content:"LOL";transform:rotate(8deg);background:#fef08a;border:.12em solid #2b2520;border-radius:1em;font-weight:700;font-size:.8em;padding:.1em .7em;}
+.deco-swatch.deco-mood-sleepy::after{content:"💤";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-mood-sleepy::after{content:"💤";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-nature-leaf::after{content:"🍃";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-nature-leaf::after{content:"🍃";font-size:1.5em;line-height:1;}
+.deco-swatch.deco-nature-flower::after{content:"🌸";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-nature-flower::after{content:"🌸";font-size:1.5em;line-height:1;}
 .note.deco-nature-grass::after,.deco-swatch.deco-nature-grass::after{content:"";position:absolute;left:0;right:0;bottom:0;height:.7em;background:linear-gradient(135deg,#16a34a 25%,transparent 25%) 0 0/.7em .7em,linear-gradient(225deg,#16a34a 25%,transparent 25%) 0 0/.7em .7em;pointer-events:none}
 .note.deco-season-confetti,.deco-swatch.deco-season-confetti{background-image:radial-gradient(circle at 10% 20%,#ef4444 .18em,transparent .2em),radial-gradient(circle at 85% 15%,#3b82f6 .18em,transparent .2em),radial-gradient(circle at 25% 88%,#22c55e .18em,transparent .2em),radial-gradient(circle at 92% 78%,#f59e0b .18em,transparent .2em),radial-gradient(circle at 60% 94%,#a855f7 .18em,transparent .2em)}
 .note.deco-season-rain,.deco-swatch.deco-season-rain{background-image:repeating-linear-gradient(100deg,transparent 0 .5em,rgba(59,130,246,.14) .5em calc(.5em + 1px))}

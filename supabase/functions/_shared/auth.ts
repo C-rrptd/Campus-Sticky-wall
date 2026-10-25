@@ -47,6 +47,11 @@ export interface AuthUser {
   email?: string;
 }
 
+/** Minimal Storage surface (absent in tests that don't need it). */
+export interface MediaStorage {
+  remove(paths: string[]): Promise<void>;
+}
+
 export interface Deps {
   /** service_role database handle */
   db: Db;
@@ -58,6 +63,7 @@ export interface Deps {
   env: (key: string) => string | undefined;
   /** optional Supabase Auth admin hook (ban/unban); absent in tests */
   setUserBan?: (userId: string, banned: boolean) => Promise<void>;
+  storage?: MediaStorage;
 }
 
 function firstKey(jsonDict: string | undefined): string | undefined {
@@ -121,6 +127,13 @@ export function defaultDeps(): Deps {
     setUserBan: async (userId, banned) => {
       const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: banned ? "876000h" : "none" });
       if (error) throw new Error(error.message);
+    },
+    storage: {
+      remove: async (paths) => {
+        if (paths.length === 0) return;
+        const { error } = await admin.storage.from("note-media").remove(paths);
+        if (error) throw new Error(error.message);
+      },
     },
   };
   cached = deps;

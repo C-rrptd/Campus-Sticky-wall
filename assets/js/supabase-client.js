@@ -2,6 +2,7 @@
 // for RPC and Edge Function calls. Errors become ApiError {code, message, status}.
 
 import { config } from "./config.js";
+import { cleanForUpload } from "./media-clean.js";
 
 let client = null;
 
@@ -99,10 +100,18 @@ export function mediaUrl(path) {
 /** Upload files into the signed-in user's folder; resolves to [{path, kind}]. */
 export async function uploadNoteMedia(files, userId) {
   const out = [];
-  for (const file of files) {
+  for (const original of files) {
+    let file;
+    try {
+      file = await cleanForUpload(original); // strips photo metadata; fails closed
+    } catch {
+      throw new ApiError("UPLOAD_FAILED", `Couldn’t prepare ${original.name}. Try a different file.`, 0);
+    }
+    const problem = mediaProblem(file);
+    if (problem) throw new ApiError("UPLOAD_FAILED", problem, 0);
     const path = `${userId}/${crypto.randomUUID()}.${MEDIA_EXT[file.type]}`;
     const { error } = await getClient().storage.from("note-media").upload(path, file, { contentType: file.type });
-    if (error) throw new ApiError("UPLOAD_FAILED", `Couldn’t upload ${file.name}. Please try again.`, 0);
+    if (error) throw new ApiError("UPLOAD_FAILED", `Couldn’t upload ${original.name}. Please try again.`, 0);
     out.push({ path, kind: file.type.startsWith("video/") ? "video" : "image" });
   }
   return out;
