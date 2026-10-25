@@ -46,14 +46,14 @@
     <p class="page-lead">Describe your offer, pick a package and submit. We review it first; <strong>you only pay after approval</strong>. Your ad then goes live and ends automatically. Paid placements are always labelled “Sponsored”.</p>
     <div class="composer__layout">
       <form class="card stack" data-ref="form" novalidate>
-        <fieldset class="ad-section stack">
-          <legend>1. Your business</legend>
+        <div class="ad-section stack" role="group" aria-labelledby="ad-s1">
+          <h2 class="ad-section__title" id="ad-s1">1. Your business</h2>
           <label class="field"><span class="field__label">Advertiser / business name</span><input name="advertiser_name" maxlength="80" required autocomplete="organization"></label>
           <label class="field"><span class="field__label">Contact email</span><input name="contact_email" type="email" maxlength="200" required autocomplete="email"></label>
-        </fieldset>
+        </div>
 
-        <fieldset class="ad-section stack">
-          <legend>2. Your ad</legend>
+        <div class="ad-section stack" role="group" aria-labelledby="ad-s2">
+          <h2 class="ad-section__title" id="ad-s2">2. Your ad</h2>
           <label class="field"><span class="field__label">Title</span><input name="title" maxlength="80" required></label>
           <label class="field">
             <span class="field__label">Description</span>
@@ -81,24 +81,24 @@
             <div class="file-previews" data-ref="creativePreview" aria-live="polite"></div>
             <span class="field__hint">PNG, JPG or WebP, up to 1 MB.</span>
           </label>
-        </fieldset>
+        </div>
 
-        <fieldset class="ad-section stack">
-          <legend>3. Placement</legend>
+        <div class="ad-section stack" role="group" aria-labelledby="ad-s3">
+          <h2 class="ad-section__title" id="ad-s3">3. Placement</h2>
           <div class="choice-cards" data-ref="placements" role="radiogroup" aria-label="Placement"></div>
-        </fieldset>
+        </div>
 
-        <fieldset class="ad-section stack">
-          <legend>4. Duration</legend>
+        <div class="ad-section stack" role="group" aria-labelledby="ad-s4">
+          <h2 class="ad-section__title" id="ad-s4">4. Duration</h2>
           <div class="choice-cards" data-ref="durations" role="radiogroup" aria-label="Duration"></div>
-        </fieldset>
+        </div>
 
-        <fieldset class="ad-section stack">
-          <legend>5. Where it appears</legend>
+        <div class="ad-section stack" role="group" aria-labelledby="ad-s5">
+          <h2 class="ad-section__title" id="ad-s5">5. Where it appears</h2>
           <label class="field"><span class="field__label">Reach</span><select data-ref="scope"></select></label>
           <div class="field" data-ref="targets"></div>
           <label class="field"><span class="field__label">Preferred start date</span><input name="requested_start" type="date" data-ref="start" required></label>
-        </fieldset>
+        </div>
 
         <label class="check"><input type="checkbox" data-ref="agree"><span>I have read the advertising policy and confirm my ad follows it.</span></label>
         <p class="field__error" data-ref="error" role="alert"></p>
