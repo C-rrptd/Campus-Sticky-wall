@@ -55,6 +55,8 @@ export function buildSnapBody(input: {
   items: SnapItem[];
   enabledPayments: string[];
   finishUrl: string;
+  /** Snap session lifetime in minutes; omitted = Midtrans default (24h). */
+  expiryMinutes?: number;
 }): string {
   if (!/^[0-9]{1,19}$/.test(input.grossAmount) || BigInt(input.grossAmount) <= 0n) {
     throw new HttpError(400, "INVALID_AMOUNT", "Invalid payable amount.");
@@ -85,7 +87,8 @@ export function buildSnapBody(input: {
     })),
     enabled_payments: input.enabledPayments,
     callbacks: { finish: input.finishUrl },
-    // No custom `expiry`: Snap's default (24h) applies, inside our 25h order expiry.
+    // Unpaid posts are deleted after 30 minutes, so the Snap session must not outlive them.
+    ...(input.expiryMinutes ? { expiry: { unit: "minutes", duration: input.expiryMinutes } } : {}),
   };
   return JSON.stringify(body).replace(/"__RAW_(\d+)__"/g, (_m, i) => raws[Number(i)]);
 }

@@ -52,6 +52,16 @@ export function amount(v: unknown, field = "amount"): string {
   return v;
 }
 
+/** Promo code: 4-24 letters/digits, upper-cased. Anything else is "no code" only when empty. */
+export function promoCode(v: unknown): string | null {
+  if (v === undefined || v === null || v === "") return null;
+  if (typeof v !== "string") throw bad("PROMO_INVALID", "This code is not valid.");
+  const c = v.trim().toUpperCase();
+  if (c === "") return null;
+  if (!/^[A-Z0-9]{4,24}$/.test(c)) throw bad("PROMO_INVALID", "This code is not valid.");
+  return c;
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function uuid(v: unknown, field: string, optional = false): string | null {

@@ -1,14 +1,33 @@
 // Client-side validation for usability. The backend repeats every rule; nothing
 // here is a security boundary.
 
-export const MIN_PUBLICATION_PRICE = 5000n;
-export const CREDIT_VALUE = 5000n;
+// Pricing comes from public.site_config (min_publication_price, max_publication_price, price_presets,
+// confirm_above_amount) via setPricing(). These defaults only apply until it loads; the server decides.
+export const pricing = { min: 2500n, max: 1000000n, presets: [2500n, 5000n, 10000n], confirmAbove: 100000n };
+export const CREDIT_VALUE = 5000n; // old verify-time credit, no new ones are issued
+
+const fmt = (n) => `Rp${n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+export { fmt as formatMoney };
+
+/** rows: [{ key, value }] from site_config. Ignores anything malformed. */
+export function setPricing(rows) {
+  const big = (v) => { try { const n = BigInt(String(v)); return n > 0n ? n : null; } catch { return null; } };
+  for (const { key, value } of rows ?? []) {
+    if (key === "min_publication_price" && big(value)) pricing.min = big(value);
+    if (key === "max_publication_price" && big(value)) pricing.max = big(value);
+    if (key === "confirm_above_amount" && big(value)) pricing.confirmAbove = big(value);
+    if (key === "price_presets" && Array.isArray(value)) {
+      const list = value.map(big).filter(Boolean);
+      if (list.length) pricing.presets = list;
+    }
+  }
+}
 
 /**
  * Parse a rupiah amount typed by a person. Accepts digits with optional "Rp",
  * spaces and "." thousands separators ("25.000"). Rejects decimals, commas,
  * signs and exponents. Returns { ok, digits, value(bigint), error }.
- * There is deliberately NO maximum.
+ * The maximum here only mirrors the server cap.
  */
 export function parseRupiah(input) {
   const raw = String(input ?? "").trim();
@@ -24,7 +43,8 @@ export function parseRupiah(input) {
 export function validatePublicationAmount(input) {
   const parsed = parseRupiah(input);
   if (!parsed.ok) return parsed;
-  if (parsed.value < MIN_PUBLICATION_PRICE) return { ok: false, error: "The minimum publication price is Rp5.000." };
+  if (parsed.value < pricing.min) return { ok: false, error: `The minimum publication price is ${fmt(pricing.min)}.` };
+  if (parsed.value > pricing.max) return { ok: false, error: `The maximum publication price is ${fmt(pricing.max)}.` };
   return parsed;
 }
 

@@ -31,13 +31,11 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
 
   const status = await fetchTransactionStatus(cfg, notification.order_id, deps.fetch);
-  // Must come first: Midtrans' "Test notification URL" sends a fake order_id, and the
-  // Get Status 404 body has no order_id. Returning 200 here lets the test pass.
-  if (status.status_code === "404") {
-    return json(req, 200, { result: "unknown_transaction" }, deps.env);
-  }
   if (status.order_id !== notification.order_id) {
     throw new HttpError(409, "STATUS_ORDER_MISMATCH");
+  }
+  if (typeof status.status_code === "string" && status.status_code === "404") {
+    return json(req, 200, { result: "unknown_transaction" }, deps.env);
   }
 
   const result = await rpc<{ result: string }>(deps.db, "apply_payment_notification", statusToRpcArgs(status, notification));

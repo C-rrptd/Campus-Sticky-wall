@@ -96,6 +96,16 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
   })],
   list_referrals: ["admin_list_referrals", (p) => ({ p_limit: int(p.limit, 100, 500) })],
   revoke_credit: ["admin_revoke_credit", (p) => ({ p_credit_id: v.uuid(p.credit_id, "credit_id"), p_reason: reason(p.reason) })],
+  list_promos: ["admin_list_promos", () => ({})],
+  create_promo: ["admin_create_promo", (p) => ({
+    p_code: v.str(p.code, "code", { min: 4, max: 24 }),
+    p_kind: v.oneOf(p.kind, "kind", ["percent", "fixed"] as const),
+    p_value: Number.isSafeInteger(p.value) && (p.value as number) > 0 ? p.value : (() => { throw new HttpError(400, "INVALID_FIELD", "value must be a positive whole number."); })(),
+    p_max_uses: p.max_uses === null || p.max_uses === undefined || p.max_uses === "" ? null : int(p.max_uses, 1, 1000000) || null,
+    p_per_user: int(p.per_user, 1, 1000) || 1,
+    p_expires: p.expires_at ? v.isoDate(p.expires_at, "expires_at") : null,
+  })],
+  set_promo_enabled: ["admin_set_promo_enabled", (p) => ({ p_id: v.uuid(p.id, "id"), p_enabled: v.bool(p.enabled, "enabled", true) })],
   audit_log: ["admin_audit_entries", (p) => ({ p_limit: int(p.limit, 100, 500), p_offset: int(p.offset, 0, 100000) })],
   leaderboard_diagnostics: ["admin_leaderboard_diagnostics", () => ({})],
   revoke_referral_credits: ["admin_revoke_referral_credits", (p) => ({

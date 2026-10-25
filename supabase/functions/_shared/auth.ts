@@ -50,6 +50,8 @@ export interface AuthUser {
 /** Minimal Storage surface (absent in tests that don't need it). */
 export interface MediaStorage {
   remove(paths: string[]): Promise<void>;
+  /** Rename inside the note-media bucket. Used to swap the uploader's folder (their user id) for a random one. */
+  move?(from: string, to: string): Promise<void>;
 }
 
 export interface Deps {
@@ -132,6 +134,10 @@ export function defaultDeps(): Deps {
       remove: async (paths) => {
         if (paths.length === 0) return;
         const { error } = await admin.storage.from("note-media").remove(paths);
+        if (error) throw new Error(error.message);
+      },
+      move: async (from, to) => {
+        const { error } = await admin.storage.from("note-media").move(from, to);
         if (error) throw new Error(error.message);
       },
     },

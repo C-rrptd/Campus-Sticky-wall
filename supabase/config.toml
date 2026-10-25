@@ -58,6 +58,8 @@ verify_jwt = false
 verify_jwt = false
 [functions.redeem-referral-credit]
 verify_jwt = false
+[functions.check-promo]
+verify_jwt = false
 [functions.manage-guest-publication]
 verify_jwt = false
 [functions.leaderboard-data]

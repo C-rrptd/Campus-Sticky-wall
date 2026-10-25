@@ -1,5 +1,5 @@
 // Sticky-note rendering and interactions (vote, bookmark, report) plus the
-// note composer with customer-defined pricing (minimum Rp5.000, no maximum).
+// note composer with customer-defined pricing (min/cap/presets from site_config).
 // Totals shown here are ESTIMATES; the server computes the authoritative price.
 
 import { cloneTemplate } from "./component-loader.js";
@@ -7,7 +7,7 @@ import { currentUser } from "./auth.js";
 import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
-import { CREDIT_VALUE, isAllowedSocialUrl, textLength, validateNote, validatePublicationAmount } from "./validation.js";
+import { CREDIT_VALUE, formatMoney, isAllowedSocialUrl, pricing, setPricing, textLength, validateNote, validatePublicationAmount } from "./validation.js";
 import { busy, el, errorMessage, formatRupiah, openDialog, refs, safeUrl, timeAgo, toast } from "./utils.js";
 
 const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
@@ -89,6 +89,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, n
   if (note.id) r.root.dataset.noteId = note.id;
   const hasMedia = Array.isArray(note.media) && note.media.length > 0;
   r.body.textContent = truncateBody(note.body ?? "");
+  if (r.body.textContent.endsWith("…")) r.body.dataset.cut = "1";
   // A note with media shows only a "Contains media" badge on the wall; the viewer shows everything.
   r.body.hidden = hasMedia;
   r.mediaBadge.hidden = !hasMedia;
@@ -248,7 +249,22 @@ export async function mountComposer(view, { signal, navigate }) {
   view.append(cloneTemplate("tpl-note-composer"));
   const r = refs(view);
   const user = currentUser();
-  const state = { decorations: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {} };
+  const state = { decorations: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {}, promo: null };
+  const picked = (data) => picked(data).filter(Boolean);
+
+  // Pricing config (public site_config rows). Failure keeps the built-in defaults; the server still decides.
+  try {
+    setPricing(await query(getClient().from("site_config").select("key,value")
+      .in("key", ["min_publication_price", "max_publication_price", "price_presets", "confirm_above_amount"])));
+  } catch { /* defaults */ }
+  r.minText.textContent = formatMoney(pricing.min);
+  r.amount.value = String(pricing.presets[0]);
+  r.amountHint.textContent = `Minimum ${formatMoney(pricing.min)}, maximum ${formatMoney(pricing.max)}. Anything above the minimum is a tip. Digits only (dots are fine, e.g. 25.000).`;
+  r.presets.replaceChildren(...pricing.presets.map((p) => {
+    const b = el("button", { type: "button", class: "chip" }, formatMoney(p));
+    b.addEventListener("click", () => { r.amount.value = String(p); recompute(); }, { signal });
+    return b;
+  }));
 
   // Optional campus tag
   const campus = buildCampusSelect({ value: getLocationPref().campus ?? "", signal });
@@ -261,7 +277,7 @@ export async function mountComposer(view, { signal, navigate }) {
       body: String(data.get("body") || "Your note will look like this."),
       author_name: String(data.get("author_name") || "You"),
       color: String(data.get("color") || "yellow"),
-      decorations: data.getAll("decorations").map(String),
+      decorations: picked(data),
       placements: {},
       amount: amount.ok && r.showAmount.checked ? amount.digits : null,
       vote_count: 0,
@@ -280,7 +296,7 @@ export async function mountComposer(view, { signal, navigate }) {
     const amount = validatePublicationAmount(r.amount.value);
     r.amountError.textContent = amount.ok ? "" : amount.error;
     r.amount.setAttribute("aria-invalid", amount.ok ? "false" : "true");
-    const chosen = new Set(new FormData(r.form).getAll("decorations").map(String));
+    const chosen = new Set(picked(new FormData(r.form)));
     let decos = 0n;
     for (const d of state.decorations) if (chosen.has(d.id)) decos += BigInt(String(d.price));
     // Referral credits are optional: one master checkbox, then fine-tuning.
@@ -304,13 +320,26 @@ export async function mountComposer(view, { signal, navigate }) {
     r.refSummary.textContent = r.useRefCredits.checked ? (used.length ? `Using ${used.join(" and ")}.` : "No credits will be used for this note.") : "";
     r.sumAmount.textContent = amount.ok ? formatRupiah(amount.value) : "—";
     r.sumDecos.textContent = formatRupiah(decos);
+    // Free weekly post / verified promo: applies to the minimum part only (tips are never discounted).
+    const sig = `${amount.ok ? amount.digits : ""}|${[...chosen].sort()}`;
+    if (state.promo && state.promo.sig !== sig) { state.promo = null; r.promoMsg.textContent = ""; }
+    r.promo.disabled = r.useFree.checked;
+    r.applyPromo.disabled = r.useFree.checked;
+    let discount = 0n;
+    if (amount.ok && r.useFree.checked) discount = amount.value < pricing.min ? amount.value : pricing.min;
+    else if (state.promo) discount = state.promo.discount;
+    r.sumPromoRow.hidden = discount === 0n;
+    r.sumPromoLabel.textContent = r.useFree.checked ? "Free weekly post" : "Promo";
+    r.sumPromo.textContent = formatRupiah(-discount);
     r.sumCreditRow.hidden = credit === 0n;
     r.sumCredit.textContent = formatRupiah(-credit);
-    const total = amount.ok ? amount.value + decos - credit : null;
+    const total = amount.ok ? amount.value + decos - credit - discount : null;
     r.sumTotal.textContent = total === null ? "—" : formatRupiah(total);
     r.confirmAmount.textContent = total === null ? "—" : formatRupiah(total);
-    r.submit.textContent = total === 0n ? "Publish with my free credits" : "Continue to payment";
-    const key = `${amount.ok ? amount.digits : ""}|${[...chosen].sort()}|${credit}`;
+    r.submit.textContent = total === 0n ? "Publish for free" : "Continue to payment";
+    const needConfirm = amount.ok && amount.value > pricing.confirmAbove;
+    r.confirmRow.hidden = !needConfirm;
+    const key = `${amount.ok ? amount.digits : ""}|${[...chosen].sort()}|${credit}|${discount}`;
     if (r.confirm.dataset.key !== key) {
       // The customer must re-confirm whenever the amount changes.
       r.confirm.checked = false;
@@ -334,16 +363,19 @@ export async function mountComposer(view, { signal, navigate }) {
   // Decorations (enabled only, prices from the database)
   try {
     state.decorations = await query(getClient().from("decorations").select("id,name,description,category,placeable,default_x,default_y,price::text").order("sort_order"));
-    r.decorations.replaceChildren(...state.decorations.map((d) => {
-      const opt = cloneTemplate("tpl-decoration-option");
-      const o = refs(opt);
-      o.input.value = d.id;
-      o.name.textContent = d.name;
-      o.cat.textContent = d.category ?? "";
-      if (/^[a-z0-9-]{2,40}$/.test(d.id)) o.swatch.classList.add(`deco-${d.id}`);
-      o.price.textContent = String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`;
-      if (d.description) o.name.title = d.description;
-      return opt;
+    const groups = new Map();
+    for (const d of state.decorations) {
+      const cat = d.category || "Other";
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat).push(d);
+    }
+    // One dropdown per category, default "None". Only decoration ids are sent; the server re-checks them.
+    r.decorations.replaceChildren(...[...groups].map(([cat, list]) => {
+      const sel = el("select", { name: "decorations", "aria-label": cat },
+        el("option", { value: "" }, "None"),
+        ...list.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id)).map((d) => el("option", { value: d.id },
+          `${d.name} — ${String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`}`)));
+      return el("label", { class: "field field--compact" }, el("span", { class: "field__label" }, cat), sel);
     }));
     if (state.decorations.length === 0) r.decorations.replaceChildren(el("p", { class: "muted" }, "No decorations available right now."));
   } catch {
@@ -378,8 +410,31 @@ export async function mountComposer(view, { signal, navigate }) {
     } catch {
       r.refRow.hidden = true;
     }
-    if (!r.author.value) r.author.value = user.user_metadata?.display_name ?? "";
+    r.discountRow.hidden = false;
+    try {
+      state.freeAvailable = Boolean(await rpc("my_free_post_available"));
+      r.freeRow.hidden = !state.freeAvailable;
+    } catch { r.freeRow.hidden = true; }
+    // Not prefilled with the account name: custom names must not match registered members anyway.
   }
+  r.applyPromo.addEventListener("click", () => busy(r.applyPromo, async () => {
+    const amount = validatePublicationAmount(r.amount.value);
+    const code = r.promo.value.trim();
+    r.promoMsg.textContent = "";
+    state.promo = null;
+    if (!code) { recompute(); return; }
+    if (!amount.ok) { r.promoMsg.textContent = amount.error; return; }
+    const chosen = picked(new FormData(r.form));
+    try {
+      const res = await invoke("check-promo", { amount: amount.digits, decorations: chosen, promo_code: code });
+      const discount = BigInt(res.quote.discount);
+      state.promo = { discount, sig: `${amount.digits}|${[...chosen].sort()}` };
+      r.promoMsg.textContent = `Code accepted: ${formatRupiah(-discount)}. New total ${formatRupiah(res.quote.total_amount)}.`;
+    } catch (err) {
+      r.promoMsg.textContent = errorMessage(err);
+    }
+    recompute();
+  }), { signal });
   recompute();
 
   r.submit.addEventListener("click", () => busy(r.submit, async () => {
@@ -392,7 +447,7 @@ export async function mountComposer(view, { signal, navigate }) {
     if (errors.body || errors.author_name) { r.formError.textContent = errors.body || errors.author_name; return; }
     if (!amount.ok) { r.formError.textContent = amount.error; r.amount.focus(); return; }
     if (social && !isAllowedSocialUrl(social)) { r.formError.textContent = "Social links must be https links on a supported platform."; return; }
-    if (!r.confirm.checked) { r.formError.textContent = "Please confirm the amount you want to pay."; r.confirm.focus(); return; }
+    if (amount.value > pricing.confirmAbove && !r.confirm.checked) { r.formError.textContent = "Please confirm the amount you want to pay."; r.confirm.focus(); return; }
     const files = [...(r.media.files ?? [])];
     if (files.length > MEDIA_MAX_FILES) { r.formError.textContent = `Attach at most ${MEDIA_MAX_FILES} files.`; return; }
     const bad = files.map(mediaProblem).find(Boolean);
@@ -407,17 +462,19 @@ export async function mountComposer(view, { signal, navigate }) {
         social_link: social || null,
         show_amount: r.showAmount.checked,
         amount: amount.digits,
-        confirm_amount: amount.digits,
-        decorations: data.getAll("decorations").map(String),
+        confirm_amount: amount.value > pricing.confirmAbove && r.confirm.checked ? amount.digits : null,
+        promo_code: r.useFree.checked ? null : (r.promo.value.trim() || null),
+        use_free_post: r.useFree.checked,
+        decorations: picked(data),
         use_credit: r.useCredit.checked,
         use_post_credit: r.usePostCredit.checked,
         deco_credits: Math.max(0, Math.floor(Number(r.decoCredits.value) || 0)),
-        decoration_positions: Object.fromEntries(Object.entries(state.positions).filter(([id]) => data.getAll("decorations").includes(id))),
+        decoration_positions: Object.fromEntries(Object.entries(state.positions).filter(([id]) => picked(data).includes(id))),
         campus_id: campus.select.value || null,
         media,
       });
       rememberReceipt(res.order.order_ref, res.access_token);
-      if (res.order.status === "completed_free") toast("Published with your free credits!", "success");
+      if (res.order.status === "completed_free") toast("Published for free!", "success");
       navigate("/checkout", { order: res.order.order_ref });
     } catch (err) {
       r.formError.textContent = errorMessage(err);

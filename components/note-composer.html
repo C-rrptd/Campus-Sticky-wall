@@ -1,8 +1,8 @@
-<!-- Compose a sticky note with a customer-chosen price (minimum Rp5.000, no maximum). -->
+<!-- Compose a sticky note with a customer-chosen price. Minimum, cap and presets come from site_config (see notes.js). -->
 <template id="tpl-note-composer">
   <section class="composer">
     <h1 class="page-title">Post a sticky note</h1>
-    <p class="page-lead">No account needed. <strong>You choose how much you pay to publish</strong> — anything from Rp5.000 upwards.</p>
+    <p class="page-lead">No account needed. <strong>You choose how much you pay to publish</strong> — anything from <span data-ref="minText">Rp2.500</span> upwards.</p>
 
     <div class="composer__layout">
       <form class="composer__form card" data-ref="form" novalidate>
@@ -14,17 +14,19 @@
 
         <label class="field">
           <span class="field__label">Name shown on the note</span>
-          <input name="author_name" data-ref="author" maxlength="40" required autocomplete="nickname" placeholder="e.g. Rani from Agronomy">
+          <input name="author_name" data-ref="author" maxlength="40" required autocomplete="off" placeholder="e.g. Rani from Agronomy">
+          <span class="field__hint">Plain text only: never a link, never tied to an account. Names of registered members, links and @handles are not allowed.</span>
         </label>
 
         <label class="field">
           <span class="field__label">How much do you want to pay to publish? (Rp)</span>
           <span class="money-input">
             <span class="money-input__prefix" aria-hidden="true">Rp</span>
-            <input name="amount" data-ref="amount" inputmode="numeric" autocomplete="off" value="5000"
+            <input name="amount" data-ref="amount" inputmode="numeric" autocomplete="off" value="2500"
                    aria-describedby="amount-hint amount-error" required>
           </span>
-          <span class="field__hint" id="amount-hint">Minimum Rp5.000. There is no maximum — pay what you like. Digits only (dots are fine, e.g. 25.000).</span>
+          <div class="presets" data-ref="presets" role="group" aria-label="Quick amounts"></div>
+          <span class="field__hint" id="amount-hint" data-ref="amountHint">Digits only (dots are fine, e.g. 25.000).</span>
           <span class="field__error" id="amount-error" data-ref="amountError" role="alert"></span>
         </label>
 
@@ -41,7 +43,7 @@
         </fieldset>
 
         <fieldset class="field">
-          <legend class="field__label">Decorations (optional, paid)</legend>
+          <legend class="field__label">Decorations (optional — pick at most one per group)</legend>
           <div class="decorations" data-ref="decorations"><p class="muted">Loading decorations…</p></div>
         </fieldset>
 
@@ -63,6 +65,20 @@
           <input type="checkbox" name="show_amount" data-ref="showAmount" checked>
           <span>Show the amount I paid on my note</span>
         </label>
+
+        <fieldset class="field" data-ref="discountRow" hidden>
+          <legend class="field__label">Free post and promo code</legend>
+          <label class="check" data-ref="freeRow" hidden>
+            <input type="checkbox" name="use_free_post" data-ref="useFree">
+            <span><strong>1 free post available</strong> this week (resets Monday 00:00 WIB). Covers the minimum price.</span>
+          </label>
+          <div class="row row--tight">
+            <input data-ref="promo" maxlength="24" autocomplete="off" autocapitalize="characters" placeholder="Promo code" aria-label="Promo code">
+            <button type="button" class="btn btn--small" data-ref="applyPromo">Apply</button>
+          </div>
+          <span class="field__hint">Discounts apply to the minimum price only. Anything paid above it is a tip and is never discounted.</span>
+          <p class="small" data-ref="promoMsg" aria-live="polite"></p>
+        </fieldset>
 
         <label class="check" data-ref="creditRow" hidden>
           <input type="checkbox" name="use_credit" data-ref="useCredit">
@@ -98,15 +114,22 @@
         <div class="card summary" aria-live="polite">
           <h2 class="summary__title">Order summary</h2>
           <dl class="summary__list">
-            <div><dt>Your publication price</dt><dd data-ref="sumAmount">Rp5.000</dd></div>
+            <div><dt>Your publication price</dt><dd data-ref="sumAmount">Rp2.500</dd></div>
             <div><dt>Decorations</dt><dd data-ref="sumDecos">Rp0</dd></div>
-            <div data-ref="sumCreditRow" hidden><dt>Credits</dt><dd data-ref="sumCredit">−Rp5.000</dd></div>
-            <div class="summary__total"><dt>Total due</dt><dd data-ref="sumTotal">Rp5.000</dd></div>
+            <div data-ref="sumPromoRow" hidden><dt data-ref="sumPromoLabel">Promo</dt><dd data-ref="sumPromo">−Rp0</dd></div>
+            <div data-ref="sumCreditRow" hidden><dt>Credits</dt><dd data-ref="sumCredit">−Rp0</dd></div>
+            <div class="summary__total"><dt>Total due</dt><dd data-ref="sumTotal">Rp2.500</dd></div>
           </dl>
           <p class="muted small">Final amounts are calculated by our server before payment.</p>
-          <label class="check">
+          <details class="small privacy-note">
+            <summary>What we can and can’t see</summary>
+            <p><strong>Public:</strong> your note, the name you typed, decorations, the amount if you chose to show it.</p>
+            <p><strong>We don’t keep:</strong> any link between your account and a published note. Payment, free-post and promo records hold no note text or note id. Free-post and promo records only keep the hour, not the minute.</p>
+            <p><strong>Still visible:</strong> Midtrans sees who paid and when (we can’t hide that); if you choose a social link it is public; at the moment you post, the time of your payment and the time your note appears are close together.</p>
+          </details>
+          <label class="check" data-ref="confirmRow" hidden>
             <input type="checkbox" data-ref="confirm">
-            <span>I confirm I want to pay <strong data-ref="confirmAmount">Rp5.000</strong> for this note.</span>
+            <span>I confirm I want to pay <strong data-ref="confirmAmount">Rp2.500</strong> for this note.</span>
           </label>
           <button type="button" class="btn btn--primary btn--block" data-ref="submit">Continue to payment</button>
         </div>

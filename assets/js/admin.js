@@ -231,7 +231,7 @@ const panels = {
   async catalog(panel, reload) {
     const c = await api("list_catalog");
     const policy = el("p", { class: "notice" },
-      `Publication pricing policy: customers choose their price. Minimum ${formatRupiah(c.pricing_policy.min_publication_price)}; no maximum (fixed product rule). Referral credit: ${formatRupiah(c.pricing_policy.referral_credit_value)}.`);
+      `Publication pricing policy: customers choose their price. Minimum ${formatRupiah(c.pricing_policy.min_publication_price)}; server cap ${formatRupiah(c.config.find((x) => x.key === "max_publication_price")?.value ?? 0)} (site_config: min_publication_price, max_publication_price, price_presets, confirm_above_amount). Referral credit: ${formatRupiah(c.pricing_policy.referral_credit_value)}.`);
 
     const decoRows = c.decorations.map((d) => {
       const name = el("input", { value: d.name, maxlength: "50" });
@@ -378,6 +378,32 @@ const panels = {
       el("h2", {}, "Regions"),
       table([{ label: "Region", key: "name" }, { label: "Country", key: "country_code" }, { label: "", render: (x) => manage("region", x.id) }], regions),
     );
+  },
+
+  async promos(panel, reload) {
+    const rows = await api("list_promos");
+    const f = { code: el("input", { placeholder: "CODE (4-24 letters/digits)", maxlength: "24" }),
+      kind: el("select", {}, el("option", { value: "percent" }, "% off the minimum"), el("option", { value: "fixed" }, "Rp off the minimum")),
+      value: el("input", { inputmode: "numeric", placeholder: "100 = free post" }),
+      max: el("input", { inputmode: "numeric", placeholder: "max uses (blank = unlimited)" }),
+      per: el("input", { inputmode: "numeric", value: "1", "aria-label": "per user" }),
+      exp: el("input", { type: "date", "aria-label": "expires" }) };
+    const create = button("Create code", async () => {
+      await api("create_promo", { code: f.code.value, kind: f.kind.value, value: Number(f.value.value), max_uses: f.max.value.trim() || null,
+        per_user: Number(f.per.value) || 1, expires_at: f.exp.value || null });
+      toast("Code created.", "success"); reload();
+    }, "btn btn--primary btn--small");
+    panel.replaceChildren(
+      el("p", { class: "notice" }, "Discounts apply to the minimum price only; anything paid above it is a tip and is never discounted. Codes need a signed-in account."),
+      actions(f.code, f.kind, f.value, f.max, f.per, f.exp, create),
+      table([
+        { label: "Code", key: "code" },
+        { label: "Discount", render: (r) => (r.kind === "percent" ? `${r.value}%` : formatRupiah(r.value)) },
+        { label: "Used", render: (r) => `${r.uses}${r.max_uses ? ` / ${r.max_uses}` : ""}` },
+        { label: "Per user", key: "per_user_limit" },
+        { label: "Expires", render: (r) => (r.expires_at ? formatDate(r.expires_at) : "never") },
+        { label: "On", render: (r) => button(r.enabled ? "Disable" : "Enable", async () => { await api("set_promo_enabled", { id: r.id, enabled: !r.enabled }); reload(); }) },
+      ], rows, "No codes yet."));
   },
 
   async announcements(panel, reload, state) {

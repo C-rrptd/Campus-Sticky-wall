@@ -26,6 +26,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   if (!user && !token) throw new HttpError(401, "AUTH_REQUIRED", "Sign in or use your receipt link.");
 
   await rateLimit(deps.db, `create-payment:ip:${clientIp(req)}`, 30, 600);
+  await rateLimit(deps.db, `create-payment:order:${ref}`, 5, 600); // double-click / retry storms on one order
 
   const cfg = midtransConfig(deps.env);
   if (!cfg) {
@@ -55,6 +56,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
       // works whether those land in the query (app.js reads order_id) or after
       // the fragment (the router still sees order=...).
       finishUrl: `${siteUrl.replace(/\/$/, "")}/#/checkout?order=${encodeURIComponent(ref)}&returned=1`,
+      expiryMinutes: 30, // matches record_payment_session (+5 min grace) and the 30-minute unpaid-post rule
     });
     const session = await createSnapTransaction(cfg, snapBody, deps.fetch);
     await rpc(deps.db, "record_payment_session", {

@@ -4,7 +4,7 @@ The authoritative implementation of each rule is the SQL in `supabase/migrations
 
 ## 1. Customer-defined publication price
 
-- The customer chooses the publication price. **Minimum Rp5.000. No application-defined maximum.** (`public.min_publication_price()`; there is no maximum function by design.)
+- The customer chooses the publication price. **Minimum Rp2.500, hard cap Rp1.000.000** (migration 012). Both, the presets (Rp2.500 preselected, Rp5.000, Rp10.000) and the confirmation threshold (above Rp100.000) live in `site_config`: `min_publication_price`, `max_publication_price`, `price_presets`, `confirm_above_amount`. `public.min_publication_price()` / `max_publication_price()` read them; the browser reads the same rows.
 - Amounts travel as **decimal strings of digits**. They are parsed exactly by `parse_amount`, which rejects signs, decimals, exponents and whitespace, and are stored as `BIGINT` whole rupiah.
 - The only ceiling is technical: BIGINT holds up to 9.223.372.036.854.775.807. Larger values are rejected with `AMOUNT_EXCEEDS_STORAGE_LIMIT`, and nothing is ever rounded or capped.
 - The browser parses with `BigInt`. The UI accepts "25.000" or "Rp 25.000" and has no `max` attribute. The customer must tick a confirmation of the exact total, and the server requires `confirm_amount == amount`.
@@ -99,3 +99,10 @@ These are separate `kind = donation` orders with their own confirmation. The def
 - A post credit makes the note's publication price free (no amount is shown on the note). A decoration credit makes one paid decoration free (highest price first). Free decorations never consume a credit.
 - Post and decoration credits are independent and can be mixed with paid items. They cannot be used for ads or donations, have no cash value and cannot be combined with the old Rp5.000 credit on the same order.
 - The old Rp5.000 verify-time credit is no longer issued; already-issued ones remain valid.
+
+## Migration 012 — free weekly post, promo codes (supersedes the figures above where they differ)
+- Free weekly post: one per account per week (Monday 00:00 Asia/Jakarta), claimed in `free_post_claims(user_id, week_start)`. It waives the minimum price only. Decorations are still paid.
+- Promo codes (`promo_codes`, admin-created): percent (100 = free post) or fixed rupiah off, `max_uses`, `per_user_limit`, `expires_at`. They discount **the minimum price only**; the rest of the amount is a tip and is never discounted. Decorations are never discounted. A free weekly post, a promo code and credits cannot be combined. Promo and free post need an account.
+- Race safety: `apply_post_discount` locks the code row (`FOR UPDATE`), so `uses` and the per-user count cannot be exceeded.
+- Unpaid orders (and their post) are deleted after 30 minutes; a Snap session lasts 30 minutes from the moment payment starts. Failed, denied, cancelled and expired orders delete the pending post and return the promo use and the free post.
+- Anonymity: see `docs/PRIVACY_POSTING.md`.
