@@ -32,6 +32,8 @@
 .promo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-4); }
 .promo-grid[aria-busy="true"] { opacity: 0.7; }
 .cta { margin-top: var(--space-6); text-align: center; }
+/* Featured ads sit above the toolbar/grid; keep them from touching it (empty = no gap). */
+[data-ref="featured"]:not(:empty) { margin-bottom: var(--space-5); }
 
 /* Auth */
 .auth-view { display: flex; justify-content: center; }
