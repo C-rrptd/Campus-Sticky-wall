@@ -29,6 +29,16 @@ function button(label, onClick, cls = "btn btn--small") {
   return b;
 }
 
+/** "pending_moderation" / "owner.delete" -> "Pending moderation" / "Owner delete". */
+const humanize = (v) => {
+  const t = String(v ?? "").replace(/[._]+/g, " ").trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+const shortId = (id) => (id ? el("code", { title: String(id) }, `${String(id).slice(0, 8)}…`) : "");
+const details = (d) => (d && typeof d === "object"
+  ? Object.entries(d).map(([k, v]) => `${humanize(k)}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(" · ")
+  : String(d ?? ""));
+
 function actions(...nodes) {
   return el("div", { class: "row row--tight" }, ...nodes.filter(Boolean));
 }
@@ -60,7 +70,7 @@ const REJECT_REASONS = ["Misleading or false claims", "Not relevant to students"
   "Image or text is unclear or low quality", "Missing or invalid business information"];
 /** Reject needs a reason the advertiser will read: pick a preset and/or write your own. */
 async function rejectionReason(action, row, danger) {
-  if (action !== "reject") return promptReason(`${action} “${row.title}”?`, { danger, okLabel: action });
+  if (action !== "reject") return promptReason(`${humanize(action)} “${row.title}”?`, { danger, okLabel: humanize(action) });
   const preset = el("select", { name: "preset", required: true }, el("option", { value: "" }, "Choose a reason…"), ...REJECT_REASONS.map((t) => el("option", { value: t }, t)));
   const extra = el("textarea", { name: "extra", rows: "3", maxlength: "300", placeholder: "More details for the advertiser (optional)" });
   const data = await openDialog({ title: `Reject “${row.title}”?`, okLabel: "Reject", danger: true,
@@ -97,11 +107,11 @@ const panels = {
   async moderation(panel, reload, state) {
     state.noteStatus ??= "pending_moderation";
     const filter = el("select", {}, ...["pending_moderation", "published", "removed", "rejected", "withdrawn"].map((s) =>
-      el("option", { value: s, selected: s === state.noteStatus || null }, s)));
+      el("option", { value: s, selected: s === state.noteStatus || null }, humanize(s))));
     filter.addEventListener("change", () => { state.noteStatus = filter.value; reload(); });
     const rows = await api("list_notes", { status: state.noteStatus, limit: 100 });
-    const act = (row, action, danger) => button(action, async () => {
-      const reason = await promptReason(`${action} this note?`, { danger, okLabel: action });
+    const act = (row, action, danger) => button(humanize(action), async () => {
+      const reason = await promptReason(`${humanize(action)} this note?`, { danger, okLabel: humanize(action) });
       if (reason === null) return;
       await api("moderate_note", { note_id: row.id, action, reason: reason || null });
       toast(`Note ${action}d.`, "success");
@@ -213,10 +223,10 @@ const panels = {
   async campaigns(panel, reload, state) {
     state.campaignStatus ??= "pending_approval";
     const filter = el("select", {}, ...["pending_approval", "approved", "awaiting_payment", "pending_review", "scheduled", "active", "paused", "expired", "rejected", "canceled", ""]
-      .map((s) => el("option", { value: s, selected: s === state.campaignStatus || null }, s || "all")));
+      .map((s) => el("option", { value: s, selected: s === state.campaignStatus || null }, s ? humanize(s) : "All")));
     filter.addEventListener("change", () => { state.campaignStatus = filter.value; reload(); });
     const rows = await api("list_campaigns", { status: state.campaignStatus || null });
-    const act = (row, action, danger) => button(action, async () => {
+    const act = (row, action, danger) => button(humanize(action), async () => {
       const reason = await rejectionReason(action, row, danger);
       if (reason === null) return;
       await api("review_campaign", { campaign_id: row.id, action, reason: reason || null });
@@ -226,13 +236,16 @@ const panels = {
     panel.replaceChildren(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Status"), filter), table([
       { label: "Campaign", render: (r) => el("div", {}, el("strong", {}, r.title), el("br"), el("span", { class: "small clamp" }, r.description)) },
       { label: "Advertiser", render: (r) => `${r.advertiser_name} <${r.contact_email}>` },
-      { label: "Link", render: (r) => (r.destination_url ? el("a", { href: r.destination_url, target: "_blank", rel: "noopener noreferrer" }, "open ↗") : "none") },
-      { label: "Image", render: (r) => { const u = r.creative_path ? creativeUrl(r.creative_path) : null; return u ? el("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, el("img", { src: u, alt: "", class: "admin-thumb" })) : "none"; } },
-      { label: "Package", render: (r) => `${r.placement === "featured" ? "Featured" : "Random"} · ${r.duration_days ?? "?"}d` },
+      { label: "Creative", render: (r) => {
+        const u = r.creative_path ? creativeUrl(r.creative_path) : null;
+        const img = u && el("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, el("img", { src: u, alt: "", class: "admin-thumb" }));
+        const link = r.destination_url && el("a", { href: r.destination_url, target: "_blank", rel: "noopener noreferrer" }, "Link ↗");
+        return img || link ? el("div", { class: "stack" }, img, link) : "Text only";
+      } },
+      { label: "Package", render: (r) => `${r.placement === "featured" ? "Featured" : "Random"} · ${r.duration_days ?? "?"}d · ${formatRupiah(r.price)}` },
       { label: "Targets", render: (r) => (r.targets ?? []).join(", ") },
-      { label: "Price", render: (r) => formatRupiah(r.price) },
-      { label: "Payment", key: "payment_status" },
-      { label: "Status", key: "status" },
+      { label: "Payment", render: (r) => humanize(r.payment_status) },
+      { label: "Status", render: (r) => el("span", { class: `badge${r.status === "active" ? " badge--ok" : ["rejected", "canceled"].includes(r.status) ? " badge--bad" : r.status === "pending_approval" ? " badge--warn" : ""}` }, humanize(r.status)) },
       { label: "Runs", render: (r) => (r.starts_at ? `${formatDate(r.starts_at)} – ${formatDate(r.ends_at)}` : `from ${r.requested_start}`) },
       { label: "Stats", render: (r) => `${r.impressions} / ${r.clicks}` },
       { label: "Actions", render: (r) => actions(
@@ -438,8 +451,8 @@ const panels = {
 
   async announcements(panel, reload, state) {
     const items = await api("list_announcements");
-    const title = el("input", { maxlength: "120", placeholder: "Title" });
-    const body = el("textarea", { rows: "4", maxlength: "4000", placeholder: "News text" });
+    const title = el("input", { maxlength: "120" });
+    const body = el("textarea", { rows: "6", maxlength: "4000" });
     const pinned = el("input", { type: "checkbox" });
     let editing = null;
     const save = button("Save draft", async () => {
@@ -449,15 +462,20 @@ const panels = {
       reload();
     }, "btn btn--primary");
     const preview = button("Preview", async () => {
-      await openDialog({ title: title.value.trim() || "Preview", okLabel: "Close", body: el("p", { style: "white-space:pre-wrap" }, body.value) });
+      await openDialog({ title: title.value.trim() || "Preview", okLabel: "Close", body: el("p", { class: "announcement__body" }, body.value) });
     });
-    const setStatus = (a, status) => button(status, async () => { await api("set_announcement_status", { id: a.id, status }); reload(); });
+    const STATUS_LABEL = { published: "Publish", draft: "Unpublish", archived: "Archive" };
+    const setStatus = (a, status) => button(STATUS_LABEL[status], async () => { await api("set_announcement_status", { id: a.id, status }); reload(); });
+    const field = (label, node) => el("label", { class: "field" }, el("span", { class: "field__label" }, label), node);
     panel.replaceChildren(
+      el("div", { class: "stack narrow card" }, el("h2", {}, "Write news"),
+        field("Title", title), field("Text", body),
+        el("label", { class: "check" }, pinned, el("span", {}, "Pin on the wall")), actions(save, preview)),
       el("h2", {}, "Recent news"),
       table([
         { label: "Title", key: "title" },
-        { label: "Status", key: "status" },
-        { label: "Pinned", render: (a) => (a.pinned ? "yes" : "") },
+        { label: "Status", render: (a) => el("span", { class: `badge${a.status === "published" ? " badge--ok" : ""}` }, humanize(a.status)) },
+        { label: "Pinned", render: (a) => (a.pinned ? "Pinned" : "") },
         { label: "Published", render: (a) => formatDate(a.published_at) },
         { label: "Last edited by", render: (a) => a.updated_by_name ?? "" },
         { label: "Actions", render: (a) => actions(
@@ -466,8 +484,7 @@ const panels = {
           a.status === "published" && setStatus(a, "draft"),
           a.status !== "archived" && setStatus(a, "archived"),
           ownerDelete(state, "announcement", a.id, "news item", reload)) },
-      ], items),
-      el("div", { class: "stack narrow card" }, el("h2", {}, "Write news"), title, body, el("label", { class: "check" }, pinned, " Pinned on the wall"), actions(save, preview)));
+      ], items));
   },
 
   async referrals(panel, reload, state) {
@@ -527,8 +544,8 @@ const panels = {
     panel.replaceChildren(table([
       { label: "When", render: (r) => formatDate(r.created_at, true) },
       { label: "Admin", key: "actor_name" },
-      { label: "Action", key: "action" },
-      { label: "Target", render: (r) => `${r.target_type ?? ""} ${r.target_id ?? ""}` },
+      { label: "Action", render: (r) => humanize(r.action) },
+      { label: "Target", render: (r) => el("span", {}, `${humanize(r.target_type)} `, shortId(r.target_id)) },
       { label: "Reason", key: "reason" },
       { label: "", render: (r) => ownerDelete(state, "audit_entry", r.id, "audit log entry", reload) ?? "" },
     ], rows));
@@ -539,10 +556,10 @@ const panels = {
     const rows = await api("security_events", { limit: 200 });
     panel.replaceChildren(table([
       { label: "When", render: (r) => formatDate(r.created_at, true) },
-      { label: "Action", key: "action" },
-      { label: "Type", key: "target_type" },
-      { label: "Target", key: "target_id" },
-      { label: "Details", render: (r) => JSON.stringify(r.details) },
+      { label: "Action", render: (r) => humanize(r.action) },
+      { label: "Type", render: (r) => humanize(r.target_type) },
+      { label: "Target", render: (r) => shortId(r.target_id) },
+      { label: "Details", render: (r) => details(r.details) },
     ], rows, "No security events."));
   },
 };

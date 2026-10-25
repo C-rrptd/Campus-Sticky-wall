@@ -46,6 +46,7 @@
 
 /* Admin */
 .admin-panel h2 { margin-top: var(--space-5); }
+.admin-panel .card > h2:first-child { margin-top: 0; }
 .admin-panel .table td .row { flex-wrap: wrap; }
 
 /* Footer */
