@@ -382,12 +382,14 @@ const panels = {
 
   async promos(panel, reload) {
     const rows = await api("list_promos");
-    const f = { code: el("input", { placeholder: "CODE (4-24 letters/digits)", maxlength: "24" }),
+    const f = { code: el("input", { placeholder: "e.g. LAUNCH50", maxlength: "24" }),
       kind: el("select", {}, el("option", { value: "percent" }, "% off the minimum"), el("option", { value: "fixed" }, "Rp off the minimum")),
       value: el("input", { inputmode: "numeric", placeholder: "100 = free post" }),
-      max: el("input", { inputmode: "numeric", placeholder: "max uses (blank = unlimited)" }),
-      per: el("input", { inputmode: "numeric", value: "1", "aria-label": "per user" }),
-      exp: el("input", { type: "date", "aria-label": "expires" }) };
+      max: el("input", { inputmode: "numeric", placeholder: "blank = unlimited" }),
+      per: el("input", { inputmode: "numeric", placeholder: "default 1" }),
+      exp: el("input", { type: "date" }) };
+    f.per.value = "1";
+    const lab = (text, node) => el("label", { class: "field" }, el("span", { class: "field__label" }, text), node);
     const create = button("Create code", async () => {
       await api("create_promo", { code: f.code.value, kind: f.kind.value, value: Number(f.value.value), max_uses: f.max.value.trim() || null,
         per_user: Number(f.per.value) || 1, expires_at: f.exp.value || null });
@@ -395,7 +397,9 @@ const panels = {
     }, "btn btn--primary btn--small");
     panel.replaceChildren(
       el("p", { class: "notice" }, "Discounts apply to the minimum price only; anything paid above it is a tip and is never discounted. Codes need a signed-in account."),
-      actions(f.code, f.kind, f.value, f.max, f.per, f.exp, create),
+      el("div", { class: "row" },
+        lab("Code (4-24 letters/digits)", f.code), lab("Type", f.kind), lab("Value (% or Rp)", f.value),
+        lab("Max uses in total", f.max), lab("Uses per person", f.per), lab("Expires on (optional)", f.exp), create),
       table([
         { label: "Code", key: "code" },
         { label: "Discount", render: (r) => (r.kind === "percent" ? `${r.value}%` : formatRupiah(r.value)) },
