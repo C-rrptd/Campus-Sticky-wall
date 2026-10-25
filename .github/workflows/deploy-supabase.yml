@@ -18,7 +18,8 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      # Session pooler string (IPv4). The direct db.<ref>.supabase.co host is IPv6-only and fails on GitHub runners.
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
     steps:
       - uses: actions/checkout@v6
@@ -27,11 +28,8 @@ jobs:
         with:
           version: latest
 
-      - name: Link project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
-
       - name: Apply database migrations
-        run: supabase db push
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
 
       - name: Deploy Edge Functions
         run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
