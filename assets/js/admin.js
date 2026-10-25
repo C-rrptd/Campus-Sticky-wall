@@ -4,7 +4,7 @@
 
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser, isAdmin, isOwner } from "./auth.js";
-import { getClient, invoke, mediaUrl, query } from "./supabase-client.js";
+import { creativeUrl, getClient, invoke, mediaUrl, query } from "./supabase-client.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, promptReason, refs, toast } from "./utils.js";
 import { parseRupiah } from "./validation.js";
 
@@ -54,6 +54,21 @@ function ownerDelete(state, kind, id, what, reload) {
     }
     reload();
   }, "btn btn--small btn--danger");
+}
+
+const REJECT_REASONS = ["Misleading or false claims", "Not relevant to students", "Prohibited content (see advertising policy)",
+  "Image or text is unclear or low quality", "Missing or invalid business information"];
+/** Reject needs a reason the advertiser will read: pick a preset and/or write your own. */
+async function rejectionReason(action, row, danger) {
+  if (action !== "reject") return promptReason(`${action} “${row.title}”?`, { danger, okLabel: action });
+  const preset = el("select", { name: "preset", required: true }, el("option", { value: "" }, "Choose a reason…"), ...REJECT_REASONS.map((t) => el("option", { value: t }, t)));
+  const extra = el("textarea", { name: "extra", rows: "3", maxlength: "300", placeholder: "More details for the advertiser (optional)" });
+  const data = await openDialog({ title: `Reject “${row.title}”?`, okLabel: "Reject", danger: true,
+    body: el("div", { class: "stack" }, el("p", { class: "small" }, "The advertiser sees this reason. Nothing is charged for a rejected ad; a paid ad is flagged for refund."), preset, extra) });
+  if (!data) return null;
+  const text = [data.get("preset"), String(data.get("extra") ?? "").trim()].filter(Boolean).join(" — ");
+  if (text.length < 3) { toast("Give the advertiser a reason.", "error"); return null; }
+  return text;
 }
 
 function amountInput(name, value, placeholder = "") {
@@ -196,13 +211,13 @@ const panels = {
   },
 
   async campaigns(panel, reload, state) {
-    state.campaignStatus ??= "pending_review";
-    const filter = el("select", {}, ...["pending_review", "active", "paused", "awaiting_payment", "draft", "rejected", "canceled", ""]
+    state.campaignStatus ??= "pending_approval";
+    const filter = el("select", {}, ...["pending_approval", "approved", "awaiting_payment", "pending_review", "scheduled", "active", "paused", "expired", "rejected", "canceled", ""]
       .map((s) => el("option", { value: s, selected: s === state.campaignStatus || null }, s || "all")));
     filter.addEventListener("change", () => { state.campaignStatus = filter.value; reload(); });
     const rows = await api("list_campaigns", { status: state.campaignStatus || null });
     const act = (row, action, danger) => button(action, async () => {
-      const reason = await promptReason(`${action} “${row.title}”?`, { danger, okLabel: action, required: action === "reject" });
+      const reason = await rejectionReason(action, row, danger);
       if (reason === null) return;
       await api("review_campaign", { campaign_id: row.id, action, reason: reason || null });
       toast(`Campaign ${action}d.`, "success");
@@ -211,7 +226,9 @@ const panels = {
     panel.replaceChildren(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Status"), filter), table([
       { label: "Campaign", render: (r) => el("div", {}, el("strong", {}, r.title), el("br"), el("span", { class: "small clamp" }, r.description)) },
       { label: "Advertiser", render: (r) => `${r.advertiser_name} <${r.contact_email}>` },
-      { label: "Link", render: (r) => el("a", { href: r.destination_url, target: "_blank", rel: "noopener noreferrer" }, "open ↗") },
+      { label: "Link", render: (r) => (r.destination_url ? el("a", { href: r.destination_url, target: "_blank", rel: "noopener noreferrer" }, "open ↗") : "none") },
+      { label: "Image", render: (r) => { const u = r.creative_path ? creativeUrl(r.creative_path) : null; return u ? el("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, el("img", { src: u, alt: "", class: "admin-thumb" })) : "none"; } },
+      { label: "Package", render: (r) => `${r.placement === "featured" ? "Featured" : "Random"} · ${r.duration_days ?? "?"}d` },
       { label: "Targets", render: (r) => (r.targets ?? []).join(", ") },
       { label: "Price", render: (r) => formatRupiah(r.price) },
       { label: "Payment", key: "payment_status" },
@@ -219,11 +236,11 @@ const panels = {
       { label: "Runs", render: (r) => (r.starts_at ? `${formatDate(r.starts_at)} – ${formatDate(r.ends_at)}` : `from ${r.requested_start}`) },
       { label: "Stats", render: (r) => `${r.impressions} / ${r.clicks}` },
       { label: "Actions", render: (r) => actions(
-        r.status === "pending_review" && r.payment_status === "paid" && act(r, "approve"),
-        ["pending_review", "draft"].includes(r.status) && act(r, "reject", true),
-        r.status === "active" && act(r, "pause"),
+        (r.status === "pending_approval" || (r.status === "pending_review" && r.payment_status === "paid")) && act(r, "approve"),
+        ["pending_approval", "approved", "pending_review", "draft"].includes(r.status) && act(r, "reject", true),
+        ["active", "scheduled"].includes(r.status) && act(r, "pause"),
         r.status === "paused" && act(r, "resume"),
-        ["active", "paused", "pending_review"].includes(r.status) && act(r, "cancel", true),
+        ["pending_approval", "approved", "pending_review", "scheduled", "active", "paused"].includes(r.status) && act(r, "cancel", true),
         ownerDelete(state, "campaign", r.id, "campaign", reload)) },
     ], rows));
   },
@@ -294,6 +311,8 @@ const panels = {
     const contact = el("input", { type: "email", value: cfg.contact_email ?? "" });
     const socials = el("textarea", { rows: "3" }, JSON.stringify(cfg.official_social_links ?? {}, null, 1));
     const ads = el("input", { type: "checkbox", checked: cfg.display_ads_enabled === true || null });
+    const wa = el("input", { type: "tel", inputmode: "numeric", maxlength: "15", placeholder: "6281234567890", value: cfg.ad_whatsapp ?? "" });
+    const payDays = el("input", { type: "number", min: "1", max: "60", value: String(cfg.ad_payment_window_days ?? 7), class: "input--small" });
     const setConfig = async (key, value) => { await api("set_config", { key, value }); };
     const saveCfg = button("Save settings", async () => {
       let links;
@@ -308,6 +327,9 @@ const panels = {
       await setConfig("contact_email", contact.value.trim());
       await setConfig("official_social_links", links);
       await setConfig("display_ads_enabled", ads.checked);
+      if (!/^(\d{8,15})?$/.test(wa.value.trim())) { toast("WhatsApp number: digits only with country code, e.g. 6281234567890.", "error"); return; }
+      await setConfig("ad_whatsapp", wa.value.trim());
+      await setConfig("ad_payment_window_days", Number(payDays.value));
       toast("Settings saved.", "success");
       reload();
     }, "btn btn--primary");
@@ -317,7 +339,9 @@ const panels = {
       el("h2", {}, "Payment methods"),
       el("p", { class: "small muted" }, "Set limits from your Midtrans/acquirer agreement. A method is offered only when the order total fits its limits; totals are never reduced to fit."),
       pmTable,
-      el("h2", {}, "Advertising packages"), adTable,
+      el("h2", {}, "Advertising packages"),
+      el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. Price is per location, and is frozen when an advertiser submits."),
+      adTable,
       el("h2", {}, "Site settings"),
       el("div", { class: "stack narrow" },
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Note moderation"), moderation),
@@ -326,6 +350,8 @@ const panels = {
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Unpaid order expiry (minutes)"), ttl),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Public contact email"), contact),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Official social links (JSON)"), socials),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Ads: WhatsApp number for custom packages (digits, country code; empty hides the button)"), wa),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Ads: days to pay after approval"), payDays),
         el("label", { class: "check" }, ads, el("span", {}, "Enable third-party display ad slots (requires provider setup; see OPERATIONS.md)")),
         saveCfg));
   },
@@ -427,7 +453,7 @@ const panels = {
     });
     const setStatus = (a, status) => button(status, async () => { await api("set_announcement_status", { id: a.id, status }); reload(); });
     panel.replaceChildren(
-      el("div", { class: "stack narrow card" }, el("h2", {}, "Write news"), title, body, el("label", { class: "check" }, pinned, " Pinned on the wall"), actions(save, preview)),
+      el("h2", {}, "Recent news"),
       table([
         { label: "Title", key: "title" },
         { label: "Status", key: "status" },
@@ -440,7 +466,8 @@ const panels = {
           a.status === "published" && setStatus(a, "draft"),
           a.status !== "archived" && setStatus(a, "archived"),
           ownerDelete(state, "announcement", a.id, "news item", reload)) },
-      ], items));
+      ], items),
+      el("div", { class: "stack narrow card" }, el("h2", {}, "Write news"), title, body, el("label", { class: "check" }, pinned, " Pinned on the wall"), actions(save, preview)));
   },
 
   async referrals(panel, reload, state) {

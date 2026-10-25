@@ -11,6 +11,16 @@ import { clear, el, refs, safeUrl, toast } from "./utils.js";
 
 const view = () => document.getElementById("view");
 
+/** Small filter/sort dropdowns (<details class="dropdown">) close on outside click or Escape. */
+function installDropdownClose() {
+  document.addEventListener("click", (e) => {
+    for (const d of document.querySelectorAll("details.dropdown[open]")) if (!d.contains(e.target)) d.open = false;
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") for (const d of document.querySelectorAll("details.dropdown[open]")) d.open = false;
+  });
+}
+
 function installGlobalErrorHandlers() {
   window.addEventListener("error", (e) => console.error("Uncaught error", e.error ?? e.message));
   window.addEventListener("unhandledrejection", (e) => {
@@ -98,6 +108,7 @@ async function renderFooter() {
 
 async function boot() {
   installGlobalErrorHandlers();
+  installDropdownClose();
   try {
     await loadComponents(["core", "footer"]);
   } catch (err) {

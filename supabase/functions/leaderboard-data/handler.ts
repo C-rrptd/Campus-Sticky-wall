@@ -1,4 +1,4 @@
-// POST /functions/v1/leaderboard-data  { kind: "referrals"|"donations"|"notes", period: "all"|"week" }
+// POST /functions/v1/leaderboard-data  { kind: "referrals"|"donations", period: "all"|"week" }
 // Account-only rankings. Runs the SQL function as the caller (their JWT), so
 // the database itself refuses guests and applies donor-privacy opt-ins.
 
@@ -12,7 +12,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   await rateLimit(deps.db, `leaderboard:user:${user.id}`, 60, 60);
 
   const data = await rpc(deps.userDb(jwt), "leaderboard", {
-    p_kind: v.oneOf(body.kind, "kind", ["referrals", "donations", "notes"] as const),
+    p_kind: v.oneOf(body.kind, "kind", ["referrals", "donations"] as const),
     p_period: v.oneOf(body.period ?? "all", "period", ["all", "week"] as const),
     p_limit: 25,
   });

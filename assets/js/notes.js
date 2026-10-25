@@ -8,7 +8,7 @@ import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc,
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, formatMoney, isAllowedSocialUrl, pricing, setPricing, textLength, validateNote, validatePublicationAmount } from "./validation.js";
-import { busy, el, errorMessage, formatRupiah, openDialog, refs, safeUrl, timeAgo, toast } from "./utils.js";
+import { busy, el, errorMessage, formatRupiah, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
 
 const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
 
@@ -93,6 +93,19 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, n
   // A note with media shows only a "Contains media" badge on the wall; the viewer shows everything.
   r.body.hidden = hasMedia;
   r.mediaBadge.hidden = !hasMedia;
+  if (hasMedia) {
+    const first = note.media[0];
+    const src = mediaUrl(first.path);
+    if (src) {
+      const video = first.kind === "video";
+      const thumb = video
+        ? el("video", { class: "note__thumb", src: `${src}#t=0.1`, preload: "metadata", muted: "", playsinline: "", "aria-hidden": "true" })
+        : el("img", { class: "note__thumb", src, alt: "", loading: "lazy" });
+      r.mediaBadge.replaceChildren(thumb, el("span", { class: "note__media-label" },
+        `${video ? "▶ Video" : "Photo"}${note.media.length > 1 ? ` +${note.media.length - 1} more` : ""}`));
+      r.mediaBadge.classList.add("note__media--thumb");
+    }
+  }
   r.author.textContent = note.author_name ?? "";
   const social = note.social_link && isAllowedSocialUrl(note.social_link) ? safeUrl(note.social_link, false) : null;
   if (social) {
@@ -250,7 +263,7 @@ export async function mountComposer(view, { signal, navigate }) {
   const r = refs(view);
   const user = currentUser();
   const state = { decorations: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {}, promo: null };
-  const picked = (data) => picked(data).filter(Boolean);
+  const picked = (data) => data.getAll("decorations").filter(Boolean); // was self-recursive (stack overflow)
 
   // Pricing config (public site_config rows). Failure keeps the built-in defaults; the server still decides.
   try {
@@ -370,7 +383,9 @@ export async function mountComposer(view, { signal, navigate }) {
       groups.get(cat).push(d);
     }
     // One dropdown per category, default "None". Only decoration ids are sent; the server re-checks them.
-    r.decorations.replaceChildren(...[...groups].map(([cat, list]) => {
+    const ORDER = ["Borders", "Tapes", "Stickers", "Stamps & badges", "Backgrounds", "Themes"];
+    const rank = (c) => (ORDER.includes(c) ? ORDER.indexOf(c) : ORDER.length);
+    r.decorations.replaceChildren(...[...groups].sort((a, b) => rank(a[0]) - rank(b[0])).map(([cat, list]) => {
       const sel = el("select", { name: "decorations", "aria-label": cat },
         el("option", { value: "" }, "None"),
         ...list.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id)).map((d) => el("option", { value: d.id },
@@ -381,6 +396,14 @@ export async function mountComposer(view, { signal, navigate }) {
   } catch {
     r.decorations.replaceChildren(el("p", { class: "muted" }, "Decorations couldn’t be loaded. You can still post a plain note."));
   }
+
+  const showMediaPreview = () => {
+    const files = [...(r.media.files ?? [])];
+    renderFilePreviews(r.mediaPreview, files, (i) => { setInputFiles(r.media, files.filter((_, j) => j !== i)); showMediaPreview(); }, mediaProblem);
+    if (files.length > MEDIA_MAX_FILES) r.mediaPreview.append(el("p", { class: "field__error", role: "alert" }, `Attach at most ${MEDIA_MAX_FILES} files.`));
+  };
+  r.media.addEventListener("change", showMediaPreview, { signal });
+  signal.addEventListener("abort", () => renderFilePreviews(r.mediaPreview, [], () => {}), { once: true });
 
   if (!user) {
     r.media.disabled = true;

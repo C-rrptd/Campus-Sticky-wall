@@ -1,5 +1,5 @@
 // POST /functions/v1/create-advertiser-campaign
-// Creates or updates a DRAFT campaign (content, schedule, targeting). Status,
+// Submits a campaign for admin approval (content, schedule, targeting). Link and image are optional. Status,
 // price, payment and approval are never accepted from the client.
 
 import { type Deps, type Handler, requireUser } from "../_shared/auth.ts";
@@ -52,7 +52,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_description: v.str(body.description, "Description", { max: 500, multiline: true }),
     p_category: v.oneOf(body.category, "Category", CATEGORIES),
     p_creative_path: creativePath,
-    p_destination_url: v.httpsUrl(body.destination_url, "Destination link"),
+    p_destination_url: v.httpsUrl(body.destination_url, "Destination link", true),
     p_product_id: v.str(body.product_id, "Package", { min: 2, max: 60 }),
     p_requested_start: v.isoDate(body.requested_start, "Start date"),
     p_targets: targets(body.targets),

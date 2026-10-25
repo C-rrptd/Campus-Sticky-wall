@@ -9,9 +9,8 @@ import { el, errorMessage, formatRupiah, local, refs } from "./utils.js";
 const EXPLAIN = {
   referrals: "Friends who joined with your link and verified their email.",
   donations: "Successful voluntary donations, only for donors who chose to be shown (Profile → donor leaderboard). Note payments and ads don’t count.",
-  notes: "Published sticky notes posted while signed in.",
 };
-const HEADER = { referrals: "Referrals", donations: "Donated", notes: "Notes" };
+const HEADER = { referrals: "Referrals", donations: "Donated" };
 
 export async function mount(view, { signal }) {
   if (!currentUser()) {

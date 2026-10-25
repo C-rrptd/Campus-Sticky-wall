@@ -5,7 +5,7 @@ import { cloneTemplate } from "./component-loader.js";
 import { rpc } from "./supabase-client.js";
 import { renderNote } from "./notes.js";
 import { renderPinned } from "./announcements.js";
-import { renderPromotion } from "./promotions.js";
+import { loadFeatured, renderPromotion } from "./promotions.js";
 import { buildLocationPicker, getLocationPref, promotionArgs, setLocationPref } from "./location.js";
 import { errorMessage, local, refs } from "./utils.js";
 
@@ -34,7 +34,7 @@ export async function mount(view, { signal }) {
 
   async function loadSponsored() {
     try {
-      state.sponsored = await rpc("get_promotions", { ...promotionArgs(state.loc), p_placement: "wall_inline", p_category: null, p_limit: MAX_SPONSORED });
+      state.sponsored = await rpc("get_promotions", { ...promotionArgs(state.loc), p_placement: "random", p_category: null, p_limit: MAX_SPONSORED });
     } catch {
       state.sponsored = [];
     }
@@ -46,7 +46,7 @@ export async function mount(view, { signal }) {
     r.error.hidden = true;
     r.more.hidden = true;
     try {
-      if (reset) await loadSponsored();
+      if (reset) await Promise.all([loadSponsored(), loadFeatured(r.featured, state.loc, signal)]);
       const notes = await rpc("get_wall", { p_sort: state.sort, p_campus: state.loc.campus || null, p_limit: PAGE, p_offset: state.offset });
       if (id !== state.requestId || signal.aborted) return; // stale response
       if (reset) r.grid.replaceChildren();

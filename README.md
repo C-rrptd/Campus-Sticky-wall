@@ -1,6 +1,6 @@
 # Campus Sticky Wall
 
-A public sticky-note wall for college students. Anyone can post a note and **choose what they pay to publish it (minimum Rp2.500, server cap Rp1.000.000)**. The site also has optional paid decorations, accounts with votes and bookmarks, referral credits, three member leaderboards, voluntary donations, a location-targeted Promotions section with paid campaigns, official announcements and an admin console.
+A public sticky-note wall for college students. Anyone can post a note and **choose what they pay to publish it (minimum Rp2.500, server cap Rp1.000.000)**. The site also has optional paid decorations, accounts with votes and bookmarks, referral credits, two member leaderboards, voluntary donations, a location-targeted Promotions section with paid campaigns, official announcements and an admin console.
 
 - **Frontend:** static HTML, CSS and vanilla ES modules. There is no framework, no bundler and no build step. Supabase JS 2.117.0 is vendored.
 - **Backend:** Supabase. It uses Auth, PostgreSQL with Row Level Security, Storage, and 10 Deno Edge Functions.

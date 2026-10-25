@@ -198,3 +198,35 @@ export async function promptReason(title, { required = false, okLabel = "Confirm
   const data = await openDialog({ title, body, okLabel, danger });
   return data ? String(data.get("reason") ?? "").trim() : null;
 }
+
+/** Replace an <input type=file>'s selection (browsers only allow this through DataTransfer). */
+export function setInputFiles(input, files) {
+  const dt = new DataTransfer();
+  files.forEach((f) => dt.items.add(f));
+  input.files = dt.files;
+}
+
+/**
+ * Show a local preview (image, GIF or video) of each chosen file with a remove button.
+ * Object URLs are revoked on the next render. `problem(file)` may return an error text per file.
+ */
+export function renderFilePreviews(container, files, onRemove, problem = () => null) {
+  (container._urls ?? []).forEach((u) => URL.revokeObjectURL(u));
+  container._urls = [];
+  container.replaceChildren(...files.map((file, i) => {
+    const url = URL.createObjectURL(file);
+    container._urls.push(url);
+    const video = file.type.startsWith("video/");
+    const media = document.createElement(video ? "video" : "img");
+    media.src = url; // blob: URLs are local, so this bypasses el()'s https-only safeUrl on purpose
+    media.className = "file-preview__media";
+    if (video) Object.assign(media, { muted: true, controls: true, preload: "metadata", playsInline: true });
+    else media.alt = `Preview of ${file.name}`;
+    const remove = el("button", { type: "button", class: "file-preview__remove", "aria-label": `Remove ${file.name}` }, "×");
+    remove.addEventListener("click", () => onRemove(i));
+    const bad = problem(file);
+    return el("figure", { class: `file-preview${bad ? " file-preview--bad" : ""}` }, media,
+      el("figcaption", { class: "small" }, `${file.name} · ${(file.size / 1048576).toFixed(1)} MB`, bad ? el("span", { class: "field__error" }, ` ${bad}`) : null),
+      remove);
+  }));
+}
