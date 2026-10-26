@@ -9,7 +9,7 @@ import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc,
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
-import { busy, copyText, el, errorMessage, formatRupiah, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
+import { busy, copyText, el, errorMessage, formatRupiah, local, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
 
 const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
 
@@ -163,7 +163,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
     t.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }, { signal });
   }
   r.root.addEventListener("click", (e) => { if (!e.target.closest("button, a, .note__extras")) open(); }, { signal });
-  if (note.is_mine) {
+  if (isMine(note)) {
     r.vote.disabled = true;
     r.vote.title = "You can’t vote for your own note";
     r.vote.setAttribute("aria-disabled", "true");
@@ -225,9 +225,18 @@ function spotifyFrame(ref, height) {
   });
 }
 
+// Since 012 the server keeps no account→note link, so "mine" is remembered on this device only.
+const MINE_KEY = "csw.myNotes";
+const isMine = (note) => !!(note.is_mine || (note.id && local.get(MINE_KEY, []).includes(note.id)));
+function rememberMine(id) {
+  if (!id) return;
+  const ids = local.get(MINE_KEY, []);
+  if (!ids.includes(id)) local.set(MINE_KEY, [...ids, id].slice(-500)); // shortcut: per-device, lost on clear/other device
+}
+
 /** "Anonymous (You)" on your own notes, so you can tell them from other people's anonymous ones. */
 function byline(note) {
-  return `${note.author_name ?? ""}${note.is_mine ? " (You)" : ""}`;
+  return `${note.author_name ?? ""}${isMine(note) ? " (You)" : ""}`;
 }
 
 /** Poll / quiz: choices and one button before answering, result bars after. Redraws every copy of the note (card and viewer). */
@@ -740,6 +749,7 @@ export async function mountComposer(view, { signal, navigate }) {
         spotify,
       });
       rememberReceipt(res.order.order_ref, res.access_token);
+      rememberMine(res.order.note?.id);
       if (res.order.status === "completed_free") toast("Published for free!", "success");
       navigate("/checkout", { order: res.order.order_ref });
     } catch (err) {
