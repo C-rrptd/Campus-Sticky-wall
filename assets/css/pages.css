@@ -52,7 +52,10 @@
 /* Admin */
 .admin-panel h2 { margin-top: var(--space-5); }
 .admin-panel .card > h2:first-child { margin-top: 0; }
-.admin-panel .table td .row { flex-wrap: wrap; }
+.admin-panel .table td .row { flex-wrap: wrap; justify-content: flex-start; }
+/* Keep table buttons one line and equal height so a long label never stretches or stacks into a tall, ragged button. */
+.admin-panel .table td .btn { white-space: nowrap; flex: 0 0 auto; }
+.admin-panel .table td:last-child { min-width: 11rem; }
 
 /* Footer */
 .site-footer { border-top: 1px solid var(--line); background: var(--header-bg); }
