@@ -31,11 +31,12 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
 
   const status = await fetchTransactionStatus(cfg, notification.order_id, deps.fetch);
+  // Unknown order (also what Midtrans' "Test notification URL" sends): ack with 200. Must precede the order_id check.
+  if (String(status.status_code) === "404") {
+    return json(req, 200, { result: "unknown_transaction" }, deps.env);
+  }
   if (status.order_id !== notification.order_id) {
     throw new HttpError(409, "STATUS_ORDER_MISMATCH");
-  }
-  if (typeof status.status_code === "string" && status.status_code === "404") {
-    return json(req, 200, { result: "unknown_transaction" }, deps.env);
   }
 
   const result = await rpc<{ result: string }>(deps.db, "apply_payment_notification", statusToRpcArgs(status, notification));

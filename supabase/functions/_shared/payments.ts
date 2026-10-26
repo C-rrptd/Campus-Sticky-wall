@@ -181,7 +181,8 @@ export async function fetchTransactionStatus(
   } catch {
     throw new HttpError(503, "STATUS_CHECK_UNAVAILABLE", "Could not confirm the transaction status.");
   }
-  if (!res.ok) throw new HttpError(503, "STATUS_CHECK_FAILED", "Could not confirm the transaction status.");
+  // 404 is a valid answer ("no such transaction"); callers check status_code === "404".
+  if (!res.ok && res.status !== 404) throw new HttpError(503, "STATUS_CHECK_FAILED", "Could not confirm the transaction status.");
   const data = await res.json().catch(() => null);
   if (!data || typeof data !== "object") throw new HttpError(503, "STATUS_CHECK_FAILED");
   return data as Record<string, unknown>;
