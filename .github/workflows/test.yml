@@ -48,6 +48,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ad_pricing.sql
       - name: Wall search, pin and anonymous-name assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_wall_search.sql
+      - name: Poll, quiz and Spotify assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_polls.sql
 
   code:
     runs-on: ubuntu-latest

@@ -36,6 +36,8 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     positions: v.positionList(body.decoration_positions),
     promo: v.promoCode(body.promo_code),
     use_free_post: v.bool(body.use_free_post, "use_free_post", false),
+    poll: v.poll(body.poll),
+    spotify: v.spotifyRef(body.spotify),
   };
   // Promo guesses are throttled separately from posting (same buckets as check-promo).
   if (input.promo) {
@@ -57,8 +59,8 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
   // Uploads land in <user-id>/…; the public URL would reveal the account. Move them to a random folder first.
   const media = await anonymiseMediaPaths(deps, input.media);
-  // One transaction: order, discounts, referral credits (free post / free decorations), media and sticker positions.
-  const order = await rpc(deps.db, "create_publication_order_v2", {
+  // One transaction: order, discounts, referral credits (free post / free decorations), media, sticker positions, poll and Spotify link.
+  const order = await rpc(deps.db, "create_publication_order_v3", {
     p_user_id: user?.id ?? null,
     p_author_name: input.author_name,
     p_body: input.body,
@@ -77,6 +79,8 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_promo: input.promo,
     p_use_free_post: input.use_free_post,
     p_confirmed: confirmed,
+    p_poll: input.poll,
+    p_spotify: input.spotify,
   });
   return json(req, 201, { order, access_token: accessToken }, deps.env);
 };

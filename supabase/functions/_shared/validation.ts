@@ -174,3 +174,20 @@ export function positionList(value: unknown, label = "Sticker positions"): { id:
     return pos.rot === undefined ? out : { ...out, rot: pos.rot as number };
   });
 }
+
+/** Spotify link or URI -> "<type>/<22 char id>" (the form stored on the note). Same rule as spotifyRef() in validation.js. */
+export function spotifyRef(v: unknown): string | null {
+  if (v === undefined || v === null || v === "") return null;
+  const m = typeof v === "string" && v.length <= 300
+    ? v.trim().match(/^(?:https:\/\/open\.spotify\.com\/(?:intl-[a-z]{2,3}(?:-[a-z]{2,4})?\/)?|spotify:)(track|album|playlist|episode|show)[/:]([A-Za-z0-9]{22})(?:[?#/].*)?$/)
+    : null;
+  if (!m) throw bad("INVALID_SPOTIFY", "Paste a Spotify link to a track, album, playlist, episode or show.");
+  return `${m[1]}/${m[2]}`;
+}
+
+/** Poll / quiz shape check. The database (validate_poll) enforces every rule; this only rejects junk early. */
+export function poll(v: unknown): Record<string, unknown> | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "object" || Array.isArray(v) || JSON.stringify(v).length > 2000) throw bad("INVALID_POLL", "Invalid poll.");
+  return v as Record<string, unknown>;
+}

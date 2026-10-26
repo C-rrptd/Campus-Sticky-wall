@@ -57,6 +57,30 @@
           <p class="visually-hidden" role="status" data-ref="decoLive"></p>
         </fieldset>
 
+        <fieldset class="field poll-builder">
+          <legend class="field__label">Poll or quiz (optional)</legend>
+          <select name="poll_kind" data-ref="pollKind" aria-label="Poll or quiz">
+            <option value="none">No poll</option>
+            <option value="poll">Poll (no right answer)</option>
+            <option value="quiz">Quiz (one or more right answers)</option>
+          </select>
+          <div class="stack" data-ref="pollBox" hidden>
+            <span class="field__hint">Your note text above is the question. Members sign in to answer, once each.</span>
+            <label class="check">
+              <input type="checkbox" data-ref="pollMulti">
+              <span>Allow choosing more than one answer</span>
+            </label>
+            <ol class="poll-builder__rows" data-ref="pollRows"></ol>
+            <button type="button" class="btn btn--small" data-ref="pollAdd">Add option</button>
+          </div>
+        </fieldset>
+
+        <label class="field">
+          <span class="field__label">Spotify link (optional)</span>
+          <input name="spotify" data-ref="spotify" type="url" inputmode="url" autocomplete="off" placeholder="https://open.spotify.com/track/…">
+          <span class="field__hint">A song, album, playlist, podcast episode or show from open.spotify.com. Press Share, then Copy link, in Spotify.</span>
+        </label>
+
         <label class="field">
           <span class="field__label">Social link (optional)</span>
           <input name="social_link" data-ref="social" type="url" inputmode="url" placeholder="https://instagram.com/yourname">

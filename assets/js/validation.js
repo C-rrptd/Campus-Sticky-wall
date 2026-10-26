@@ -94,3 +94,33 @@ export function adPrice(base, pct, n) {
   const b = BigInt(base);
   return n < 1 ? 0n : b + (b * BigInt(pct) * BigInt(n - 1) + 50n) / 100n;
 }
+
+/** Spotify link or URI -> "<type>/<22 char id>", or null. Mirrors spotifyRef() in the create-publication validation. */
+export function spotifyRef(input) {
+  const m = String(input ?? "").trim().match(/^(?:https:\/\/open\.spotify\.com\/(?:intl-[a-z]{2,3}(?:-[a-z]{2,4})?\/)?|spotify:)(track|album|playlist|episode|show)[/:]([A-Za-z0-9]{22})(?:[?#/].*)?$/);
+  return m ? `${m[1]}/${m[2]}` : null;
+}
+
+/** Poll option limits, equal to validate_poll() in migration 021. */
+export const POLL_MIN_OPTIONS = 2;
+export const POLL_MAX_OPTIONS = 6;
+export const POLL_OPTION_MAX = 80;
+
+/**
+ * Build the poll payload from the composer rows [{ text, correct }].
+ * Returns { poll } (null when kind is "none") or { error }.
+ */
+export function buildPoll(kind, multi, rows) {
+  if (kind !== "poll" && kind !== "quiz") return { poll: null };
+  const items = rows.map((r) => ({ text: String(r.text ?? "").trim(), correct: Boolean(r.correct) })).filter((r) => r.text);
+  if (items.length < POLL_MIN_OPTIONS) return { error: `Add at least ${POLL_MIN_OPTIONS} options.` };
+  if (items.some((r) => [...r.text].length > POLL_OPTION_MAX)) return { error: `Options can be at most ${POLL_OPTION_MAX} characters.` };
+  if (new Set(items.map((r) => r.text.toLowerCase())).size !== items.length) return { error: "Options must be different from each other." };
+  const poll = { kind, multi: Boolean(multi), options: items.map((r) => r.text) };
+  if (kind === "quiz") {
+    poll.correct = items.flatMap((r, i) => (r.correct ? [i] : []));
+    if (poll.correct.length === 0) return { error: "Mark the correct answer." };
+    if (!poll.multi && poll.correct.length !== 1) return { error: "Mark exactly one correct answer, or allow multiple answers." };
+  }
+  return { poll };
+}

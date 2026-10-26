@@ -8,7 +8,7 @@ import { currentUser } from "./auth.js";
 import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
-import { CREDIT_VALUE, formatMoney, isAllowedSocialUrl, pricing, setPricing, textLength, validateNote, validatePublicationAmount } from "./validation.js";
+import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
 import { busy, copyText, el, errorMessage, formatRupiah, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
 
 const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
@@ -108,7 +108,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   r.body.textContent = truncateBody(note.body ?? "");
   if (r.body.textContent.endsWith("…")) r.body.dataset.cut = "1";
   // A note with media shows only a "Contains media" badge on the wall; the viewer shows everything.
-  r.body.hidden = hasMedia;
+  r.body.hidden = hasMedia && !note.poll;
   r.mediaBadge.hidden = !hasMedia;
   if (hasMedia) {
     const first = note.media[0];
@@ -124,6 +124,12 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
       r.mediaBadge.classList.add("note__media--thumb");
     }
   }
+  if (interactive && note.id) {
+    const poll = renderPoll(note);
+    if (poll) r.extras.append(poll);
+  }
+  const player = spotifyFrame(note.spotify, 80);
+  if (player) r.extras.append(player);
   r.author.textContent = note.author_name ?? "";
   const social = note.social_link && isAllowedSocialUrl(note.social_link) ? safeUrl(note.social_link, false) : null;
   if (social) {
@@ -156,7 +162,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   for (const t of [r.body, r.mediaBadge]) {
     t.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }, { signal });
   }
-  r.root.addEventListener("click", (e) => { if (!e.target.closest("button, a")) open(); }, { signal });
+  r.root.addEventListener("click", (e) => { if (!e.target.closest("button, a, .note__extras")) open(); }, { signal });
   if (note.is_mine) {
     r.vote.disabled = true;
     r.vote.title = "You can’t vote for your own note";
@@ -207,6 +213,76 @@ const PREVIEW_CHARS = 140;
 const PREVIEW_LINES = 4;
 
 /** Short wall preview: "text that is too long…". The full text is shown in the viewer. */
+const SPOTIFY_REF = /^(track|album|playlist|episode|show)\/[A-Za-z0-9]{22}$/;
+
+/** Spotify player for a stored "<type>/<id>" ref; null when the ref is missing or malformed. */
+function spotifyFrame(ref, height) {
+  if (!SPOTIFY_REF.test(ref ?? "")) return null;
+  return el("iframe", {
+    class: "note__spotify", src: `https://open.spotify.com/embed/${ref}`, height, loading: "lazy",
+    allow: "encrypted-media", title: "Spotify player", sandbox: "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox",
+  });
+}
+
+/** Poll / quiz: choices and one button before answering, result bars after. Redraws every copy of the note (card and viewer). */
+function renderPoll(note) {
+  if (!note.poll || !note.id) return null;
+  const box = el("div", { class: "poll" });
+  let peek = false;
+  const draw = () => {
+    const p = note.poll;
+    const quiz = p.kind === "quiz";
+    const answered = Array.isArray(p.mine);
+    if (answered || peek) {
+      const total = Math.max(Number(p.total) || 0, 1);
+      const rows = p.options.map((label, i) => {
+        const n = Number(p.counts?.[i]) || 0;
+        const bar = el("span", { class: "poll__bar" });
+        bar.style.width = `${Math.round((n / total) * 100)}%`;
+        const mark = (p.mine?.includes(i) ? " ✓ you" : "") + (quiz && p.correct?.includes(i) ? " ★ correct" : "");
+        return el("li", { class: `poll__row${quiz && p.correct?.includes(i) ? " poll__row--correct" : ""}` },
+          bar, el("span", { class: "poll__label" }, `${label}${mark}`), el("span", { class: "poll__n" }, `${n}`));
+      });
+      const verdict = quiz && answered
+        ? el("p", { class: "poll__verdict", role: "status" },
+            p.correct.length === p.mine.length && p.correct.every((c) => p.mine.includes(c)) ? "Correct!" : "Not quite.") : null;
+      box.replaceChildren(el("ul", { class: "poll__results" }, rows), verdict,
+        el("p", { class: "poll__total muted small" }, `${p.total} ${p.total === 1 ? "answer" : "answers"}${p.multi ? " · several choices allowed" : ""}`));
+      return;
+    }
+    const name = `poll-${note.id}-${Math.random().toString(36).slice(2, 7)}`;
+    const form = el("form", { class: "poll__form" });
+    const send = el("button", { type: "submit", class: "btn btn--small btn--primary" }, quiz ? "Answer" : "Vote");
+    const choices = p.options.map((label, i) =>
+      el("label", { class: "poll__choice" }, el("input", { type: p.multi ? "checkbox" : "radio", name, value: String(i) }), el("span", {}, label)));
+    form.append(el("fieldset", { class: "poll__set" },
+      el("legend", { class: "poll__legend" }, `${quiz ? "Quiz" : "Poll"}${p.multi ? ": pick all that apply" : ": pick one"}`), ...choices),
+      el("div", { class: "row row--tight" }, send, quiz ? null : (() => {
+        const b = el("button", { type: "button", class: "btn btn--small btn--quiet" }, "Results");
+        b.addEventListener("click", () => { peek = true; draw(); });
+        return b;
+      })()));
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!requireAccount(quiz ? "answer quizzes" : "vote in polls")) return;
+      const picked = [...form.querySelectorAll("input:checked")].map((i) => Number(i.value));
+      if (picked.length === 0) { toast("Pick an answer first.", "info"); return; }
+      busy(send, async () => {
+        try {
+          note.poll = await rpc("answer_poll", { p_note: note.id, p_choices: picked });
+          for (const redraw of note.pollViews) redraw();
+        } catch (err) {
+          toast(errorMessage(err), "error");
+        }
+      });
+    });
+    box.replaceChildren(form);
+  };
+  (note.pollViews ??= new Set()).add(draw);
+  draw();
+  return box;
+}
+
 function truncateBody(text) {
   const lines = text.split("\n");
   let out = lines.slice(0, PREVIEW_LINES).join("\n");
@@ -229,6 +305,8 @@ function openNoteViewer(note) {
   const close = el("button", { type: "button", class: "btn btn--primary" }, "Close");
   const dialog = el("dialog", { class: `dialog viewer note--${color}`, "aria-label": `Note by ${note.author_name ?? ""}` },
     el("div", { class: "viewer__body" }, note.body ?? ""),
+    renderPoll(note),
+    spotifyFrame(note.spotify, 152),
     ...media,
     el("p", { class: "viewer__by" }, `— ${note.author_name ?? ""}`),
     close);
@@ -405,6 +483,7 @@ export async function mountComposer(view, { signal, navigate }) {
       author_name: String(data.get("author_name") || "").trim() || "Anonymous",
       color: String(data.get("color") || "yellow"),
       decorations: picked(),
+      spotify: spotifyRef(data.get("spotify")),
       stickers: state.stickers.map((t) => ({ key: t.key, id: t.id, ...state.positions[t.key], rot: state.rotations[t.key] ?? 0 })),
             vote_count: 0,
     };
@@ -578,6 +657,39 @@ export async function mountComposer(view, { signal, navigate }) {
   }), { signal });
   recompute();
 
+  // Poll / quiz builder: 2-6 option rows, a "correct" mark per row for quizzes.
+  const pollRows = [];
+  const syncPoll = () => {
+    const kind = r.pollKind.value;
+    r.pollBox.hidden = kind === "none";
+    pollRows.forEach((row, i) => {
+      row.text.placeholder = `Option ${i + 1}`;
+      row.text.setAttribute("aria-label", `Option ${i + 1}`);
+      row.ok.hidden = kind !== "quiz";
+      row.correct.type = r.pollMulti.checked ? "checkbox" : "radio";
+      row.correct.setAttribute("aria-label", `Option ${i + 1} is correct`);
+      row.del.hidden = pollRows.length <= POLL_MIN_OPTIONS;
+    });
+    r.pollAdd.hidden = pollRows.length >= POLL_MAX_OPTIONS;
+  };
+  const addPollRow = () => {
+    const row = {
+      text: el("input", { maxlength: POLL_OPTION_MAX, autocomplete: "off" }),
+      correct: el("input", { type: "radio", name: "poll_correct" }),
+      del: el("button", { type: "button", class: "btn btn--small btn--quiet", "aria-label": "Remove option" }, "✕"),
+    };
+    row.ok = el("label", { class: "poll-builder__ok" }, row.correct, " correct");
+    row.li = el("li", { class: "poll-builder__row" }, row.text, row.ok, row.del);
+    row.del.addEventListener("click", () => { pollRows.splice(pollRows.indexOf(row), 1); row.li.remove(); syncPoll(); }, { signal });
+    pollRows.push(row);
+    r.pollRows.append(row.li);
+    syncPoll();
+  };
+  addPollRow(); addPollRow();
+  r.pollAdd.addEventListener("click", () => { addPollRow(); pollRows.at(-1).text.focus(); }, { signal });
+  r.pollKind.addEventListener("change", syncPoll, { signal });
+  r.pollMulti.addEventListener("change", syncPoll, { signal });
+
   r.submit.addEventListener("click", () => busy(r.submit, async () => {
     r.formError.textContent = "";
     const data = new FormData(r.form);
@@ -588,6 +700,11 @@ export async function mountComposer(view, { signal, navigate }) {
     if (errors.body || errors.author_name) { r.formError.textContent = errors.body || errors.author_name; return; }
     if (!amount.ok) { r.formError.textContent = amount.error; r.amount.focus(); return; }
     if (social && !isAllowedSocialUrl(social)) { r.formError.textContent = "Social links must be https links on a supported platform."; return; }
+    const built = buildPoll(r.pollKind.value, r.pollMulti.checked, pollRows.map((x) => ({ text: x.text.value, correct: x.correct.checked })));
+    if (built.error) { r.formError.textContent = built.error; return; }
+    const spotifyRaw = String(data.get("spotify") ?? "").trim();
+    const spotify = spotifyRaw ? spotifyRef(spotifyRaw) : null;
+    if (spotifyRaw && !spotify) { r.formError.textContent = "Paste a Spotify link to a track, album, playlist, episode or show."; r.spotify.focus(); return; }
     if (amount.value > pricing.confirmAbove && !r.confirm.checked) { r.formError.textContent = "Please confirm the amount you want to pay."; r.confirm.focus(); return; }
     if (picked().length > MAX_DECOS) { r.formError.textContent = `You can add at most ${MAX_DECOS} decorations.`; return; }
     const files = [...(r.media.files ?? [])];
@@ -613,6 +730,8 @@ export async function mountComposer(view, { signal, navigate }) {
         decoration_positions: placementsFor(),
         campus_id: campus.select.value || null,
         media,
+        poll: built.poll,
+        spotify,
       });
       rememberReceipt(res.order.order_ref, res.access_token);
       if (res.order.status === "completed_free") toast("Published for free!", "success");
