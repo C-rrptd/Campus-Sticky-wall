@@ -83,6 +83,14 @@ export async function mountProfile(view, { signal }) {
   if (profile.suspended_at) r.error.textContent = "This account is suspended; profile changes are disabled.";
 
   form.display_name.value = profile.display_name;
+  const paintHead = () => {
+    const n = form.display_name.value.trim();
+    r.headName.textContent = n || "Your name";
+    r.avatar.textContent = Array.from(n)[0] ?? "?";
+  };
+  paintHead();
+  r.headEmail.textContent = user.email ?? "";
+  form.display_name.addEventListener("input", paintHead, { signal });
   form.avatar_url.value = profile.avatar_url ?? "";
   form.donor_recognition.checked = profile.donor_recognition;
   r.socials.replaceChildren(...SOCIALS.map(([key, label]) => el("label", { class: "field" },

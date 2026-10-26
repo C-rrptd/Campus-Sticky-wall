@@ -8,22 +8,37 @@
       <a href="#/referrals">Referrals</a>
       <a href="#/advertise">My campaigns</a>
     </nav>
-    <form class="card stack narrow" data-ref="form" novalidate>
-      <label class="field"><span class="field__label">Display name</span><input name="display_name" maxlength="40" minlength="2" required></label>
-      <label class="field"><span class="field__label">Avatar image URL (https, optional)</span><input name="avatar_url" type="url" maxlength="500"></label>
-      <fieldset class="field">
-        <legend class="field__label">Social links (optional)</legend>
-        <div class="stack" data-ref="socials"></div>
-      </fieldset>
-      <div class="field" data-ref="location"></div>
-      <label class="check">
-        <input type="checkbox" name="donor_recognition">
-        <span>Show my name and total donations on the donor leaderboard (off by default)</span>
-      </label>
-      <p class="field__error" data-ref="error" role="alert"></p>
-      <button class="btn btn--primary" type="submit">Save profile</button>
+    <form class="profile narrow" data-ref="form" novalidate>
+      <div class="card profile__head">
+        <span class="avatar" data-ref="avatar" aria-hidden="true"></span>
+        <div>
+          <p class="profile__name" data-ref="headName"></p>
+          <p class="muted small" data-ref="headEmail"></p>
+        </div>
+      </div>
+      <div class="card stack">
+        <h2>Public profile</h2>
+        <label class="field"><span class="field__label">Display name</span><input name="display_name" maxlength="40" minlength="2" required></label>
+        <label class="field"><span class="field__label">Avatar image URL (https, optional)</span><input name="avatar_url" type="url" maxlength="500"></label>
+      </div>
+      <div class="card stack" role="group" aria-labelledby="profile-social">
+        <h2 id="profile-social">Social links <span class="muted small">(optional)</span></h2>
+        <div class="profile__grid" data-ref="socials"></div>
+      </div>
+      <div class="card stack">
+        <h2>Area &amp; privacy</h2>
+        <div class="field" data-ref="location"></div>
+        <label class="check">
+          <input type="checkbox" name="donor_recognition">
+          <span>Show my name and total donations on the donor leaderboard (off by default)</span>
+        </label>
+      </div>
+      <div class="profile__bar">
+        <p class="field__error" data-ref="error" role="alert"></p>
+        <button class="btn btn--primary" type="submit">Save profile</button>
+      </div>
     </form>
-    <div class="card narrow">
+    <div class="card narrow danger-zone">
       <h2>Delete account</h2>
       <p class="small">To delete your account, email us from your account address. Payment records are kept for financial reconciliation as described in our <a href="#/privacy">privacy notice</a>; your notes are detached from your account.</p>
       <a class="btn" data-ref="deleteMail" href="#">Request account deletion</a>

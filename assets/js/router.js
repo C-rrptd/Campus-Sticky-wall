@@ -108,6 +108,7 @@ async function render() {
       }
       current.cleanup = typeof cleanup === "function" ? cleanup : null;
     }
+    for (const a of viewEl.querySelectorAll(".subnav a")) if (a.getAttribute("href") === `#${path}`) a.setAttribute("aria-current", "page");
     const heading = viewEl.querySelector("h1");
     if (heading) {
       heading.setAttribute("tabindex", "-1");

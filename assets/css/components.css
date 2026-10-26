@@ -99,8 +99,10 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .badge--payment_failed, .badge--removed, .badge--rejected, .badge--refunded { background: var(--err-soft); color: var(--err); }
 
 /* Sticky notes --------------------------------------------------------------------- */
+/* Paper is always bright, so notes and the enlarged viewer keep dark ink in both themes. */
+.note, .viewer { --ink: #16213a; --ink-soft: #414e6b; --muted: #4a5775; --accent: #2a44c7; --accent-strong: #1f349c; --accent-ink: #fff; color: var(--ink); }
 .note {
-  --tilt: 0deg; --ink: #16213a; --ink-soft: #414e6b;
+  --tilt: 0deg;
   position: relative; display: flex; flex-direction: column; gap: var(--space-2);
   min-height: 180px; padding: var(--space-5) var(--space-4) var(--space-3);
   background: var(--note-yellow); color: var(--ink);
@@ -124,7 +126,7 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .note__amount { font-weight: 700; background: rgba(255, 255, 255, 0.55); padding: 0 6px; border-radius: 4px; }
 .note__time { margin-left: auto; }
 .note__actions { display: flex; gap: var(--space-2); }
-.note__btn { font: inherit; font-size: 0.85rem; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 999px; padding: 2px 10px; cursor: pointer; min-height: 30px; }
+.note__btn { font: inherit; color: var(--ink); font-size: 0.85rem; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 999px; padding: 2px 10px; cursor: pointer; min-height: 30px; }
 .note__btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .note__btn:disabled { cursor: default; opacity: 0.6; }
 .note__btn--quiet { margin-left: auto; background: transparent; border-color: transparent; color: var(--muted); }
@@ -157,7 +159,7 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .promo--inline { border-style: dashed; }
 
 /* Navigation & header ---------------------------------------------------------------- */
-.site-header { background: var(--header-bg); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(6px); }
+.site-header { background: var(--header-bg); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
 .site-header__inner { max-width: var(--max); margin: 0 auto; padding: var(--space-2) var(--space-4); display: flex; align-items: center; gap: var(--space-4); }
 .brand { display: flex; align-items: center; gap: var(--space-2); color: var(--ink); text-decoration: none; font-weight: 800; font-size: 1.1rem; white-space: nowrap; }
 .brand__pin { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f87171, #b91c1c); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3); }
@@ -168,7 +170,10 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .main-nav__spacer { flex: 1; }
 .account-menu { display: flex; gap: var(--space-3); align-items: center; }
 .nav-toggle { display: none; font-size: 1.4rem; background: none; border: 1px solid var(--line); border-radius: var(--radius-small); min-height: 40px; min-width: 44px; cursor: pointer; }
-.subnav { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); }
+.subnav { display: flex; flex-wrap: wrap; gap: var(--space-1); width: fit-content; max-width: 100%; padding: var(--space-1); margin-bottom: var(--space-5); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+.subnav a { padding: var(--space-2) var(--space-4); border-radius: var(--radius-small); color: var(--ink-soft); font-weight: 600; font-size: 0.9rem; text-decoration: none; }
+.subnav a:hover { background: var(--accent-soft); color: var(--ink); }
+.subnav a[aria-current="page"] { background: var(--accent); color: var(--accent-ink); }
 
 .tabs { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--line); margin-bottom: var(--space-4); overflow-x: auto; }
 .tabs--wrap { flex-wrap: wrap; overflow: visible; }

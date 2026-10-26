@@ -23,7 +23,7 @@
   .field--inline { flex-wrap: wrap; }
   .copy-row { flex-wrap: wrap; }
   .card { padding: var(--space-3); }
-  .stats--grid { grid-template-columns: minmax(0, 1fr); }
+  .stats--grid, .profile__grid { grid-template-columns: minmax(0, 1fr); }
   .note { transform: none; }
   .table { font-size: 0.85rem; }
   .brand__name { font-size: 1rem; }

@@ -71,7 +71,7 @@ async function renderHeader() {
     const dark = root.dataset.theme === "dark";
     r.themeToggle.firstElementChild.textContent = dark ? "☀" : "☾";
     r.themeToggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f1424" : "#eef1f7");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f1424" : "#ece3b0");
   };
   r.themeToggle.addEventListener("click", () => {
     root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";

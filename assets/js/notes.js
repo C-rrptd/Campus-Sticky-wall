@@ -116,8 +116,9 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
     if (src) {
       const video = first.kind === "video";
       const thumb = video
-        ? el("video", { class: "note__thumb", src: `${src}#t=0.1`, preload: "metadata", muted: "", playsinline: "", "aria-hidden": "true" })
+        ? el("video", { class: "note__thumb", preload: "metadata", muted: "", playsinline: "", "aria-hidden": "true" })
         : el("img", { class: "note__thumb", src, alt: "", loading: "lazy" });
+      if (video) lazyVideo(thumb, `${src}#t=0.1`);
       r.mediaBadge.replaceChildren(thumb, el("span", { class: "note__media-label" },
         `${video ? "▶ Video" : "Photo"}${note.media.length > 1 ? ` +${note.media.length - 1} more` : ""}`));
       r.mediaBadge.classList.add("note__media--thumb");
@@ -163,6 +164,18 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   r.bookmark.addEventListener("click", () => toggleBookmark(note, r), { signal });
   r.report.addEventListener("click", () => reportNote(note), { signal });
   return frag;
+}
+
+// Video thumbnails fetch their first frame only when scrolled near, not all 24 at page load.
+const videoWatcher = typeof IntersectionObserver === "function"
+  ? new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) { e.target.src = e.target.dataset.src; videoWatcher.unobserve(e.target); }
+  }, { rootMargin: "300px" })
+  : null;
+function lazyVideo(video, src) {
+  if (!videoWatcher) { video.src = src; return; }
+  video.dataset.src = src;
+  videoWatcher.observe(video);
 }
 
 const PREVIEW_CHARS = 140;
