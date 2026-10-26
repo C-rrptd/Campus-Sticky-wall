@@ -49,5 +49,4 @@
   /* Decorations stay inside the smaller card: stickers shrink, whole-note frames get thinner */
   .wall .sticker { font-size: 0.7em; }
   .wall .note.deco-border { outline-width: 2px; outline-offset: -6px; }
-  .composer .deco-swatch { width: 2.2rem; height: 2.2rem; }
 }

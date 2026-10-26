@@ -2,11 +2,19 @@
 .deco-swatch{position:relative;display:inline-block;flex:none;width:2.6rem;height:2.6rem;font-size:.7rem;border:1px solid var(--line);border-radius:4px;background-color:var(--note-yellow);overflow:hidden}
 .deco-option__cat{display:block;font-size:.75rem;color:var(--muted)}
 .deco-option:focus-within{outline:3px solid var(--focus);outline-offset:2px}
-.sticker{position:absolute;transform:translate(-50%,-50%);line-height:1;z-index:2;font-size:1em;pointer-events:none}
+.sticker{position:absolute;transform:translate(-50%,-50%) rotate(var(--rot,0deg));line-height:1;z-index:2;font-size:1em;pointer-events:none}
 .sticker--editable{pointer-events:auto;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .sticker--editable:active{cursor:grabbing}
 .sticker--editable:hover{outline:2px dashed rgba(43,37,32,.55);outline-offset:4px;border-radius:4px}
+.sticker--editable:focus-within{outline:2px dashed rgba(43,37,32,.55);outline-offset:4px;border-radius:4px}
 .sticker--editable:focus-visible{outline:3px solid var(--focus);outline-offset:4px;border-radius:4px}
+/* rotate / remove buttons sit on the corners of the sticker's dashed square and stay upright */
+.sticker__btn{position:absolute;display:none;place-items:center;width:1.5rem;height:1.5rem;padding:0;border:1px solid #2b2520;border-radius:50%;background:#fff;color:#2b2520;font:700 .85rem/1 system-ui,sans-serif;cursor:pointer;z-index:4;transform:rotate(calc(-1 * var(--rot,0deg)))}
+.sticker__btn--remove{top:-1rem;left:-1rem}
+.sticker__btn--rotate{top:-1rem;right:-1rem}
+.sticker__btn:hover{background:#ffedd5}
+.sticker__btn--remove:hover{background:#fee2e2}
+.sticker--editable:hover .sticker__btn,.sticker--editable:focus-within .sticker__btn{display:grid}
 .sticker-hint{margin:.4rem 0 0}
 .deco-swatch.deco-sticker-sun::after{content:"☀";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
 .sticker.deco-sticker-sun::after{content:"☀";font-size:1.5em;line-height:1;}

@@ -8,6 +8,13 @@
     countries: [{ code: "ID", name: "Indonesia" }],
     regions: [{ id: "r1", name: "West Java", country_code: "ID", kind: "province" }],
     cities: [{ id: "c1", name: "Bogor", region_id: "r1" }],
+    decorations: [
+      ["frame-thick", "Thick frame", "Borders", 0, 0], ["frame-dashed", "Dashed frame", "Borders", 1000, 0],
+      ["tape-washi-pink", "Pink washi tape", "Tapes", 1000, 0], ["tape-washi-blue", "Blue washi tape", "Tapes", 1000, 0], ["tape-masking", "Masking tape", "Tapes", 0, 0],
+      ["sticker-sun", "Sun", "Stickers", 1000, 1, 88, 12], ["sticker-cat", "Cat", "Stickers", 1000, 1, 88, 84], ["sticker-coffee", "Coffee", "Stickers", 1000, 1, 12, 12],
+      ["stamp-approved", "Approved stamp", "Stamps & badges", 1000, 1, 50, 88], ["badge-star", "Star badge", "Stamps & badges", 1000, 1, 70, 12],
+      ["paper-lined", "Lined paper", "Backgrounds", 1000, 0],
+    ].map(([id, name, category, price, placeable, x, y]) => ({ id, name, description: name, category, placeable: !!placeable, default_x: x ?? null, default_y: y ?? null, price: String(price) })),
     campuses: [{ id: "u1", name: "IPB University", short_name: "IPB", city_id: "c1" }],
   };
   const builder = (table) => {

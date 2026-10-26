@@ -43,7 +43,7 @@
         </fieldset>
 
         <fieldset class="field">
-          <legend class="field__label">Decorations (optional — pick at most one per group)</legend>
+          <legend class="field__label">Decorations (optional)</legend>
           <div class="decorations" data-ref="decorations"><p class="muted">Loading decorations…</p></div>
         </fieldset>
 
@@ -111,7 +111,7 @@
 
       <aside class="composer__side">
         <div class="preview-wrap" data-ref="preview"></div>
-        <p class="small muted sticker-hint" data-ref="stickerHint" hidden>Drag a sticker on the preview to place it, or focus it and use the arrow keys (Shift moves further).</p>
+        <p class="small muted sticker-hint" data-ref="stickerHint" hidden>Drag a sticker on the preview to place it. Hover or tap it for the ↻ rotate and ✕ remove buttons, or focus it and use the arrow keys to move (Shift moves further), R to rotate, Delete to remove.</p>
         <div class="card summary" aria-live="polite">
           <h2 class="summary__title">Order summary</h2>
           <dl class="summary__list">
@@ -140,10 +140,10 @@
 </template>
 
 <template id="tpl-decoration-option">
-  <label class="deco-option">
-    <input type="checkbox" name="decorations" data-ref="input">
+  <label class="deco-option" data-ref="root">
+    <input type="checkbox" data-ref="input">
     <span class="deco-swatch" data-ref="swatch" aria-hidden="true"></span>
-    <span class="deco-option__name"><span data-ref="name"></span><span class="deco-option__cat" data-ref="cat"></span></span>
+    <span class="deco-option__name" data-ref="name"></span>
     <span class="deco-option__price" data-ref="price"></span>
   </label>
 </template>

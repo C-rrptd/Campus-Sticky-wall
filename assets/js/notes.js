@@ -21,13 +21,22 @@ function tilt(id) {
 const clampPct = (n) => Math.min(96, Math.max(4, Math.round(n * 100) / 100));
 
 /** Make a sticker draggable (mouse, touch, pen) and movable with the arrow keys. */
-function makeDraggable(node, card, id, label, onPlace) {
+function makeDraggable(node, card, id, label, onPlace, { onRotate = null, onRemove = null, rot = 0 } = {}) {
   node.classList.add("sticker--editable");
   node.removeAttribute("aria-hidden");
   node.tabIndex = 0;
-  node.setAttribute("role", "button");
+  node.setAttribute("role", "group"); // contains the rotate/remove buttons
   node.setAttribute("aria-roledescription", "movable sticker");
-  node.setAttribute("aria-label", `${label} sticker. Drag to move, or use the arrow keys.`);
+  node.setAttribute("aria-label", `${label} sticker. Drag or use the arrow keys to move${onRotate ? ", R to rotate" : ""}${onRemove ? ", Delete to remove" : ""}.`);
+  let angle = rot;
+  const turn = (by) => { angle = ((angle + by + 540) % 360) - 180; node.style.setProperty("--rot", `${angle}deg`); onRotate(id, angle); };
+  const button = (cls, text, verb, fn) => {
+    const b = el("button", { type: "button", class: `sticker__btn ${cls}`, "aria-label": `${verb} ${label}` }, text);
+    b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+    return b;
+  };
+  if (onRemove) node.append(button("sticker__btn--remove", "✕", "Remove", () => onRemove(id)));
+  if (onRotate) node.append(button("sticker__btn--rotate", "↻", "Rotate", () => turn(15)));
   const put = (x, y) => {
     node.style.left = `${clampPct(x)}%`;
     node.style.top = `${clampPct(y)}%`;
@@ -35,6 +44,7 @@ function makeDraggable(node, card, id, label, onPlace) {
   };
   const current = () => [parseFloat(node.style.left), parseFloat(node.style.top)];
   node.addEventListener("pointerdown", (e) => {
+    if (e.target.closest?.(".sticker__btn")) return; // buttons are not drag handles
     if (e.button !== undefined && e.button !== 0) return;
     e.preventDefault();
     node.setPointerCapture(e.pointerId);
@@ -55,6 +65,9 @@ function makeDraggable(node, card, id, label, onPlace) {
     move(e);
   });
   node.addEventListener("keydown", (e) => {
+    if (e.target !== node) return;
+    if (onRotate && (e.key === "r" || e.key === "R")) { e.preventDefault(); turn(e.shiftKey ? -15 : 15); return; }
+    if (onRemove && (e.key === "Delete" || e.key === "Backspace")) { e.preventDefault(); onRemove(id); return; }
     const step = e.shiftKey ? 10 : 2;
     const [x, y] = current();
     const delta = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
@@ -65,7 +78,7 @@ function makeDraggable(node, card, id, label, onPlace) {
 }
 
 /** Render one note. `interactive` enables vote/bookmark/report. */
-export function renderNote(note, { interactive = true, signal, onPlace = null, names = {} } = {}) {
+export function renderNote(note, { interactive = true, signal, onPlace = null, onRotate = null, onRemove = null, names = {} } = {}) {
   const frag = cloneTemplate("tpl-note-card");
   const r = refs(frag);
   const color = COLORS.has(note.color) ? note.color : "yellow";
@@ -80,7 +93,9 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, n
       const sticker = el("span", { class: `sticker deco-${d}`, "aria-hidden": "true" });
       sticker.style.left = `${clampPct(Number(p.x))}%`;
       sticker.style.top = `${clampPct(Number(p.y))}%`;
-      if (onPlace) makeDraggable(sticker, r.root, d, names[d] ?? d, onPlace);
+      const rot = Number.isFinite(Number(p.rot)) ? Number(p.rot) : 0;
+      sticker.style.setProperty("--rot", `${rot}deg`);
+      if (onPlace) makeDraggable(sticker, r.root, d, names[d] ?? d, onPlace, { onRotate, onRemove, rot });
       r.root.append(sticker);
     } else {
       r.root.classList.add(`deco-${d}`);
@@ -262,8 +277,19 @@ export async function mountComposer(view, { signal, navigate }) {
   view.append(cloneTemplate("tpl-note-composer"));
   const r = refs(view);
   const user = currentUser();
-  const state = { decorations: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {}, promo: null };
-  const picked = (data) => data.getAll("decorations").filter(Boolean); // was self-recursive (stack overflow)
+  const state = { decorations: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {}, rotations: {}, promo: null };
+  // Every ticked decoration tile (radio tiles for "one per group", checkboxes for stickers, stamps and badges).
+  const picked = () => [...r.decorations.querySelectorAll("input:checked")].map((i) => i.value).filter(Boolean);
+  const removeDecoration = (id) => {
+    delete state.positions[id];
+    delete state.rotations[id];
+    const tile = [...r.decorations.querySelectorAll("input")].find((i) => i.value === id);
+    if (tile) { tile.checked = false; tile.dispatchEvent(new Event("change", { bubbles: true })); }
+  };
+  // What the server stores for stickers: position + rotation, only for placeable decorations that are ticked and were moved or rotated.
+  const placementsFor = (ids) => Object.fromEntries(state.decorations
+    .filter((d) => d.placeable && ids.includes(d.id) && (state.positions[d.id] || state.rotations[d.id]))
+    .map((d) => [d.id, { ...(state.positions[d.id] ?? { x: Number(d.default_x), y: Number(d.default_y) }), rot: state.rotations[d.id] ?? 0 }]));
 
   // Pricing config (public site_config rows). Failure keeps the built-in defaults; the server still decides.
   try {
@@ -283,6 +309,7 @@ export async function mountComposer(view, { signal, navigate }) {
   const campus = buildCampusSelect({ value: getLocationPref().campus ?? "", signal });
   r.campusField.append(campus.element);
 
+  let lastPreview = ""; // skip identical rebuilds: a blur-triggered "change" must not replace the sticker under the pointer
   const updatePreview = () => {
     const data = new FormData(r.form);
     const amount = validatePublicationAmount(r.amount.value);
@@ -290,7 +317,7 @@ export async function mountComposer(view, { signal, navigate }) {
       body: String(data.get("body") || "Your note will look like this."),
       author_name: String(data.get("author_name") || "You"),
       color: String(data.get("color") || "yellow"),
-      decorations: picked(data),
+      decorations: picked(),
       placements: {},
       amount: amount.ok && r.showAmount.checked ? amount.digits : null,
       vote_count: 0,
@@ -299,17 +326,21 @@ export async function mountComposer(view, { signal, navigate }) {
     for (const d of state.decorations) {
       if (!d.placeable || !note.decorations.includes(d.id)) continue;
       names[d.id] = d.name;
-      note.placements[d.id] = state.positions[d.id] ?? { x: Number(d.default_x), y: Number(d.default_y) };
+      note.placements[d.id] = { ...(state.positions[d.id] ?? { x: Number(d.default_x), y: Number(d.default_y) }), rot: state.rotations[d.id] ?? 0 };
     }
     r.stickerHint.hidden = Object.keys(note.placements).length === 0;
-    r.preview.replaceChildren(renderNote(note, { interactive: false, names, onPlace: (id, x, y) => { state.positions[id] = { x, y }; } }));
+    const key = JSON.stringify(note);
+    if (key === lastPreview) return;
+    lastPreview = key;
+    r.preview.replaceChildren(renderNote(note, { interactive: false, names, onPlace: (id, x, y) => { state.positions[id] = { x, y }; },
+      onRotate: (id, rot) => { state.rotations[id] = rot; }, onRemove: removeDecoration }));
   };
 
   const recompute = () => {
     const amount = validatePublicationAmount(r.amount.value);
     r.amountError.textContent = amount.ok ? "" : amount.error;
     r.amount.setAttribute("aria-invalid", amount.ok ? "false" : "true");
-    const chosen = new Set(picked(new FormData(r.form)));
+    const chosen = new Set(picked());
     let decos = 0n;
     for (const d of state.decorations) if (chosen.has(d.id)) decos += BigInt(String(d.price));
     // Referral credits are optional: one master checkbox, then fine-tuning.
@@ -382,15 +413,29 @@ export async function mountComposer(view, { signal, navigate }) {
       if (!groups.has(cat)) groups.set(cat, []);
       groups.get(cat).push(d);
     }
-    // One dropdown per category, default "None". Only decoration ids are sent; the server re-checks them.
+    // Preview tiles per category: pick one (radio, with a "None" tile), except stickers, stamps and badges where you can pick many.
+    // Only decoration ids are sent; the server re-checks them.
+    const MULTI = new Set(["Stickers", "Stamps & badges"]);
     const ORDER = ["Borders", "Tapes", "Stickers", "Stamps & badges", "Backgrounds", "Themes"];
     const rank = (c) => (ORDER.includes(c) ? ORDER.indexOf(c) : ORDER.length);
     r.decorations.replaceChildren(...[...groups].sort((a, b) => rank(a[0]) - rank(b[0])).map(([cat, list]) => {
-      const sel = el("select", { name: "decorations", "aria-label": cat },
-        el("option", { value: "" }, "None"),
-        ...list.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id)).map((d) => el("option", { value: d.id },
-          `${d.name} — ${String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`}`)));
-      return el("label", { class: "field field--compact" }, el("span", { class: "field__label" }, cat), sel);
+      const multi = MULTI.has(cat);
+      const tile = (d) => {
+        const frag = cloneTemplate("tpl-decoration-option");
+        const o = refs(frag);
+        o.input.type = multi ? "checkbox" : "radio";
+        o.input.name = `deco-${cat.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+        o.input.value = d ? d.id : "";
+        o.input.checked = !multi && !d; // "None" starts selected
+        o.swatch.className = d ? `deco-swatch deco-${d.id}` : "deco-swatch deco-swatch--none";
+        o.name.textContent = d ? d.name : "None";
+        o.price.textContent = d ? (String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`) : "";
+        if (d?.description) o.root.title = d.description;
+        return frag;
+      };
+      const legend = el("legend", { class: "field__label" }, cat, ...(multi ? [el("span", { class: "deco-group__hint" }, " — pick as many as you like")] : []));
+      return el("fieldset", { class: "deco-group" }, legend,
+        el("div", { class: "deco-grid" }, ...(multi ? [] : [tile(null)]), ...list.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id)).map(tile)));
     }));
     if (state.decorations.length === 0) r.decorations.replaceChildren(el("p", { class: "muted" }, "No decorations available right now."));
   } catch {
@@ -447,7 +492,7 @@ export async function mountComposer(view, { signal, navigate }) {
     state.promo = null;
     if (!code) { recompute(); return; }
     if (!amount.ok) { r.promoMsg.textContent = amount.error; return; }
-    const chosen = picked(new FormData(r.form));
+    const chosen = picked();
     try {
       const res = await invoke("check-promo", { amount: amount.digits, decorations: chosen, promo_code: code });
       const discount = BigInt(res.quote.discount);
@@ -471,6 +516,7 @@ export async function mountComposer(view, { signal, navigate }) {
     if (!amount.ok) { r.formError.textContent = amount.error; r.amount.focus(); return; }
     if (social && !isAllowedSocialUrl(social)) { r.formError.textContent = "Social links must be https links on a supported platform."; return; }
     if (amount.value > pricing.confirmAbove && !r.confirm.checked) { r.formError.textContent = "Please confirm the amount you want to pay."; r.confirm.focus(); return; }
+    if (picked().length > 10) { r.formError.textContent = "You can add at most 10 decorations."; return; }
     const files = [...(r.media.files ?? [])];
     if (files.length > MEDIA_MAX_FILES) { r.formError.textContent = `Attach at most ${MEDIA_MAX_FILES} files.`; return; }
     const bad = files.map(mediaProblem).find(Boolean);
@@ -488,11 +534,11 @@ export async function mountComposer(view, { signal, navigate }) {
         confirm_amount: amount.value > pricing.confirmAbove && r.confirm.checked ? amount.digits : null,
         promo_code: r.useFree.checked ? null : (r.promo.value.trim() || null),
         use_free_post: r.useFree.checked,
-        decorations: picked(data),
+        decorations: picked(),
         use_credit: r.useCredit.checked,
         use_post_credit: r.usePostCredit.checked,
         deco_credits: Math.max(0, Math.floor(Number(r.decoCredits.value) || 0)),
-        decoration_positions: Object.fromEntries(Object.entries(state.positions).filter(([id]) => picked(data).includes(id))),
+        decoration_positions: placementsFor(picked()),
         campus_id: campus.select.value || null,
         media,
       });
