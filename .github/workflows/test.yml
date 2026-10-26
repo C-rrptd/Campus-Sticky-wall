@@ -44,6 +44,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ads_fixes.sql
       - name: Sticker rotation assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_sticker_rotation.sql
+      - name: Ad pricing assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ad_pricing.sql
 
   code:
     runs-on: ubuntu-latest

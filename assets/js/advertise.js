@@ -8,7 +8,7 @@ import { config } from "./config.js";
 import { getClient, invoke, query, rpc } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { getLocationPref, loadLocations } from "./location.js";
-import { isEmail, isHttpsUrl } from "./validation.js";
+import { adPrice, isEmail, isHttpsUrl } from "./validation.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, refs, renderFilePreviews, setInputFiles, toast } from "./utils.js";
 
 const LEVEL_LABEL = { global: "Everywhere", country: "Whole country", region: "Provinces / regions", city: "Cities", campus: "Campuses" };
@@ -96,7 +96,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
     r.sumDuration.textContent = p ? `${p.duration_days} days` : "—";
     r.sumTargets.textContent = String(count);
     r.sumStart.textContent = r.start.value ? fmtDay(r.start.value) : "—";
-    r.sumTotal.textContent = p ? formatRupiah(BigInt(String(p.price_per_target)) * BigInt(count)) : "—";
+    r.sumTotal.textContent = p ? formatRupiah(adPrice(p.price_per_target, p.extra_location_pct, count)) : "—";
   }
   function renderTargets() {
     if (sel.scope === "global") {
@@ -118,7 +118,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (!levels.includes(sel.scope)) sel.scope = levels[0];
     r.scope.replaceChildren(...options(levels.map((l) => {
       const p = available.find((x) => group(x) === sel.placement && x.duration_days === sel.duration && x.scope_level === l);
-      return [l, `${REACH[l]} — ${formatRupiah(String(p.price_per_target))}${l === "global" ? "" : " per location"}`];
+      return [l, `${REACH[l]} — ${formatRupiah(String(p.price_per_target))}${l === "global" ? "" : p.extra_location_pct ? ` for the first location, +${p.extra_location_pct}% for each extra` : " for any number of locations"}`];
     })));
     r.scope.value = sel.scope;
     renderTargets();
@@ -288,7 +288,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
   try {
     // Only packages the admin has enabled are readable; wall-only packages were folded into Random Placement.
     const [products, locs] = await Promise.all([
-      query(client.from("ad_products").select("id,name,placement,scope_level,duration_days,price_per_target::text").neq("placement", "wall_inline").order("sort_order")),
+      query(client.from("ad_products").select("id,name,placement,scope_level,duration_days,price_per_target::text,extra_location_pct").neq("placement", "wall_inline").order("sort_order")),
       loadLocations(),
     ]);
     locations = locs;

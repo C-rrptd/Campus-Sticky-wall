@@ -87,3 +87,14 @@
 .profile__bar { position: sticky; bottom: var(--space-3); z-index: 5; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); padding: var(--space-3); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .profile__bar .field__error { flex: 1; }
 .danger-zone { border-left: 5px solid var(--err); }
+
+/* Admin decorations: preview grid */
+.deco-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: var(--space-3); }
+.deco-tile { display: grid; justify-items: center; align-content: start; gap: var(--space-1); padding: var(--space-3) var(--space-2); font: inherit; color: inherit; text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.deco-tile:hover { border-color: var(--accent); }
+.deco-tile:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.deco-tile.is-off { opacity: 0.5; }
+.deco-tile .deco-swatch, .deco-preview .deco-swatch { width: 4.5rem; height: 4.5rem; font-size: 1.2rem; }
+.deco-tile__name { font-weight: 600; font-size: 0.85rem; }
+.deco-tile small { color: var(--muted); }
+.deco-preview { display: grid; justify-items: center; }

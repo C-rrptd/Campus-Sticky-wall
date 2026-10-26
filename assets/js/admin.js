@@ -6,7 +6,7 @@ import { cloneTemplate } from "./component-loader.js";
 import { currentUser, isAdmin, isOwner } from "./auth.js";
 import { creativeUrl, getClient, invoke, mediaUrl, query } from "./supabase-client.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, promptReason, refs, toast } from "./utils.js";
-import { parseRupiah } from "./validation.js";
+import { adPrice, parseRupiah } from "./validation.js";
 
 async function api(action, params = {}) {
   const res = await invoke("admin-api", { action, params });
@@ -263,24 +263,41 @@ const panels = {
     const policy = el("p", { class: "notice" },
       `Publication pricing policy: customers choose their price. Minimum ${formatRupiah(c.pricing_policy.min_publication_price)}; server cap ${formatRupiah(c.config.find((x) => x.key === "max_publication_price")?.value ?? 0)} (site_config: min_publication_price, max_publication_price, price_presets, confirm_above_amount). Referral credit: ${formatRupiah(c.pricing_policy.referral_credit_value)}.`);
 
-    const decoRows = c.decorations.map((d) => {
-      const name = el("input", { value: d.name, maxlength: "50" });
+    // Decorations: a grid of previews. Click one to edit its name, price and visibility.
+    const editDeco = async (d, paint) => {
+      const name = el("input", { name: "name", value: d.name, maxlength: "50", minlength: "2", required: true });
       const price = amountInput("price", d.price);
       const enabled = el("input", { type: "checkbox", checked: d.enabled || null });
-      return { d, name, price, enabled };
-    });
-    const decoTable = table([
-      { label: "Id", render: (x) => x.d.id },
-      { label: "Name", render: (x) => x.name },
-      { label: "Price (Rp)", render: (x) => x.price },
-      { label: "Enabled", render: (x) => x.enabled },
-      { label: "", render: (x) => button("Save", async () => {
-        const p = parseRupiah(x.price.value);
-        if (!p.ok) { toast(p.error, "error"); return; }
-        await api("upsert_decoration", { id: x.d.id, name: x.name.value.trim(), description: x.d.description, price: p.digits, enabled: x.enabled.checked, sort: x.d.sort_order });
-        toast("Decoration saved. Existing orders keep their original prices.", "success");
-      }) },
-    ], decoRows);
+      const body = el("div", { class: "stack" },
+        el("div", { class: "deco-preview" }, el("span", { class: `deco-swatch deco-${d.id}`, "aria-hidden": "true" })),
+        el("p", { class: "small muted" }, `${d.id}${d.category ? ` · ${d.category}` : ""}`),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Name"), name),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Price (Rp)"), price),
+        el("label", { class: "check" }, enabled, el("span", {}, "Enabled")));
+      if (!(await openDialog({ title: d.name, body, okLabel: "Save" }))) return;
+      const p = parseRupiah(price.value);
+      if (!p.ok) { toast(p.error, "error"); return; }
+      await api("upsert_decoration", { id: d.id, name: name.value.trim(), description: d.description, price: p.digits, enabled: enabled.checked, sort: d.sort_order });
+      Object.assign(d, { name: name.value.trim(), price: p.digits, enabled: enabled.checked });
+      paint();
+      toast("Decoration saved. Existing orders keep their original prices.", "success");
+    };
+    const decoTile = (d) => {
+      const b = el("button", { type: "button", class: "deco-tile" },
+        el("span", { class: `deco-swatch deco-${d.id}`, "aria-hidden": "true" }), el("span", { class: "deco-tile__name" }), el("small"));
+      const paint = () => {
+        b.classList.toggle("is-off", !d.enabled);
+        b.children[1].textContent = d.name;
+        b.children[2].textContent = BigInt(d.price) ? formatRupiah(d.price) : "Free";
+      };
+      b.addEventListener("click", () => busy(b, () => editDeco(d, paint)));
+      paint();
+      return b;
+    };
+    const cats = [...new Set(c.decorations.map((d) => d.category || "Other"))];
+    const decoGrid = el("div", { class: "stack" }, ...cats.map((cat) => el("div", {},
+      el("h3", { class: "small muted" }, cat),
+      el("div", { class: "deco-grid" }, ...c.decorations.filter((d) => (d.category || "Other") === cat).map(decoTile)))));
 
     const pmRows = c.payment_methods.map((m) => ({ m, min: amountInput("min", m.min_amount, "none"), max: amountInput("max", m.max_amount, "none"),
       enabled: el("input", { type: "checkbox", checked: m.enabled || null }) }));
@@ -298,19 +315,36 @@ const panels = {
       }) },
     ], pmRows);
 
-    const adRows = c.ad_products.map((a) => ({ a, price: amountInput("price", a.price_per_target),
-      days: el("input", { type: "number", min: "1", max: "365", value: String(a.duration_days), class: "input--small" }),
-      enabled: el("input", { type: "checkbox", checked: a.enabled || null }) }));
+    const adRows = c.ad_products.map((a) => {
+      const price = amountInput("price", a.price_per_target);
+      const global = a.scope_level === "global"; // always one location, so no extra-location %
+      const pct = el("input", { type: "number", min: "0", max: "1000", step: "1", value: String(a.extra_location_pct), disabled: global || null, class: "input--small" });
+      const example = el("span", { class: "small muted" });
+      const paint = () => {
+        const p = parseRupiah(price.value);
+        example.textContent = !p.ok ? "—" : `${global ? "" : "3 locations: "}${formatRupiah(adPrice(p.digits, Number(pct.value) || 0, global ? 1 : 3))}`;
+      };
+      price.addEventListener("input", paint);
+      pct.addEventListener("input", paint);
+      paint();
+      return { a, price, pct, example,
+        days: el("input", { type: "number", min: "1", max: "365", value: String(a.duration_days), class: "input--small" }),
+        enabled: el("input", { type: "checkbox", checked: a.enabled || null }) };
+    });
     const adTable = table([
       { label: "Package", render: (x) => `${x.a.name} [${x.a.placement} · ${x.a.scope_level}]` },
       { label: "Days", render: (x) => x.days },
-      { label: "Price / location (Rp)", render: (x) => x.price },
+      { label: "Base fee (Rp)", render: (x) => x.price },
+      { label: "Extra per added location (%)", render: (x) => x.pct },
+      { label: "Example", render: (x) => x.example },
       { label: "Enabled", render: (x) => x.enabled },
       { label: "", render: (x) => button("Save", async () => {
         const p = parseRupiah(x.price.value);
-        if (!p.ok || p.value < 1n) { toast("Price must be a positive whole rupiah amount.", "error"); return; }
+        if (!p.ok || p.value < 1n) { toast("Base fee must be a positive whole rupiah amount.", "error"); return; }
+        const extra = Number(x.pct.value);
+        if (!Number.isInteger(extra) || extra < 0 || extra > 1000) { toast("Extra % must be a whole number from 0 to 1000.", "error"); return; }
         await api("upsert_ad_product", { id: x.a.id, name: x.a.name, placement: x.a.placement, scope_level: x.a.scope_level,
-          duration_days: Number(x.days.value), price: p.digits, enabled: x.enabled.checked, sort: x.a.sort_order });
+          duration_days: Number(x.days.value), price: p.digits, extra_pct: extra, enabled: x.enabled.checked, sort: x.a.sort_order });
         toast("Package saved.", "success");
       }) },
     ], adRows);
@@ -348,12 +382,12 @@ const panels = {
     }, "btn btn--primary");
 
     panel.replaceChildren(policy,
-      el("h2", {}, "Decorations"), decoTable,
+      el("h2", {}, "Decorations"), decoGrid,
       el("h2", {}, "Payment methods"),
       el("p", { class: "small muted" }, "Set limits from your Midtrans/acquirer agreement. A method is offered only when the order total fits its limits; totals are never reduced to fit."),
       pmTable,
       el("h2", {}, "Advertising packages"),
-      el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. Price is per location, and is frozen when an advertiser submits."),
+      el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. The base fee covers the first location; each added location costs the extra % of the base fee (100% = the same price again, 50% = half). The total is frozen when an advertiser submits."),
       adTable,
       el("h2", {}, "Site settings"),
       el("div", { class: "stack narrow" },

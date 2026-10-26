@@ -64,7 +64,7 @@ Rows from suspended accounts are hidden. Periods are all time, or the current we
 
 ## 6. Promotions and targeting
 
-- Packages (`ad_products`) are defined by placement (`promotions_feed`, `wall_inline`, `featured`), scope level (`global`/`country`/`region`/`city`/`campus`), duration and **price per target**. The price is `price_per_target × number of targets`, snapshotted on the order.
+- Packages (`ad_products`) are defined by placement (`promotions_feed`, `wall_inline`, `featured`), scope level (`global`/`country`/`region`/`city`/`campus`), duration and a **base fee** (`price_per_target`, covers the first target) plus **extra_location_pct** (each added target costs that % of the base fee; default 100). The total is `public.ad_price(base, pct, targets)`, snapshotted on the campaign and charged as one order line.
 - Every target must match the package's scope level, enforced by a CHECK constraint per level. Unknown or disabled locations are rejected.
 - **Live** means status `active`, order `paid`, and now within `[starts_at, ends_at)`. Approval sets `starts_at = max(now, requested start)` and `ends_at = starts_at + duration`.
 - **Matching** (`get_promotions`): the viewer's selection is resolved upwards (campus → city → region → country). A campaign matches if any target is global, or equals the resolved country, region, city or campus. Results are grouped per campaign (no duplicates) and sorted most specific first. Campus-targeted campaigns are shown only to that campus audience. A missing or invalid selection yields global campaigns only.

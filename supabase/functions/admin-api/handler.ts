@@ -64,6 +64,7 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_price: v.amount(p.price, "price"),
     p_enabled: v.bool(p.enabled, "enabled", true),
     p_sort: int(p.sort, 0, 1000),
+    p_extra_pct: int(p.extra_pct, 100, 1000),
   })],
   set_config: ["admin_set_config", (p) => ({ p_key: v.str(p.key, "key", { max: 60 }), p_value: p.value ?? null })],
   list_orders: ["admin_list_orders", (p) => ({

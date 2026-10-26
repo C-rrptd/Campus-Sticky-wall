@@ -1,7 +1,7 @@
 // LOCAL DEV ONLY: fake Supabase client (signed-in user, canned data). Never deploy.
 (() => {
   const user = { id: "00000000-0000-4000-8000-000000000001", email: "dev@local.test", user_metadata: { username: "C_rrptd" } };
-  const P = (placement, scope_level, duration_days, price) => ({ id: `${placement}-${scope_level}-${duration_days}`, name: `${placement} ${scope_level} ${duration_days}d`, placement, scope_level, duration_days, price_per_target: String(price), sort_order: 0 });
+  const P = (placement, scope_level, duration_days, price) => ({ id: `${placement}-${scope_level}-${duration_days}`, name: `${placement} ${scope_level} ${duration_days}d`, placement, scope_level, duration_days, price_per_target: String(price), extra_location_pct: 100, sort_order: 0 });
   const tables = {
     ad_products: [P("featured", "campus", 7, 60000), P("featured", "campus", 14, 100000), P("featured", "global", 7, 300000),
       P("random", "campus", 7, 30000), P("random", "campus", 14, 50000), P("random", "city", 7, 80000)],
