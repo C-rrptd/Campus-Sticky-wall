@@ -130,7 +130,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   }
   const player = spotifyFrame(note.spotify, 80);
   if (player) r.extras.append(player);
-  r.author.textContent = note.author_name ?? "";
+  r.author.textContent = byline(note);
   const social = note.social_link && isAllowedSocialUrl(note.social_link) ? safeUrl(note.social_link, false) : null;
   if (social) {
     r.social.href = social;
@@ -166,6 +166,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   if (note.is_mine) {
     r.vote.disabled = true;
     r.vote.title = "You can’t vote for your own note";
+    r.vote.setAttribute("aria-disabled", "true");
   }
   r.vote.addEventListener("click", () => toggleVote(note, r), { signal });
   r.bookmark.addEventListener("click", () => toggleBookmark(note, r), { signal });
@@ -224,6 +225,11 @@ function spotifyFrame(ref, height) {
   });
 }
 
+/** "Anonymous (You)" on your own notes, so you can tell them from other people's anonymous ones. */
+function byline(note) {
+  return `${note.author_name ?? ""}${note.is_mine ? " (You)" : ""}`;
+}
+
 /** Poll / quiz: choices and one button before answering, result bars after. Redraws every copy of the note (card and viewer). */
 function renderPoll(note) {
   if (!note.poll || !note.id) return null;
@@ -246,8 +252,8 @@ function renderPoll(note) {
       const verdict = quiz && answered
         ? el("p", { class: "poll__verdict", role: "status" },
             p.correct.length === p.mine.length && p.correct.every((c) => p.mine.includes(c)) ? "Correct!" : "Not quite.") : null;
-      box.replaceChildren(el("ul", { class: "poll__results" }, rows), verdict,
-        el("p", { class: "poll__total muted small" }, `${p.total} ${p.total === 1 ? "answer" : "answers"}${p.multi ? " · several choices allowed" : ""}`));
+      box.replaceChildren(...[el("ul", { class: "poll__results" }, rows), verdict,
+        el("p", { class: "poll__total muted small" }, `${p.total} ${p.total === 1 ? "answer" : "answers"}${p.multi ? " · several choices allowed" : ""}`)].filter(Boolean));
       return;
     }
     const name = `poll-${note.id}-${Math.random().toString(36).slice(2, 7)}`;
@@ -308,7 +314,7 @@ function openNoteViewer(note) {
     renderPoll(note),
     spotifyFrame(note.spotify, 152),
     ...media,
-    el("p", { class: "viewer__by" }, `— ${note.author_name ?? ""}`),
+    el("p", { class: "viewer__by" }, `— ${byline(note)}`),
     close);
   const done = () => { for (const v of dialog.querySelectorAll("video")) v.pause(); dialog.close(); };
   close.addEventListener("click", done);

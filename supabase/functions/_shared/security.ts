@@ -125,9 +125,13 @@ export async function readJson(req: Request, maxBytes = MAX_BODY_BYTES): Promise
 }
 
 export function clientIp(req: Request): string {
+  // The edge proxy sets cf-connecting-ip itself. The first x-forwarded-for entry is client-supplied
+  // (spoofable), so use the last one, which the proxy appended, only as a fallback.
+  const direct = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-real-ip");
+  if (direct) return direct.trim().slice(0, 64);
   const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim().slice(0, 64);
-  return (req.headers.get("cf-connecting-ip") ?? req.headers.get("x-real-ip") ?? "unknown").slice(0, 64);
+  if (fwd) return fwd.split(",").pop()!.trim().slice(0, 64);
+  return "unknown";
 }
 
 export async function sha256Hex(input: string): Promise<string> {

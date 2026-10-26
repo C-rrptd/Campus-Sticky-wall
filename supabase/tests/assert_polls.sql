@@ -77,6 +77,11 @@ select pg_temp.must(public.answer_poll((select quiz from ids), '{0}') -> 'correc
 select pg_temp.as_user('');
 select pg_temp.must(not (public.get_note((select quiz from ids)) -> 'poll' ? 'correct'), 'anonymous viewer still has no answer');
 
+-- ---- 022 hardening ----
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000e3', 'e3@t.id');
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e3');
+select pg_temp.expect_err(format($$select public.answer_poll(%L, '{0}')$$, (select plain from ids)), 'EMAIL_NOT_VERIFIED');
+
 -- ---- privileges ----
 select pg_temp.must(not has_column_privilege('authenticated', 'public.notes', 'poll_answer', 'select'), 'poll_answer is not readable by clients');
 select pg_temp.must(not has_table_privilege('authenticated', 'public.poll_votes', 'select'), 'poll_votes is not readable by clients');
