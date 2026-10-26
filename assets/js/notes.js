@@ -746,7 +746,7 @@ export async function mountComposer(view, { signal, navigate }) {
         campus_id: campus.select.value || null,
         media,
         poll: built.poll,
-        spotify,
+        spotify: spotifyRaw || null, // raw link: the server normalises it; "track/<id>" alone would not match its URL rule
       });
       rememberReceipt(res.order.order_ref, res.access_token);
       rememberMine(res.order.note?.id);
