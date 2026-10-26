@@ -1,0 +1,7 @@
+/* Advertise page. Layout only: nothing here hides or collapses content. */
+.adv-form > * + * { margin-top: var(--space-4); }
+.adv-group { border: 0; padding: 0; margin-inline: 0; margin-bottom: 0; min-width: 0; }
+.adv-group legend { font-weight: 800; font-size: 1.05rem; padding: 0; margin-bottom: var(--space-2); }
+.adv-group > * + * { margin-top: var(--space-3); }
+.adv-group input:not([type="checkbox"]), .adv-group select, .adv-group textarea { max-width: 100%; }
+.adv-side > * + * { margin-top: var(--space-3); }

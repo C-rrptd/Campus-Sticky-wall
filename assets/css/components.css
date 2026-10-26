@@ -245,17 +245,6 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .note__media-label { font-size: 0.8rem; }
 
 /* Advertise ---------------------------------------------------------------------------- */
-.ad-section { border: 0; padding: 0; margin: 0; min-width: 0; }
-.ad-section input, .ad-section select, .ad-section textarea { max-width: 100%; }
-.ad-section__title { font-weight: 800; font-size: 1.05rem; padding: 0; margin-bottom: var(--space-2); }
-.choice-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-2); }
-.choice { position: relative; display: block; cursor: pointer; }
-.choice input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
-.choice__body { display: block; height: 100%; padding: var(--space-3); background: #fff; border: 2px solid var(--line); border-radius: var(--radius-small); }
-.choice__body strong { display: block; }
-.choice__body small { color: var(--ink-soft); }
-.choice input:checked + .choice__body { border-color: var(--accent); background: var(--accent-soft); }
-.choice input:focus-visible + .choice__body { outline: 3px solid var(--accent); outline-offset: 2px; }
 .steps { margin: 0; padding-left: 1.2em; display: grid; gap: var(--space-1); font-size: 0.9rem; }
 .campaign-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .campaign-item { padding: var(--space-3); background: #fff; border: 1px solid var(--line); border-radius: var(--radius-small); display: grid; gap: var(--space-1); }
@@ -268,4 +257,3 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .badge--warn { background: #fef3c7; color: #92400e; }
 .badge--bad { background: var(--err-soft); color: var(--err); }
 .is-loading { opacity: 0.6; pointer-events: none; }
-.stack > .ad-section + .ad-section { margin-top: var(--space-5); }

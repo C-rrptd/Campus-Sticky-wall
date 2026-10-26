@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Sticky Wall</title>
+  <meta name="description" content="A sticky-note wall for college students. Post a note, pay what you choose (from Rp5.000), and discover campus promotions.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#f3ead7">
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/base.css?v=20261025">
+  <link rel="stylesheet" href="assets/css/components.css?v=20261025">
+  <link rel="stylesheet" href="assets/css/decorations.css?v=20261025">
+  <link rel="stylesheet" href="assets/css/pages.css?v=20261025">
+  <link rel="stylesheet" href="assets/css/advertise.css?v=20261025">
+  <link rel="stylesheet" href="assets/css/responsive.css?v=20261025">
+  <!-- Pinned, vendored Supabase client (MIT). See DEPENDENCIES.md. -->
+  <script src="assets/js/mock-supabase.js" defer></script>
+  <script type="module" src="assets/js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="app-header"></div>
+  <main id="main" tabindex="-1">
+    <div id="view" aria-live="polite">
+      <p class="boot">Loading the wall…</p>
+    </div>
+  </main>
+  <div id="app-footer"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="template-store" hidden></div>
+  <noscript>
+    <p class="boot">Campus Sticky Wall needs JavaScript to load notes and process payments.</p>
+  </noscript>
+</body>
+</html>

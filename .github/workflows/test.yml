@@ -40,6 +40,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_stickers.sql
       - name: Advertising v3 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ads_v3.sql
+      - name: Advertising fixes assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ads_fixes.sql
 
   code:
     runs-on: ubuntu-latest
