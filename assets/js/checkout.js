@@ -141,7 +141,7 @@ export async function mount(view, { params, signal, navigate }) {
   }
 
   function poll() {
-    if (signal.aborted || !order || order.status !== "awaiting_payment" || polls >= 20) return;
+    if (signal.aborted || !order || !["awaiting_payment", "challenge"].includes(order.status) || polls >= 20) return;
     polls += 1;
     timer = setTimeout(async () => {
       try {
@@ -203,7 +203,7 @@ export async function mount(view, { params, signal, navigate }) {
 
   try {
     await load();
-    if (params.get("returned")) {
+    if (params.get("returned") && order.status === "awaiting_payment") {
       r.banner.append(el("br"), "Checking your payment with the provider…");
       poll();
     }

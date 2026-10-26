@@ -5,7 +5,8 @@
 //   Auth:   Basic base64("<server key>:")
 //   Signature: SHA512(order_id + status_code + gross_amount + server_key), hex.
 
-import { HttpError, sha512Hex, timingSafeEqual } from "./security.ts";
+import type { Db } from "./auth.ts";
+import { HttpError, rpc, sha512Hex, timingSafeEqual } from "./security.ts";
 
 export interface MidtransConfig {
   serverKey: string;
@@ -204,4 +205,28 @@ export function statusToRpcArgs(status: Record<string, unknown>, fallback: Midtr
       status: { ...status, signature_key: "[redacted]" },
     },
   };
+}
+
+/**
+ * Pull-based fallback for a missed or delayed webhook: ask Midtrans for the
+ * transaction status (server key, so it is as authoritative as a verified
+ * notification) and apply it through the same idempotent, amount-checked RPC.
+ * Never throws: the receipt must still load if Midtrans is down.
+ */
+export async function syncOrderStatus(cfg: MidtransConfig, db: Db, orderRef: string, fetchFn: typeof fetch): Promise<void> {
+  try {
+    const status = await fetchTransactionStatus(cfg, orderRef, fetchFn);
+    // Unknown transaction (customer never reached Snap) has no transaction_status; nothing to apply.
+    if (status.order_id !== orderRef || typeof status.transaction_status !== "string") return;
+    const fallback = {
+      order_id: orderRef,
+      status_code: String(status.status_code ?? ""),
+      gross_amount: String(status.gross_amount ?? ""),
+      signature_key: "",
+      transaction_status: status.transaction_status,
+    };
+    await rpc(db, "apply_payment_notification", statusToRpcArgs(status, fallback));
+  } catch (err) {
+    console.warn("Midtrans status sync skipped", err instanceof Error ? err.message : String(err));
+  }
 }
