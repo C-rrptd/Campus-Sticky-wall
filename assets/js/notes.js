@@ -2,6 +2,7 @@
 // note composer with customer-defined pricing (min/cap/presets from site_config).
 // Totals shown here are ESTIMATES; the server computes the authoritative price.
 
+import { decoPicker } from "./deco-picker.js";
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
 import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc, uploadNoteMedia } from "./supabase-client.js";
@@ -279,11 +280,12 @@ export async function mountComposer(view, { signal, navigate }) {
   const r = refs(view);
   const user = currentUser();
   const state = { decorations: [], stickers: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {}, rotations: {}, promo: null };
-  const MAX_DECOS = 10; // same limit as the server
+  const MAX_DECOS = 200; // same sanity ceiling as the server (create-publication, check-promo, migration 018)
+  let singles = [], adder = null; // pickers: one per whole-note category, one that adds stickers
   let nextKey = 0;
   const priceLabel = (d) => (String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`);
   // Whole-note decorations come from one dropdown per category. Stickers are copies in state.stickers, each with its own key.
-  const picked = () => [...r.decoSingles.querySelectorAll("select")].map((i) => i.value).filter(Boolean).concat(state.stickers.map((t) => t.id));
+  const picked = () => singles.map((p) => p.value).filter(Boolean).concat(state.stickers.map((t) => t.id));
   const say = (text) => { r.decoLive.textContent = text; };
   const copiesOf = (id) => state.stickers.filter((t) => t.id === id).length;
   const nameOf = (id) => state.decorations.find((d) => d.id === id)?.name ?? id;
@@ -317,7 +319,7 @@ export async function mountComposer(view, { signal, navigate }) {
     for (const t of state.stickers) counts.set(t.id, (counts.get(t.id) ?? 0) + 1);
     const full = picked().length >= MAX_DECOS;
     const refocus = (id, act) => (r.stickerList.querySelector(`[data-id="${id}"][data-act="${act}"]:not(:disabled)`)
-      ?? r.stickerList.querySelector(`[data-id="${id}"][data-act="less"]`) ?? r.adder).focus();
+      ?? r.stickerList.querySelector(`[data-id="${id}"][data-act="less"]`) ?? { focus: () => adder.focus() }).focus();
     const button = (id, act, text, label, fn) => {
       const b = el("button", { type: "button", class: "stepper__btn", "data-id": id, "data-act": act, "aria-label": label }, text);
       b.disabled = act === "more" && full;
@@ -335,8 +337,8 @@ export async function mountComposer(view, { signal, navigate }) {
           button(id, "more", "+", `Add another ${d.name}`, () => addSticker(id))));
     }));
     r.stickerList.hidden = counts.size === 0;
-    r.adder.disabled = full;
-    r.adderHint.textContent = full ? `You have ${MAX_DECOS} decorations, the most a note can have.` : "Pick the same sticker again to add another copy. A note can have up to 10 decorations.";
+    if (adder) adder.disabled = full;
+    r.adderHint.textContent = full ? `You have ${MAX_DECOS} decorations, the most a note can have.` : "Pick the same sticker again to add another copy, as many as you like.";
   };
 
   // Pricing config (public site_config rows). Failure keeps the built-in defaults; the server still decides.
@@ -454,22 +456,22 @@ export async function mountComposer(view, { signal, navigate }) {
     // Only decoration ids are sent; the server re-checks them.
     const ORDER = ["Borders", "Tapes", "Stickers", "Stamps & badges", "Backgrounds", "Themes"];
     const rank = (c) => (ORDER.includes(c) ? ORDER.indexOf(c) : ORDER.length);
-    const option = (d) => el("option", { value: d.id, title: d.description || null }, `${d.name} (${priceLabel(d)})`);
+    const option = (d) => ({ value: d.id, name: d.name, price: priceLabel(d), desc: d.description, cat: d.category || "Other" });
     const byCategory = (list) => {
       const groups = new Map();
       for (const d of list) groups.set(d.category || "Other", [...(groups.get(d.category || "Other") ?? []), d]);
       return [...groups].sort((a, b) => rank(a[0]) - rank(b[0]));
     };
     const usable = state.decorations.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id));
-    r.decoSingles.replaceChildren(...byCategory(usable.filter((d) => !d.placeable)).map(([cat, list]) =>
-      el("label", { class: "field" }, el("span", { class: "field__label" }, cat),
-        el("select", {}, el("option", { value: "" }, "None"), ...list.map(option)))));
+    const wholeNote = byCategory(usable.filter((d) => !d.placeable));
+    singles = wholeNote.map(([, list]) => decoPicker({ options: list.map((d) => ({ ...option(d), cat: undefined })), placeholder: "None", label: list[0].category || "Other", signal,
+      onChange: () => { renderStickerList(); recompute(); } }));
+    r.decoSingles.replaceChildren(...singles.map((p, i) => el("div", { class: "field" }, el("span", { class: "field__label" }, wholeNote[i][0]), p.element)));
     const stickers = byCategory(usable.filter((d) => d.placeable));
-    r.adder.replaceChildren(el("option", { value: "" }, "Choose a sticker…"),
-      ...stickers.map(([cat, list]) => el("optgroup", { label: cat }, ...list.map(option))));
+    adder = decoPicker({ options: stickers.flatMap(([, list]) => list.map(option)), placeholder: "Choose a sticker…", label: "Stickers, stamps and badges", signal,
+      onChange: (id) => { adder.value = ""; if (id) addSticker(id); } });
+    r.adder.replaceChildren(adder.element);
     r.stickerBox.hidden = stickers.length === 0;
-    r.decoSingles.addEventListener("change", renderStickerList, { signal }); // the 10-decoration limit counts these too
-    r.adder.addEventListener("change", () => { const id = r.adder.value; r.adder.value = ""; if (id) addSticker(id); }, { signal });
     renderStickerList();
     r.decoMsg.hidden = state.decorations.length > 0;
     r.decoMsg.textContent = "No decorations available right now.";
@@ -551,7 +553,7 @@ export async function mountComposer(view, { signal, navigate }) {
     if (!amount.ok) { r.formError.textContent = amount.error; r.amount.focus(); return; }
     if (social && !isAllowedSocialUrl(social)) { r.formError.textContent = "Social links must be https links on a supported platform."; return; }
     if (amount.value > pricing.confirmAbove && !r.confirm.checked) { r.formError.textContent = "Please confirm the amount you want to pay."; r.confirm.focus(); return; }
-    if (picked().length > 10) { r.formError.textContent = "You can add at most 10 decorations."; return; }
+    if (picked().length > MAX_DECOS) { r.formError.textContent = `You can add at most ${MAX_DECOS} decorations.`; return; }
     const files = [...(r.media.files ?? [])];
     if (files.length > MEDIA_MAX_FILES) { r.formError.textContent = `Attach at most ${MEDIA_MAX_FILES} files.`; return; }
     const bad = files.map(mediaProblem).find(Boolean);

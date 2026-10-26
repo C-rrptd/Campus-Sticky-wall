@@ -35,9 +35,9 @@ select pg_temp.order_full('legacy', '{sticker-cat,sticker-sun}', '{"sticker-cat"
 select pg_temp.must(jsonb_array_length(pg_temp.note('legacy') -> 'stickers') = 2, 'legacy form stored');
 select pg_temp.must((pg_temp.note('legacy') -> 'placements' -> 'sticker-cat' ->> 'x')::numeric = 20, 'legacy placements key still present');
 
--- whole-note decorations stay one each; stickers cap at 10 decorations in total
+-- whole-note decorations stay one each; stickers cap at 200 decorations in total (migration 018)
 select pg_temp.expect_err($$select pg_temp.order_full('dup-frame', '{frame-thick,frame-thick}', null)$$, 'DUPLICATE_DECORATION');
-select pg_temp.expect_err($$select pg_temp.order_full('too-many', '{sticker-cat,sticker-cat,sticker-cat,sticker-cat,sticker-cat,sticker-cat,sticker-cat,sticker-cat,sticker-cat,sticker-cat,sticker-cat}', null)$$, 'TOO_MANY_DECORATIONS');
+select pg_temp.expect_err($$select pg_temp.order_full('too-many', ('{' || repeat('sticker-cat,', 200) || 'sticker-cat}')::text[], null)$$, 'TOO_MANY_DECORATIONS');
 
 -- positions may not name more copies than the note has, or a sticker that is not on it
 select pg_temp.expect_err($$select pg_temp.order_full('extra', '{sticker-cat}', '[{"id":"sticker-cat","x":1,"y":1},{"id":"sticker-cat","x":2,"y":2}]')$$, 'INVALID_POSITION');

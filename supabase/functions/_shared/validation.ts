@@ -77,6 +77,9 @@ export function oneOf<T extends string>(v: unknown, field: string, allowed: read
   return v as T;
 }
 
+/** Most decorations on one note. Keep equal to MAX_DECOS in notes.js and the limit in migration 018. */
+export const MAX_DECORATIONS = 200;
+
 export function idList(v: unknown, field: string, max: number): string[] {
   if (v === undefined || v === null) return [];
   if (!Array.isArray(v) || v.length > max) throw bad("INVALID_FIELD", `${field} must be a list (max ${max}).`);
@@ -152,14 +155,14 @@ export function email(v: unknown, field: string): string {
   return s;
 }
 
-/** Sticker positions: [{ id, x: 0-100, y: 0-100, rot?: -360..360 degrees }], one per copy, at most 10.
+/** Sticker positions: [{ id, x: 0-100, y: 0-100, rot?: -360..360 degrees }], one per copy, at most MAX_DECORATIONS.
  *  The older { "<id>": { x, y, rot? } } form is still accepted. The database re-checks everything. */
 export function positionList(value: unknown, label = "Sticker positions"): { id: string; x: number; y: number; rot?: number }[] {
   if (value === undefined || value === null) return [];
   const bad = () => new HttpError(400, "INVALID_POSITION", `${label} are invalid.`);
   const list = Array.isArray(value) ? value
     : typeof value === "object" ? Object.entries(value).map(([id, p]) => ({ ...(p as object), id })) : null;
-  if (!list || list.length > 10) throw bad();
+  if (!list || list.length > MAX_DECORATIONS) throw bad();
   return list.map((p) => {
     const pos = p as { id?: unknown; x?: unknown; y?: unknown; rot?: unknown } | null;
     const ok = pos && typeof pos === "object" && typeof pos.id === "string" && /^[a-z0-9-]{2,40}$/.test(pos.id) &&

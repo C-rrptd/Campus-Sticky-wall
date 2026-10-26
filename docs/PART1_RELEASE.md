@@ -62,7 +62,7 @@ Both the inviter and the invited friend get **2 free posts + 2 free decorations*
 - Tests: `supabase/tests/assert_stickers.sql`. A jsdom test of sticker rendering, pointer dragging and keyboard moves passed locally but is not in the repo; the composer checkbox logic was not exercised in a browser.
 
 ## Repeated stickers and the decorations dropdowns (migration 017)
-- **Repeats:** a sticker, stamp or badge can be added to a note several times. Each copy is priced, charged and credited on its own (`quote_publication` returns one line per copy; `note_decorations` has one row per copy). Frames, tapes, papers and themes stay one each. A note has at most 10 decorations in total.
+- **Repeats:** a sticker, stamp or badge can be added to a note several times. Each copy is priced, charged and credited on its own (`quote_publication` returns one line per copy; `note_decorations` has one row per copy). Frames, tapes, papers and themes stay one each. A note has at most 200 decorations in total (migration 018; a sanity ceiling).
 - **Composer:** one dropdown per whole-note category (None or one choice), plus one "Stickers, stamps and badges" dropdown that adds a copy. Added stickers show as rows with a − / + counter. Copies start a step apart so they do not hide each other.
 - **API:** `decoration_positions` is now a list `[{id,x,y,rot}]`, one per copy; the old `{ "<id>": {x,y,rot} }` form is still accepted. `note_json` gains `stickers` (one entry per copy); `placements` stays for clients cached from before 017 and can be dropped later.
 - **Deploy order:** run `017_repeat_stickers.sql`, deploy `create-publication` (and `check-promo` is unchanged), then the site.

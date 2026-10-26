@@ -13,7 +13,7 @@
 .wall[aria-busy="true"] { opacity: 0.7; }
 .wall-more { text-align: center; margin-top: var(--space-6); }
 .announcement { margin-bottom: var(--space-4); border-left: 5px solid var(--accent); }
-.announcement--pinned { background: #f6f8ff; }
+.announcement--pinned { background: var(--pinned); }
 .announcement__meta { display: flex; gap: var(--space-2); align-items: center; font-size: 0.8rem; color: var(--muted); }
 .announcement__body { white-space: pre-wrap; overflow-wrap: anywhere; }
 
@@ -55,7 +55,7 @@
 .admin-panel .table td .row { flex-wrap: wrap; }
 
 /* Footer */
-.site-footer { border-top: 1px solid var(--line); background: rgba(255, 255, 255, 0.7); }
+.site-footer { border-top: 1px solid var(--line); background: var(--header-bg); }
 .site-footer__inner { max-width: var(--max); margin: 0 auto; padding: var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; justify-content: space-between; font-size: 0.875rem; color: var(--ink-soft); }
 .site-footer__inner p { margin: 0; }
 .site-footer nav { display: flex; gap: var(--space-3); flex-wrap: wrap; }

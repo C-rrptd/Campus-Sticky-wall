@@ -66,6 +66,19 @@ async function renderHeader() {
     r.nav.classList.toggle("is-open", open);
   });
   r.signOut.addEventListener("click", () => signOut());
+  const root = document.documentElement;
+  const paintTheme = () => {
+    const dark = root.dataset.theme === "dark";
+    r.themeToggle.firstElementChild.textContent = dark ? "☀" : "☾";
+    r.themeToggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f1424" : "#eef1f7");
+  };
+  r.themeToggle.addEventListener("click", () => {
+    root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+    try { localStorage.setItem("csw-theme", root.dataset.theme); } catch { /* storage blocked: choice lasts this visit */ }
+    paintTheme();
+  });
+  paintTheme();
   const update = async () => {
     const user = currentUser();
     r.signInLink.hidden = Boolean(user);

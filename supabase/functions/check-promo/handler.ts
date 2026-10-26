@@ -17,7 +17,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   const quote = await rpc(deps.db, "quote_post_discount", {
     p_user_id: user.id,
     p_amount: v.amount(body.amount),
-    p_decorations: v.idList(body.decorations, "Decorations", 10),
+    p_decorations: v.idList(body.decorations, "Decorations", v.MAX_DECORATIONS),
     p_code: v.promoCode(body.promo_code),
     p_use_free: v.bool(body.use_free_post, "use_free_post", false),
   });

@@ -28,7 +28,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     social_link: v.socialUrl(body.social_link, "Social link"),
     show_amount: v.bool(body.show_amount, "show_amount", true),
     amount: v.amount(body.amount),
-    decorations: v.idList(body.decorations, "Decorations", 10),
+    decorations: v.idList(body.decorations, "Decorations", v.MAX_DECORATIONS),
     use_credit: v.bool(body.use_credit, "use_credit", false),
     use_post_credit: v.bool(body.use_post_credit, "use_post_credit", false),
     deco_credits: typeof body.deco_credits === "number" && Number.isInteger(body.deco_credits) && body.deco_credits >= 0 && body.deco_credits <= 10 ? body.deco_credits : 0,

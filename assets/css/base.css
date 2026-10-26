@@ -38,8 +38,24 @@
   --space-6: 32px;
   --space-7: 48px;
   --max: 1200px;
+  --grid: 42, 68, 199;
+  --header-bg: rgba(255, 255, 255, 0.9);
+  --pinned: #f6f8ff;
+  color-scheme: light;
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-note: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+
+/* Dark theme: set by theme-init.js (saved choice, else the OS setting). Notes keep their paper colours, slightly dimmed. */
+:root[data-theme="dark"] {
+  --paper: #0f1424; --paper-dark: #1a2138; --ink: #e6eaf7; --ink-soft: #b4bdd6; --muted: #8f9bb8; --line: #2d3754;
+  --card: #171e33; --accent: #8da0ff; --accent-strong: #aab8ff; --accent-ink: #0b1030; --accent-soft: #222c52;
+  --focus: #ff9a5c; --ok: #6ee7a0; --ok-soft: #12331f; --err: #ff8a8a; --err-soft: #3b1717; --info-soft: #1c2850;
+  --note-yellow: #e9db8a; --note-pink: #e8b9c9; --note-blue: #b3cde8; --note-green: #bfdfb3; --note-orange: #e8c79c; --note-purple: #cfc0e8;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 10px 24px -14px rgba(0, 0, 0, 0.8);
+  --shadow-note: 0 1px 1px rgba(0, 0, 0, 0.5), 0 12px 18px -8px rgba(0, 0, 0, 0.7);
+  --grid: 141, 160, 255; --header-bg: rgba(15, 20, 36, 0.9); --pinned: #1a2242;
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -55,10 +71,10 @@ body {
   color: var(--ink);
   background-color: var(--paper);
   background-image:
-    linear-gradient(rgba(42, 68, 199, 0.11) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(42, 68, 199, 0.11) 1px, transparent 1px),
-    linear-gradient(rgba(42, 68, 199, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(42, 68, 199, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(var(--grid), 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--grid), 0.11) 1px, transparent 1px),
+    linear-gradient(rgba(var(--grid), 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--grid), 0.06) 1px, transparent 1px);
   background-size: 140px 140px, 140px 140px, 28px 28px, 28px 28px;
   display: flex;
   flex-direction: column;
