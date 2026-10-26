@@ -152,21 +152,22 @@ export function email(v: unknown, field: string): string {
   return s;
 }
 
-/** Sticker positions: { "<decoration id>": { x: 0-100, y: 0-100, rot?: -360..360 degrees } }, at most 10. The database re-checks everything. */
-export function positionMap(value: unknown, label = "Sticker positions"): Record<string, { x: number; y: number; rot?: number }> {
-  if (value === undefined || value === null) return {};
-  if (typeof value !== "object" || Array.isArray(value)) throw new HttpError(400, "INVALID_POSITION", `${label} are invalid.`);
-  const entries = Object.entries(value as Record<string, unknown>);
-  if (entries.length > 10) throw new HttpError(400, "INVALID_POSITION", `${label} are invalid.`);
-  const out: Record<string, { x: number; y: number; rot?: number }> = {};
-  for (const [id, p] of entries) {
-    const pos = p as { x?: unknown; y?: unknown; rot?: unknown } | null;
-    const ok = /^[a-z0-9-]{2,40}$/.test(id) && pos && typeof pos === "object" &&
+/** Sticker positions: [{ id, x: 0-100, y: 0-100, rot?: -360..360 degrees }], one per copy, at most 10.
+ *  The older { "<id>": { x, y, rot? } } form is still accepted. The database re-checks everything. */
+export function positionList(value: unknown, label = "Sticker positions"): { id: string; x: number; y: number; rot?: number }[] {
+  if (value === undefined || value === null) return [];
+  const bad = () => new HttpError(400, "INVALID_POSITION", `${label} are invalid.`);
+  const list = Array.isArray(value) ? value
+    : typeof value === "object" ? Object.entries(value).map(([id, p]) => ({ ...(p as object), id })) : null;
+  if (!list || list.length > 10) throw bad();
+  return list.map((p) => {
+    const pos = p as { id?: unknown; x?: unknown; y?: unknown; rot?: unknown } | null;
+    const ok = pos && typeof pos === "object" && typeof pos.id === "string" && /^[a-z0-9-]{2,40}$/.test(pos.id) &&
       typeof pos.x === "number" && typeof pos.y === "number" &&
       Number.isFinite(pos.x) && Number.isFinite(pos.y) && pos.x >= 0 && pos.x <= 100 && pos.y >= 0 && pos.y <= 100 &&
       (pos.rot === undefined || (typeof pos.rot === "number" && Number.isFinite(pos.rot) && Math.abs(pos.rot) <= 360));
-    if (!ok) throw new HttpError(400, "INVALID_POSITION", `${label} are invalid.`);
-    out[id] = pos.rot === undefined ? { x: pos.x as number, y: pos.y as number } : { x: pos.x as number, y: pos.y as number, rot: pos.rot as number };
-  }
-  return out;
+    if (!ok) throw bad();
+    const out = { id: pos.id as string, x: pos.x as number, y: pos.y as number };
+    return pos.rot === undefined ? out : { ...out, rot: pos.rot as number };
+  });
 }

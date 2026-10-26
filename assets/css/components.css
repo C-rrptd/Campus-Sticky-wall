@@ -12,8 +12,10 @@
 .btn:hover { background: #fff; box-shadow: var(--shadow); }
 .btn:active { transform: translateY(1px); }
 .btn:disabled, .btn[aria-busy="true"] { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
-.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn--primary:hover { background: #a7360a; }
+.btn--primary { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
+.btn--primary, .btn--primary:hover { box-shadow: 0 2px 0 var(--accent-strong); }
+.btn--primary:hover { background: var(--accent-strong); }
+.btn--primary:active { transform: translateY(2px); box-shadow: none; }
 .btn--danger { color: var(--err); border-color: #f1b4b4; }
 .btn--small { min-height: 32px; padding: 0 var(--space-3); font-size: 0.875rem; }
 .btn--block { width: 100%; }
@@ -25,6 +27,7 @@
 .field__label { font-weight: 600; font-size: 0.9rem; }
 .field__hint { font-size: 0.8rem; color: var(--muted); }
 .field__error { color: var(--err); font-size: 0.875rem; min-height: 1em; margin: 0; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 input, select, textarea {
   font: inherit; color: var(--ink); background: #fff;
   border: 1px solid var(--line); border-radius: var(--radius-small);
@@ -56,17 +59,20 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .swatch--orange span { background: var(--note-orange); }
 .swatch--purple span { background: var(--note-purple); }
 
-.decorations { display: grid; gap: var(--space-4); }
-.deco-group { border: 0; padding: 0; margin: 0; min-width: 0; }
-.deco-group__hint { font-weight: 400; color: var(--muted); }
-.deco-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.6rem, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
-.deco-option { position: relative; display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: var(--space-2); background: #fff; border: 2px solid var(--line); border-radius: var(--radius-small); cursor: pointer; text-align: center; }
-.deco-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.deco-option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-.deco-option .deco-swatch { width: 3.4rem; height: 3.4rem; }
-.deco-option__name { font-size: .8rem; font-weight: 700; line-height: 1.2; }
-.deco-option__price { font-size: .75rem; color: var(--ink-soft); }
-.deco-swatch--none { background: repeating-linear-gradient(45deg, #fff 0 .4rem, #eee .4rem .8rem); }
+/* Decorations: one dropdown per whole-note category, one dropdown that adds stickers, a counter per sticker */
+.decos { display: grid; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px dashed var(--line); }
+.decos__singles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-3); }
+.decos__stickers { display: grid; gap: var(--space-1); }
+.sticker-list { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; gap: var(--space-2); }
+.sticker-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: #fff; border: 1px solid var(--line); border-radius: var(--radius-small); }
+.sticker-row .deco-swatch { width: 2.4rem; height: 2.4rem; }
+.sticker-row__name { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.sticker-row__name small { font-weight: 400; color: var(--ink-soft); }
+.stepper { display: inline-flex; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.stepper output { min-width: 2ch; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stepper__btn { width: 40px; height: 40px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 1.25rem; font-weight: 700; cursor: pointer; }
+.stepper__btn:hover:not(:disabled) { background: var(--accent-soft); }
+.stepper__btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .chip { font: inherit; padding: var(--space-1) var(--space-3); border-radius: 999px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
@@ -151,7 +157,7 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .promo--inline { border-style: dashed; }
 
 /* Navigation & header ---------------------------------------------------------------- */
-.site-header { background: rgba(255, 253, 247, 0.92); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(6px); }
+.site-header { background: rgba(255, 255, 255, 0.9); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(6px); }
 .site-header__inner { max-width: var(--max); margin: 0 auto; padding: var(--space-2) var(--space-4); display: flex; align-items: center; gap: var(--space-4); }
 .brand { display: flex; align-items: center; gap: var(--space-2); color: var(--ink); text-decoration: none; font-weight: 800; font-size: 1.1rem; white-space: nowrap; }
 .brand__pin { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f87171, #b91c1c); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3); }

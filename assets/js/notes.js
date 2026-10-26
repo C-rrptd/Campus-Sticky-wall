@@ -84,22 +84,23 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   const color = COLORS.has(note.color) ? note.color : "yellow";
   r.root.classList.add(`note--${color}`);
   r.root.style.setProperty("--tilt", `${tilt(note.id ?? note.body)}deg`);
-  const placements = note.placements && typeof note.placements === "object" ? note.placements : {};
+  // Stickers are placed copies: `stickers` (one entry per copy), or `placements` keyed by id on older data.
+  const older = note.placements && typeof note.placements === "object" ? note.placements : {};
+  const stickers = (Array.isArray(note.stickers) ? note.stickers : Object.entries(older).map(([id, p]) => ({ id, ...p })))
+    .filter((t) => t && typeof t.id === "string" && /^[a-z0-9-]{2,40}$/.test(t.id) && Number.isFinite(Number(t.x)) && Number.isFinite(Number(t.y)));
+  const placed = new Set(stickers.map((t) => t.id));
   for (const d of note.decorations ?? []) {
-    if (!/^[a-z0-9-]{2,40}$/.test(d)) continue;
-    const p = placements[d];
-    if (p && Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y))) {
-      // Sticker: a real element placed by percentages, so the author can drag it.
-      const sticker = el("span", { class: `sticker deco-${d}`, "aria-hidden": "true" });
-      sticker.style.left = `${clampPct(Number(p.x))}%`;
-      sticker.style.top = `${clampPct(Number(p.y))}%`;
-      const rot = Number.isFinite(Number(p.rot)) ? Number(p.rot) : 0;
-      sticker.style.setProperty("--rot", `${rot}deg`);
-      if (onPlace) makeDraggable(sticker, r.root, d, names[d] ?? d, onPlace, { onRotate, onRemove, rot });
-      r.root.append(sticker);
-    } else {
-      r.root.classList.add(`deco-${d}`);
-    }
+    if (/^[a-z0-9-]{2,40}$/.test(d) && !placed.has(d)) r.root.classList.add(`deco-${d}`);
+  }
+  for (const t of stickers) {
+    // A real element placed by percentages, so the author can drag it.
+    const sticker = el("span", { class: `sticker deco-${t.id}`, "aria-hidden": "true" });
+    sticker.style.left = `${clampPct(Number(t.x))}%`;
+    sticker.style.top = `${clampPct(Number(t.y))}%`;
+    const rot = Number.isFinite(Number(t.rot)) ? Number(t.rot) : 0;
+    sticker.style.setProperty("--rot", `${rot}deg`);
+    if (onPlace) makeDraggable(sticker, r.root, t.key ?? t.id, names[t.id] ?? t.id, onPlace, { onRotate, onRemove, rot });
+    r.root.append(sticker);
   }
   if (note.id) r.root.dataset.noteId = note.id;
   const hasMedia = Array.isArray(note.media) && note.media.length > 0;
@@ -277,19 +278,66 @@ export async function mountComposer(view, { signal, navigate }) {
   view.append(cloneTemplate("tpl-note-composer"));
   const r = refs(view);
   const user = currentUser();
-  const state = { decorations: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {}, rotations: {}, promo: null };
-  // Every ticked decoration tile (radio tiles for "one per group", checkboxes for stickers, stamps and badges).
-  const picked = () => [...r.decorations.querySelectorAll("input:checked")].map((i) => i.value).filter(Boolean);
-  const removeDecoration = (id) => {
-    delete state.positions[id];
-    delete state.rotations[id];
-    const tile = [...r.decorations.querySelectorAll("input")].find((i) => i.value === id);
-    if (tile) { tile.checked = false; tile.dispatchEvent(new Event("change", { bubbles: true })); }
+  const state = { decorations: [], stickers: [], credits: 0, freePosts: 0, freeDecos: 0, positions: {}, rotations: {}, promo: null };
+  const MAX_DECOS = 10; // same limit as the server
+  let nextKey = 0;
+  const priceLabel = (d) => (String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`);
+  // Whole-note decorations come from one dropdown per category. Stickers are copies in state.stickers, each with its own key.
+  const picked = () => [...r.decoSingles.querySelectorAll("select")].map((i) => i.value).filter(Boolean).concat(state.stickers.map((t) => t.id));
+  const say = (text) => { r.decoLive.textContent = text; };
+  const copiesOf = (id) => state.stickers.filter((t) => t.id === id).length;
+  const nameOf = (id) => state.decorations.find((d) => d.id === id)?.name ?? id;
+  const removeDecoration = (key) => {
+    const gone = state.stickers.find((t) => t.key === key);
+    if (!gone) return;
+    state.stickers = state.stickers.filter((t) => t.key !== key);
+    delete state.positions[key];
+    delete state.rotations[key];
+    say(`Removed ${nameOf(gone.id)}. ${copiesOf(gone.id)} left on your note.`);
+    renderStickerList();
+    recompute();
   };
-  // What the server stores for stickers: position + rotation, only for placeable decorations that are ticked and were moved or rotated.
-  const placementsFor = (ids) => Object.fromEntries(state.decorations
-    .filter((d) => d.placeable && ids.includes(d.id) && (state.positions[d.id] || state.rotations[d.id]))
-    .map((d) => [d.id, { ...(state.positions[d.id] ?? { x: Number(d.default_x), y: Number(d.default_y) }), rot: state.rotations[d.id] ?? 0 }]));
+  const addSticker = (id) => {
+    const d = state.decorations.find((x) => x.id === id);
+    if (!d?.placeable || picked().length >= MAX_DECOS) return;
+    // Each extra copy starts one step further in from its corner so it does not hide the copy before it.
+    const x = Number(d.default_x), y = Number(d.default_y), step = 8 * copiesOf(id);
+    const key = `s${++nextKey}`;
+    state.stickers.push({ key, id });
+    state.positions[key] = { x: clampPct(x > 50 ? x - step : x + step), y: clampPct(y > 50 ? y - step : y + step) };
+    say(`Added ${d.name}. ${copiesOf(id)} on your note.`);
+    renderStickerList();
+    recompute();
+  };
+  // What the server stores for stickers: one entry per copy.
+  const placementsFor = () => state.stickers.map((t) => ({ id: t.id, ...state.positions[t.key], rot: state.rotations[t.key] ?? 0 }));
+  // One row per kind of sticker, with a copy counter.
+  const renderStickerList = () => {
+    const counts = new Map();
+    for (const t of state.stickers) counts.set(t.id, (counts.get(t.id) ?? 0) + 1);
+    const full = picked().length >= MAX_DECOS;
+    const refocus = (id, act) => (r.stickerList.querySelector(`[data-id="${id}"][data-act="${act}"]:not(:disabled)`)
+      ?? r.stickerList.querySelector(`[data-id="${id}"][data-act="less"]`) ?? r.adder).focus();
+    const button = (id, act, text, label, fn) => {
+      const b = el("button", { type: "button", class: "stepper__btn", "data-id": id, "data-act": act, "aria-label": label }, text);
+      b.disabled = act === "more" && full;
+      b.addEventListener("click", () => { fn(); refocus(id, act); }, { signal });
+      return b;
+    };
+    r.stickerList.replaceChildren(...[...counts].map(([id, n]) => {
+      const d = state.decorations.find((x) => x.id === id);
+      return el("li", { class: "sticker-row" },
+        el("span", { class: `deco-swatch deco-${id}`, "aria-hidden": "true" }),
+        el("span", { class: "sticker-row__name" }, d.name, el("small", {}, ` ${priceLabel(d)} each`)),
+        el("span", { class: "stepper" },
+          button(id, "less", "−", `Remove one ${d.name}`, () => removeDecoration([...state.stickers].reverse().find((t) => t.id === id).key)),
+          el("output", { "aria-label": `${d.name} copies` }, String(n)),
+          button(id, "more", "+", `Add another ${d.name}`, () => addSticker(id))));
+    }));
+    r.stickerList.hidden = counts.size === 0;
+    r.adder.disabled = full;
+    r.adderHint.textContent = full ? `You have ${MAX_DECOS} decorations, the most a note can have.` : "Pick the same sticker again to add another copy. A note can have up to 10 decorations.";
+  };
 
   // Pricing config (public site_config rows). Failure keeps the built-in defaults; the server still decides.
   try {
@@ -318,17 +366,12 @@ export async function mountComposer(view, { signal, navigate }) {
       author_name: String(data.get("author_name") || "You"),
       color: String(data.get("color") || "yellow"),
       decorations: picked(),
-      placements: {},
+      stickers: state.stickers.map((t) => ({ key: t.key, id: t.id, ...state.positions[t.key], rot: state.rotations[t.key] ?? 0 })),
       amount: amount.ok && r.showAmount.checked ? amount.digits : null,
       vote_count: 0,
     };
-    const names = {};
-    for (const d of state.decorations) {
-      if (!d.placeable || !note.decorations.includes(d.id)) continue;
-      names[d.id] = d.name;
-      note.placements[d.id] = { ...(state.positions[d.id] ?? { x: Number(d.default_x), y: Number(d.default_y) }), rot: state.rotations[d.id] ?? 0 };
-    }
-    r.stickerHint.hidden = Object.keys(note.placements).length === 0;
+    const names = Object.fromEntries(state.decorations.map((d) => [d.id, d.name]));
+    r.stickerHint.hidden = note.stickers.length === 0;
     const key = JSON.stringify(note);
     if (key === lastPreview) return;
     lastPreview = key;
@@ -340,16 +383,15 @@ export async function mountComposer(view, { signal, navigate }) {
     const amount = validatePublicationAmount(r.amount.value);
     r.amountError.textContent = amount.ok ? "" : amount.error;
     r.amount.setAttribute("aria-invalid", amount.ok ? "false" : "true");
-    const chosen = new Set(picked());
-    let decos = 0n;
-    for (const d of state.decorations) if (chosen.has(d.id)) decos += BigInt(String(d.price));
+    const ids = picked();
+    const prices = ids.map((id) => BigInt(String(state.decorations.find((d) => d.id === id)?.price ?? 0))); // one per copy
+    const decos = prices.reduce((a, b) => a + b, 0n);
     // Referral credits are optional: one master checkbox, then fine-tuning.
     r.refOptions.hidden = !r.useRefCredits.checked;
     if (!r.useRefCredits.checked) { r.usePostCredit.checked = false; r.decoCredits.value = "0"; delete r.decoCredits.dataset.manual; }
     // Old Rp5.000 credit and referral credits are mutually exclusive.
     if (r.useRefCredits.checked && r.useCredit.checked) r.useCredit.checked = false;
-    const paidDecos = state.decorations.filter((d) => chosen.has(d.id) && BigInt(String(d.price)) > 0n)
-      .map((d) => BigInt(String(d.price))).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+    const paidDecos = prices.filter((p) => p > 0n).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
     const decoMax = Math.min(state.freeDecos, paidDecos.length);
     // Until the author changes the number themselves, use as many free decorations as possible.
     if (r.useRefCredits.checked && !r.decoCredits.dataset.manual) r.decoCredits.value = String(decoMax);
@@ -365,7 +407,7 @@ export async function mountComposer(view, { signal, navigate }) {
     r.sumAmount.textContent = amount.ok ? formatRupiah(amount.value) : "—";
     r.sumDecos.textContent = formatRupiah(decos);
     // Free weekly post / verified promo: applies to the minimum part only (tips are never discounted).
-    const sig = `${amount.ok ? amount.digits : ""}|${[...chosen].sort()}`;
+    const sig = `${amount.ok ? amount.digits : ""}|${[...ids].sort()}`;
     if (state.promo && state.promo.sig !== sig) { state.promo = null; r.promoMsg.textContent = ""; }
     r.promo.disabled = r.useFree.checked;
     r.applyPromo.disabled = r.useFree.checked;
@@ -383,7 +425,7 @@ export async function mountComposer(view, { signal, navigate }) {
     r.submit.textContent = total === 0n ? "Publish for free" : "Continue to payment";
     const needConfirm = amount.ok && amount.value > pricing.confirmAbove;
     r.confirmRow.hidden = !needConfirm;
-    const key = `${amount.ok ? amount.digits : ""}|${[...chosen].sort()}|${credit}|${discount}`;
+    const key = `${amount.ok ? amount.digits : ""}|${[...ids].sort()}|${credit}|${discount}`;
     if (r.confirm.dataset.key !== key) {
       // The customer must re-confirm whenever the amount changes.
       r.confirm.checked = false;
@@ -407,39 +449,32 @@ export async function mountComposer(view, { signal, navigate }) {
   // Decorations (enabled only, prices from the database)
   try {
     state.decorations = await query(getClient().from("decorations").select("id,name,description,category,placeable,default_x,default_y,price::text").order("sort_order"));
-    const groups = new Map();
-    for (const d of state.decorations) {
-      const cat = d.category || "Other";
-      if (!groups.has(cat)) groups.set(cat, []);
-      groups.get(cat).push(d);
-    }
-    // Preview tiles per category: pick one (radio, with a "None" tile), except stickers, stamps and badges where you can pick many.
+    // Whole-note decorations (frames, tapes, papers, themes): one dropdown per category, one choice each.
+    // Stickers, stamps and badges: one dropdown that adds a copy; pick the same one again for more copies.
     // Only decoration ids are sent; the server re-checks them.
-    const MULTI = new Set(["Stickers", "Stamps & badges"]);
     const ORDER = ["Borders", "Tapes", "Stickers", "Stamps & badges", "Backgrounds", "Themes"];
     const rank = (c) => (ORDER.includes(c) ? ORDER.indexOf(c) : ORDER.length);
-    r.decorations.replaceChildren(...[...groups].sort((a, b) => rank(a[0]) - rank(b[0])).map(([cat, list]) => {
-      const multi = MULTI.has(cat);
-      const tile = (d) => {
-        const frag = cloneTemplate("tpl-decoration-option");
-        const o = refs(frag);
-        o.input.type = multi ? "checkbox" : "radio";
-        o.input.name = `deco-${cat.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-        o.input.value = d ? d.id : "";
-        o.input.checked = !multi && !d; // "None" starts selected
-        o.swatch.className = d ? `deco-swatch deco-${d.id}` : "deco-swatch deco-swatch--none";
-        o.name.textContent = d ? d.name : "None";
-        o.price.textContent = d ? (String(d.price) === "0" ? "Free" : `+${formatRupiah(String(d.price))}`) : "";
-        if (d?.description) o.root.title = d.description;
-        return frag;
-      };
-      const legend = el("legend", { class: "field__label" }, cat, ...(multi ? [el("span", { class: "deco-group__hint" }, " — pick as many as you like")] : []));
-      return el("fieldset", { class: "deco-group" }, legend,
-        el("div", { class: "deco-grid" }, ...(multi ? [] : [tile(null)]), ...list.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id)).map(tile)));
-    }));
-    if (state.decorations.length === 0) r.decorations.replaceChildren(el("p", { class: "muted" }, "No decorations available right now."));
+    const option = (d) => el("option", { value: d.id, title: d.description || null }, `${d.name} (${priceLabel(d)})`);
+    const byCategory = (list) => {
+      const groups = new Map();
+      for (const d of list) groups.set(d.category || "Other", [...(groups.get(d.category || "Other") ?? []), d]);
+      return [...groups].sort((a, b) => rank(a[0]) - rank(b[0]));
+    };
+    const usable = state.decorations.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id));
+    r.decoSingles.replaceChildren(...byCategory(usable.filter((d) => !d.placeable)).map(([cat, list]) =>
+      el("label", { class: "field" }, el("span", { class: "field__label" }, cat),
+        el("select", {}, el("option", { value: "" }, "None"), ...list.map(option)))));
+    const stickers = byCategory(usable.filter((d) => d.placeable));
+    r.adder.replaceChildren(el("option", { value: "" }, "Choose a sticker…"),
+      ...stickers.map(([cat, list]) => el("optgroup", { label: cat }, ...list.map(option))));
+    r.stickerBox.hidden = stickers.length === 0;
+    r.decoSingles.addEventListener("change", renderStickerList, { signal }); // the 10-decoration limit counts these too
+    r.adder.addEventListener("change", () => { const id = r.adder.value; r.adder.value = ""; if (id) addSticker(id); }, { signal });
+    renderStickerList();
+    r.decoMsg.hidden = state.decorations.length > 0;
+    r.decoMsg.textContent = "No decorations available right now.";
   } catch {
-    r.decorations.replaceChildren(el("p", { class: "muted" }, "Decorations couldn’t be loaded. You can still post a plain note."));
+    r.decoMsg.textContent = "Decorations couldn’t be loaded. You can still post a plain note.";
   }
 
   const showMediaPreview = () => {
@@ -538,7 +573,7 @@ export async function mountComposer(view, { signal, navigate }) {
         use_credit: r.useCredit.checked,
         use_post_credit: r.usePostCredit.checked,
         deco_credits: Math.max(0, Math.floor(Number(r.decoCredits.value) || 0)),
-        decoration_positions: placementsFor(picked()),
+        decoration_positions: placementsFor(),
         campus_id: campus.select.value || null,
         media,
       });

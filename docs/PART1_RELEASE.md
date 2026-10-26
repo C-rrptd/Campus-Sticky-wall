@@ -60,3 +60,10 @@ Both the inviter and the invited friend get **2 free posts + 2 free decorations*
 - **Referral credits:** the compose page now has one optional checkbox "Pay with my referral credits" (shown only when you have credits). Checking it applies a free post and as many free decorations as possible; the two sub-options can be changed and a live line shows what will be used. The old Rp5.000 credit and referral credits still cannot be combined.
 - **Limits:** stickers cannot be moved after the note is created; two stickers can overlap; the enlarged view on the wall is a plain text/media viewer and does not show stickers.
 - Tests: `supabase/tests/assert_stickers.sql`. A jsdom test of sticker rendering, pointer dragging and keyboard moves passed locally but is not in the repo; the composer checkbox logic was not exercised in a browser.
+
+## Repeated stickers and the decorations dropdowns (migration 017)
+- **Repeats:** a sticker, stamp or badge can be added to a note several times. Each copy is priced, charged and credited on its own (`quote_publication` returns one line per copy; `note_decorations` has one row per copy). Frames, tapes, papers and themes stay one each. A note has at most 10 decorations in total.
+- **Composer:** one dropdown per whole-note category (None or one choice), plus one "Stickers, stamps and badges" dropdown that adds a copy. Added stickers show as rows with a − / + counter. Copies start a step apart so they do not hide each other.
+- **API:** `decoration_positions` is now a list `[{id,x,y,rot}]`, one per copy; the old `{ "<id>": {x,y,rot} }` form is still accepted. `note_json` gains `stickers` (one entry per copy); `placements` stays for clients cached from before 017 and can be dropped later.
+- **Deploy order:** run `017_repeat_stickers.sql`, deploy `create-publication` (and `check-promo` is unchanged), then the site.
+- Tests: `supabase/tests/assert_repeat_stickers.sql` (needs psql like the others). The older `assert_posting_v2.sql`, `assert_sticker_rotation.sql` and, with its `\gset` lines emulated, `assert_stickers.sql` also pass on 017.

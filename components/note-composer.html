@@ -42,9 +42,19 @@
           </div>
         </fieldset>
 
-        <fieldset class="field">
+        <fieldset class="field decos">
           <legend class="field__label">Decorations (optional)</legend>
-          <div class="decorations" data-ref="decorations"><p class="muted">Loading decorations…</p></div>
+          <p class="muted small" data-ref="decoMsg">Loading decorations…</p>
+          <div class="decos__singles" data-ref="decoSingles"></div>
+          <div class="decos__stickers" data-ref="stickerBox" hidden>
+            <label class="field">
+              <span class="field__label">Stickers, stamps and badges</span>
+              <select data-ref="adder" aria-describedby="sticker-add-hint"></select>
+            </label>
+            <span class="field__hint" id="sticker-add-hint" data-ref="adderHint"></span>
+            <ul class="sticker-list" data-ref="stickerList" hidden></ul>
+          </div>
+          <p class="visually-hidden" role="status" data-ref="decoLive"></p>
         </fieldset>
 
         <label class="field">
@@ -137,13 +147,4 @@
       </aside>
     </div>
   </section>
-</template>
-
-<template id="tpl-decoration-option">
-  <label class="deco-option" data-ref="root">
-    <input type="checkbox" data-ref="input">
-    <span class="deco-swatch" data-ref="swatch" aria-hidden="true"></span>
-    <span class="deco-option__name" data-ref="name"></span>
-    <span class="deco-option__price" data-ref="price"></span>
-  </label>
 </template>

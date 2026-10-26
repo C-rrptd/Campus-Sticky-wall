@@ -1,21 +1,23 @@
 /* Design tokens, reset, typography and layout primitives. */
 :root {
-  --paper: #f3ead7;
-  --paper-dark: #e6d9bd;
-  --ink: #2b2520;
-  --ink-soft: #5d544b;
-  --muted: #7b7166;
-  --line: #d6c7a8;
-  --card: #fffdf7;
-  --accent: #c2410c;
+  /* Ballpoint blue on graph paper: the wall is a lecture-pad page, notes are the only warm colour on it. */
+  --paper: #eef1f7;
+  --paper-dark: #dce2ef;
+  --ink: #16213a;
+  --ink-soft: #414e6b;
+  --muted: #5a6786;
+  --line: #c5cee2;
+  --card: #ffffff;
+  --accent: #2a44c7;
+  --accent-strong: #1f349c;
   --accent-ink: #ffffff;
-  --accent-soft: #fde7d6;
-  --focus: #1d4ed8;
+  --accent-soft: #e4e9ff;
+  --focus: #d9480f;
   --ok: #166534;
   --ok-soft: #dcfce7;
   --err: #b91c1c;
   --err-soft: #fee2e2;
-  --info-soft: #e0ecff;
+  --info-soft: #e4ecff;
 
   --note-yellow: #fff3a3;
   --note-pink: #ffd3e1;
@@ -24,10 +26,10 @@
   --note-orange: #ffdcb3;
   --note-purple: #e6d8ff;
 
-  --radius: 10px;
-  --radius-small: 6px;
-  --shadow: 0 1px 2px rgba(43, 37, 32, 0.12), 0 6px 16px rgba(43, 37, 32, 0.08);
-  --shadow-note: 0 2px 3px rgba(43, 37, 32, 0.18), 0 10px 18px rgba(43, 37, 32, 0.12);
+  --radius: 8px;
+  --radius-small: 5px;
+  --shadow: 0 1px 0 rgba(22, 33, 58, 0.06), 0 10px 24px -14px rgba(22, 33, 58, 0.35);
+  --shadow-note: 0 1px 1px rgba(22, 33, 58, 0.2), 0 12px 18px -8px rgba(22, 33, 58, 0.3);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -53,10 +55,11 @@ body {
   color: var(--ink);
   background-color: var(--paper);
   background-image:
-    radial-gradient(rgba(120, 90, 40, 0.06) 1px, transparent 1px),
-    radial-gradient(rgba(120, 90, 40, 0.04) 1px, transparent 1px);
-  background-size: 22px 22px, 37px 37px;
-  background-position: 0 0, 11px 17px;
+    linear-gradient(rgba(42, 68, 199, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 68, 199, 0.11) 1px, transparent 1px),
+    linear-gradient(rgba(42, 68, 199, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 68, 199, 0.06) 1px, transparent 1px);
+  background-size: 140px 140px, 140px 140px, 28px 28px, 28px 28px;
   display: flex;
   flex-direction: column;
 }
@@ -64,7 +67,7 @@ body {
 main { flex: 1; width: 100%; max-width: var(--max); margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); }
 main:focus { outline: none; }
 
-h1, h2, h3 { line-height: 1.2; margin: 0 0 var(--space-3); }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 var(--space-3); }
 h2 { font-size: 1.2rem; }
 h3 { font-size: 1rem; margin-top: var(--space-4); }
 p { margin: 0 0 var(--space-3); }

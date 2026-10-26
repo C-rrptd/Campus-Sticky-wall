@@ -34,7 +34,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     deco_credits: typeof body.deco_credits === "number" && Number.isInteger(body.deco_credits) && body.deco_credits >= 0 && body.deco_credits <= 10 ? body.deco_credits : 0,
     campus_id: v.uuid(body.campus_id, "Campus", true),
     media: v.mediaList(body.media, "Media", 4),
-    positions: v.positionMap(body.decoration_positions),
+    positions: v.positionList(body.decoration_positions),
     promo: v.promoCode(body.promo_code),
     use_free_post: v.bool(body.use_free_post, "use_free_post", false),
   };
