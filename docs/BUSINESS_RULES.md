@@ -106,3 +106,8 @@ These are separate `kind = donation` orders with their own confirmation. The def
 - Race safety: `apply_post_discount` locks the code row (`FOR UPDATE`), so `uses` and the per-user count cannot be exceeded.
 - Unpaid orders (and their post) are deleted after 30 minutes; a Snap session lasts 30 minutes from the moment payment starts. Failed, denied, cancelled and expired orders delete the pending post and return the promo use and the free post.
 - Anonymity: see `docs/PRIVACY_POSTING.md`.
+
+## Boosts and anonymity (migration 020)
+- **Pin to top** (`pin-top`, Rp10.000) keeps a note first on the Newest wall for 7 days after it is published. **Highlight glow** (`highlight-glow`, Rp3.000) is cosmetic. Both are ordinary paid decorations, so pricing, credits and refunds work as for any decoration. Prices live in the `decorations` table.
+- The amount paid is never shown on a note. The server always stores `show_amount = false`; the "Highest contribution" sort is removed from the wall.
+- A note posted without a name is shown as **Anonymous**.

@@ -87,12 +87,17 @@ function amountInput(name, value, placeholder = "") {
 
 const panels = {
   async overview(panel, reload) {
-    const [o, d] = await Promise.all([api("overview"), api("leaderboard_diagnostics")]);
+    const jakarta = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 864e5).toISOString().slice(0, 10);
+    const [o, d, rev] = await Promise.all([api("overview"), api("leaderboard_diagnostics"),
+      api("revenue_report", { from: `${jakarta(-6)}T00:00:00+07:00`, to: `${jakarta(1)}T00:00:00+07:00` })]);
     panel.replaceChildren(
       el("dl", { class: "stats stats--grid" },
         ...Object.entries({
+          "Revenue, last 7 days (net)": formatRupiah(rev.net_collected), "Paid orders, last 7 days": rev.paid_orders,
+          "Notes posted today": o.notes_today, "Notes posted, last 7 days": o.notes_7d,
+          "Ads waiting for review": o.campaigns_pending_review,
           "Open reports": o.open_reports, "Notes in moderation": o.notes_pending_moderation,
-          "Campaigns awaiting review": o.campaigns_pending_review, "Orders needing review": o.orders_needing_review,
+          "Orders needing review": o.orders_needing_review,
           "Published notes": o.published_notes, "Accounts": o.users, "Qualified referrals": d.qualified_referrals,
           "Opted-in donors": d.opted_in_donors, "Successful donations": d.successful_donations,
         }).map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, String(v))))),

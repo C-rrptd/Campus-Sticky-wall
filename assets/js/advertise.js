@@ -43,14 +43,6 @@ function paymentStatus(c) {
   return "Not charged";
 }
 
-function signInRequired(view) {
-  const frag = cloneTemplate("tpl-signin-required");
-  const r = refs(frag);
-  r.title.textContent = "Sign in to advertise";
-  r.message.textContent = "Advertisers need an account so campaigns, payments and receipts stay linked to you.";
-  view.append(frag);
-}
-
 // A start date is a calendar day (Asia/Jakarta), not an instant: format it without any timezone shift.
 const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const fmtDay = (d) => dayFmt.format(new Date(`${d}T00:00:00Z`));
@@ -58,11 +50,16 @@ const fmtDay = (d) => dayFmt.format(new Date(`${d}T00:00:00Z`));
 const options = (list) => list.map(([v, label]) => el("option", { value: v }, label));
 
 export async function mountAdvertise(view, { signal, navigate }) {
+  // Anyone can read the packages and prices; an account is only needed to submit (campaigns and receipts are linked to it).
   const user = currentUser();
-  if (!user) return signInRequired(view);
 
   view.append(cloneTemplate("tpl-advertise-v2"));
   const r = refs(view);
+  if (!user) {
+    view.querySelector(".page-lead").after(el("p", { class: "panel" }, "Look around and try the price calculator without an account. To submit your ad, ",
+      el("a", { href: "#/auth?next=/advertise" }, "sign in or create an account"), " (so your campaigns, payments and receipts stay linked to you)."));
+    r.submit.textContent = "Sign in to submit";
+  }
   const client = getClient();
   const day = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 864e5).toISOString().slice(0, 10); // Asia/Jakarta date
   const today = day(0);
@@ -161,6 +158,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
   signal.addEventListener("abort", () => renderFilePreviews(r.creativePreview, [], () => {}), { once: true });
 
   let uploaded = null; // { file, path }: a retry after a failed submit reuses the same upload
+  let reuseCreative = null; // image path of the campaign being run again, when no new image is chosen
   async function uploadCreative(file) {
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
@@ -174,6 +172,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
     e.preventDefault();
     busy(r.submit, async () => {
       r.error.textContent = "";
+      if (!user) { navigate("/auth", { next: "/advertise" }); return; }
       const data = new FormData(r.form);
       const text = (k) => String(data.get(k) ?? "").trim();
       const link = text("destination_url");
@@ -198,10 +197,11 @@ export async function mountAdvertise(view, { signal, navigate }) {
         const res = await invoke("create-advertiser-campaign", {
           advertiser_name: text("advertiser_name"), contact_email: text("contact_email"), title: text("title"),
           description: text("description"), category: data.get("category"), destination_url: link || null,
-          creative_path: file ? uploaded.path : null, product_id: p.id, requested_start: r.start.value, targets,
+          creative_path: file ? uploaded.path : reuseCreative, product_id: p.id, requested_start: r.start.value, targets,
         });
         toast(`Submitted! Quoted price ${formatRupiah(String(res.price))}. We’ll review it and you can pay once it’s approved.`, "success", 9000);
         uploaded = null;
+        reuseCreative = null;
         r.form.reset();
         r.descCount.textContent = "0";
         r.start.value = today;
@@ -213,6 +213,69 @@ export async function mountAdvertise(view, { signal, navigate }) {
       }
     });
   }, { signal });
+
+  // ---- Daily results chart + "run it again" -------------------------------------------------------
+  const SVG = "http://www.w3.org/2000/svg";
+  const svg = (tag, attrs = {}, ...kids) => {
+    const n = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    n.append(...kids);
+    return n;
+  };
+  /** One bar per day. Views and clicks get separate charts: clicks are far smaller, a shared scale would hide them. */
+  function barChart(rows, key, label, cls) {
+    const W = 300, H = 90, max = Math.max(1, ...rows.map((x) => Number(x[key])));
+    const bw = W / rows.length;
+    const chart = svg("svg", { viewBox: `0 0 ${W} ${H + 14}`, class: `chart ${cls}`, role: "img", "aria-label": `${label} per day, last ${rows.length} days` },
+      ...rows.map((x, i) => {
+        const h = (Number(x[key]) / max) * H;
+        return svg("rect", { x: i * bw + 1, y: H - h, width: Math.max(1, bw - 2), height: h }, svg("title", {}, `${x.day}: ${x[key]} ${label.toLowerCase()}`));
+      }),
+      svg("text", { x: 0, y: H + 11, class: "chart__axis" }, rows[0].day.slice(5)),
+      svg("text", { x: W, y: H + 11, class: "chart__axis", "text-anchor": "end" }, rows.at(-1).day.slice(5)));
+    return el("figure", { class: "chart-fig" }, el("figcaption", { class: "small" }, `${label} (peak ${max})`), chart);
+  }
+  function resultsChart(c) {
+    const box = el("details", { class: "campaign-item__chart" }, el("summary", {}, "Daily views and clicks"));
+    let loaded = false;
+    box.addEventListener("toggle", async () => {
+      if (!box.open || loaded) return;
+      loaded = true;
+      const from = new Date(Math.max(new Date(c.starts_at).getTime(), Date.now() - 29 * 864e5) + 7 * 3600e3).toISOString().slice(0, 10);
+      try {
+        const rows = await query(client.from("campaign_daily_stats").select("day,impressions,clicks").eq("campaign_id", c.id).gte("day", from).order("day"));
+        if (rows.length === 0) { box.append(el("p", { class: "small muted" }, "No views yet.")); return; }
+        box.append(barChart(rows, "impressions", "Views", "chart--views"), barChart(rows, "clicks", "Clicks", "chart--clicks"),
+          el("p", { class: "small muted" }, "Views are approximate (counted in the visitor’s browser)."));
+      } catch {
+        loaded = false;
+        box.append(el("p", { class: "small muted" }, "Couldn’t load the chart."));
+      }
+    }, { signal });
+    return box;
+  }
+  /** Copy a past campaign into the form (text, package, locations, image); the advertiser reviews and submits as usual. */
+  async function runAgain(c) {
+    const f = r.form.elements;
+    for (const k of ["advertiser_name", "contact_email", "title", "description", "destination_url", "category"]) if (f[k]) f[k].value = c[k] ?? "";
+    r.descCount.textContent = String((c.description ?? "").length);
+    reuseCreative = c.creative_path ?? null;
+    const endDay = c.ends_at ? new Date(new Date(c.ends_at).getTime() + 7 * 3600e3).toISOString().slice(0, 10) : today;
+    r.start.value = endDay > today && endDay <= lastDay ? endDay : today;
+    const p = available.find((x) => x.id === c.product_id);
+    if (p) {
+      Object.assign(sel, { placement: group(p), duration: p.duration_days, scope: p.scope_level });
+      try {
+        const rows = await query(client.from("campaign_targets").select("target_key").eq("campaign_id", c.id));
+        keep.set(p.scope_level, new Set(rows.map((t) => t.target_key.split(":")[1])));
+      } catch { keep.delete(p.scope_level); }
+      renderPlacement();
+    } else {
+      updatePrice();
+    }
+    r.form.scrollIntoView({ behavior: "smooth" });
+    toast(p ? "Copied into the form. Check the dates and submit to run it again." : "Copied the text. That package is no longer offered, so choose a new one.", "info", 7000);
+  }
 
   // ---- Your campaigns ---------------------------------------------------------------------------
   function campaignItem(c) {
@@ -228,6 +291,11 @@ export async function mountAdvertise(view, { signal, navigate }) {
     const item = el("li", { class: "campaign-item" },
       el("div", { class: "campaign-item__head" }, el("strong", {}, c.title), el("span", { class: `badge${tone ? ` badge--${tone}` : ""}` }, label)),
       el("dl", {}, ...rows.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])));
+    const msLeft = c.ends_at ? new Date(c.ends_at).getTime() - Date.now() : 0;
+    const ended = ["active", "scheduled", "expired"].includes(c.status) && c.starts_at && msLeft <= 0;
+    const endingSoon = c.status === "active" && msLeft > 0 && msLeft <= 3 * 864e5;
+    if (endingSoon) item.append(el("p", { class: "campaign-item__reason" }, `Ends in ${Math.ceil(msLeft / 864e5)} day(s). Run it again to keep your spot.`));
+    if (c.starts_at && ["active", "scheduled", "expired", "paused"].includes(c.status)) item.append(resultsChart(c));
     if (c.status === "rejected" && c.moderation_reason) item.append(el("p", { class: "campaign-item__reason" }, `Rejected: ${c.moderation_reason}`));
     if (c.status === "canceled" && c.moderation_reason) item.append(el("p", { class: "small muted" }, c.moderation_reason));
     if (c.status === "expired" && !c.starts_at) item.append(el("p", { class: "small muted" }, "The payment window passed. Submit the ad again if you still want it."));
@@ -262,13 +330,19 @@ export async function mountAdvertise(view, { signal, navigate }) {
       }), { signal });
       buttons.push(cancel);
     }
+    if (ended || endingSoon) {
+      const again = el("button", { type: "button", class: "btn btn--small btn--primary" }, "Run it again");
+      again.addEventListener("click", () => busy(again, () => runAgain(c)), { signal });
+      buttons.push(again);
+    }
     if (buttons.length) item.append(el("div", { class: "row row--tight" }, ...buttons));
     return item;
   }
   async function loadMine() {
+    if (!user) { r.mine.replaceChildren(el("li", { class: "muted" }, "Sign in to see your campaigns.")); return; }
     try {
       const mine = await query(client.from("campaigns")
-        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,moderation_reason,impressions,clicks,created_at")
+        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,moderation_reason,impressions,clicks,created_at,product_id,description,category,advertiser_name,contact_email,destination_url,creative_path")
         .order("created_at", { ascending: false }).limit(20));
       r.mine.replaceChildren(...(mine.length ? mine.map(campaignItem) : [el("li", { class: "muted" }, "No campaigns yet.")]));
     } catch {

@@ -56,8 +56,7 @@ export function validateNote({ body, author_name }) {
   const errors = {};
   if (textLength(body) < 1) errors.body = "Write your note.";
   else if (textLength(body) > 500) errors.body = "Notes can be at most 500 characters.";
-  if (textLength(author_name) < 1) errors.author_name = "Add the name to show on your note.";
-  else if (textLength(author_name) > 40) errors.author_name = "Names can be at most 40 characters.";
+  if (textLength(author_name) > 40) errors.author_name = "Names can be at most 40 characters.";
   return errors;
 }
 

@@ -3,11 +3,17 @@
   <section class="wall-view">
     <div data-ref="pinned"></div>
     <div class="stack" data-ref="featured"></div>
+    <section data-ref="topBox" hidden>
+      <h2>Top notes</h2>
+      <div class="wall" data-ref="top"></div>
+    </section>
     <div class="wall-toolbar">
       <div>
-        <h1 class="page-title">The Wall</h1>
-        <p class="page-lead">Notes from students, pinned by students. Anyone can post — you choose what you pay (from Rp2.500).</p>
+        <h1 class="page-title" data-ref="title">The Wall</h1>
+        <p class="page-lead" data-ref="lead">Notes from students, pinned by students. Anyone can post — you choose what you pay (from Rp2.500).</p>
+        <a class="small" data-ref="campusLink" hidden>Open this campus’s page →</a>
       </div>
+      <input type="search" class="wall-search" data-ref="q" maxlength="60" placeholder="Search notes…" aria-label="Search notes" autocomplete="off">
       <details class="dropdown">
         <summary class="dropdown__tab">Filter &amp; sort</summary>
         <div class="dropdown__panel">
@@ -16,7 +22,18 @@
             <select data-ref="sort">
               <option value="newest">Newest</option>
               <option value="top">Most voted</option>
-              <option value="contribution">Highest contribution</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field__label">Colour</span>
+            <select data-ref="color">
+              <option value="">All colours</option>
+              <option value="yellow">Yellow</option>
+              <option value="pink">Pink</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="orange">Orange</option>
+              <option value="purple">Purple</option>
             </select>
           </label>
           <div data-ref="location"></div>

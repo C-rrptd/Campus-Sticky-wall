@@ -22,11 +22,10 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   if (user) await rateLimit(deps.db, `create-publication:user:${user.id}`, 10, 600);
 
   const input = {
-    author_name: v.str(body.author_name, "Author name", { max: 40 }),
+    author_name: v.str(typeof body.author_name === "string" && body.author_name.trim() ? body.author_name : "Anonymous", "Author name", { max: 40 }),
     body: v.str(body.body, "Note text", { max: 500, multiline: true }),
     color: v.oneOf(body.color ?? "yellow", "Colour", COLORS),
     social_link: v.socialUrl(body.social_link, "Social link"),
-    show_amount: v.bool(body.show_amount, "show_amount", true),
     amount: v.amount(body.amount),
     decorations: v.idList(body.decorations, "Decorations", v.MAX_DECORATIONS),
     use_credit: v.bool(body.use_credit, "use_credit", false),
@@ -65,7 +64,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_body: input.body,
     p_color: input.color,
     p_social_link: input.social_link,
-    p_show_amount: input.show_amount,
+    p_show_amount: false, // the amount paid is never shown on a note
     p_amount: input.amount,
     p_decorations: input.decorations,
     p_use_credit: input.use_credit,

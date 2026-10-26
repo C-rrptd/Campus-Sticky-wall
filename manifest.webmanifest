@@ -1,0 +1,13 @@
+{
+  "name": "Campus Sticky Wall",
+  "short_name": "Sticky Wall",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ece3b0",
+  "theme_color": "#ece3b0",
+  "icons": [
+    { "src": "assets/images/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

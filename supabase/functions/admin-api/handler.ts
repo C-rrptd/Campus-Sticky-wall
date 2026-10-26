@@ -10,6 +10,7 @@ import { fetchTransactionStatus, midtransConfig, parseNotification, statusToRpcA
 import { HttpError, json, rateLimit, readJson, rpc } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
 import { purgeMediaOrphans } from "../_shared/media.ts";
+import { sendEmail } from "../_shared/email.ts";
 
 type P = Record<string, unknown>;
 const int = (x: unknown, d: number, max: number) =>
@@ -159,6 +160,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     const data = await rpc(userDb, fn, build(params));
     // Removing/rejecting/deleting a note queues its files; delete them now (also on each overview load).
     if (PURGE_AFTER.has(action)) await purgeMediaOrphans(deps);
+    if (action === "review_campaign" && (params.action === "approve" || params.action === "reject")) await emailAdvertiser(deps, userDb, params).catch((e) => console.error("Advertiser email skipped", e instanceof Error ? e.message : String(e)));
     return json(req, 200, { data }, deps.env);
   }
 
@@ -205,3 +207,21 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   throw new HttpError(400, "UNKNOWN_ACTION", "Unknown admin action.");
 };
 
+
+/** Tells the advertiser a campaign was approved (payment due) or rejected. Best effort; see _shared/email.ts. */
+async function emailAdvertiser(deps: Deps, userDb: Db, params: P) {
+  const id = v.uuid(params.campaign_id, "campaign_id");
+  // Read as the calling admin (admin_list_campaigns re-checks admin status); the list is the 200 newest campaigns.
+  const rows = await rpc<{ id: string; title: string; contact_email: string; price: string | null; moderation_reason: string | null }[]>(
+    userDb, "admin_list_campaigns", { p_status: null });
+  const c = rows.find((x) => x.id === id);
+  if (!c?.contact_email) return;
+  const site = (deps.env("SITE_URL") ?? "").replace(/\/$/, "");
+  const approved = params.action === "approve";
+  const price = c.price != null ? `Rp${Number(c.price).toLocaleString("id-ID")}` : "the quoted price";
+  await sendEmail(deps.env, deps.fetch, c.contact_email,
+    approved ? `Approved: pay ${price} to schedule "${c.title}"` : `Your campaign "${c.title}" was not approved`,
+    approved
+      ? `Your campaign "${c.title}" was approved.\n\nPayment of ${price} is now due. It is scheduled as soon as you pay:\n${site}/#/advertise\n`
+      : `Your campaign "${c.title}" was not approved.${c.moderation_reason ? `\n\nReason: ${c.moderation_reason}` : ""}\n\nYou can edit and submit it again:\n${site}/#/advertise\n`);
+}

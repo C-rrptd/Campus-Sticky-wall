@@ -13,5 +13,8 @@
 /components/*
   Cache-Control: no-cache
 
+/sw.js
+  Cache-Control: no-cache
+
 /assets/*
   Cache-Control: no-cache

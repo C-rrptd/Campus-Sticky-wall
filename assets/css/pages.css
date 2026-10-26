@@ -98,3 +98,5 @@
 .deco-tile__name { font-weight: 600; font-size: 0.85rem; }
 .deco-tile small { color: var(--muted); }
 .deco-preview { display: grid; justify-items: center; }
+
+.wall-search{flex:1 1 14rem;max-width:22rem;min-width:10rem;align-self:flex-end}

@@ -14,8 +14,8 @@
 
         <label class="field">
           <span class="field__label">Name shown on the note</span>
-          <input name="author_name" data-ref="author" maxlength="40" required autocomplete="off" placeholder="e.g. Rani from Agronomy">
-          <span class="field__hint">Plain text only: never a link, never tied to an account. Names of registered members, links and @handles are not allowed.</span>
+          <input name="author_name" data-ref="author" maxlength="40" autocomplete="off" value="" placeholder="Leave empty to post as Anonymous">
+          <span class="field__hint">Optional. Empty = “Anonymous”. Plain text only: never a link, never tied to an account. Names of registered members, links and @handles are not allowed.</span>
         </label>
 
         <label class="field">
@@ -71,11 +71,6 @@
         </label>
 
         <div class="field" data-ref="campusField"></div>
-
-        <label class="check">
-          <input type="checkbox" name="show_amount" data-ref="showAmount" checked>
-          <span>Show the amount I paid on my note</span>
-        </label>
 
         <fieldset class="field" data-ref="discountRow" hidden>
           <legend class="field__label">Free post and promo code</legend>
@@ -134,7 +129,7 @@
           <p class="muted small">Final amounts are calculated by our server before payment.</p>
           <details class="small privacy-note">
             <summary>What we can and can’t see</summary>
-            <p><strong>Public:</strong> your note, the name you typed, decorations, the amount if you chose to show it.</p>
+            <p><strong>Public:</strong> your note, the name you typed (or “Anonymous”), decorations.</p>
             <p><strong>We don’t keep:</strong> any link between your account and a published note. Payment, free-post and promo records hold no note text or note id. Free-post and promo records only keep the hour, not the minute.</p>
             <p><strong>Still visible:</strong> Midtrans sees who paid and when (we can’t hide that); if you choose a social link it is public; at the moment you post, the time of your payment and the time your note appears are close together.</p>
           </details>

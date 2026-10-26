@@ -5,3 +5,10 @@
 .adv-group > * + * { margin-top: var(--space-3); }
 .adv-group input:not([type="checkbox"]), .adv-group select, .adv-group textarea { max-width: 100%; }
 .adv-side > * + * { margin-top: var(--space-3); }
+
+.chart-fig{margin:.5rem 0}
+.chart{width:100%;max-width:26rem;height:auto;display:block}
+.chart--views rect{fill:#2563eb}
+.chart--clicks rect{fill:#16a34a}
+.chart__axis{font-size:9px;fill:var(--muted)}
+.campaign-item__chart summary{cursor:pointer}

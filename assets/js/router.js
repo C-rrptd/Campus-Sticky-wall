@@ -7,6 +7,8 @@ import { clear, refs } from "./utils.js";
 
 const routes = {
   "/": { title: "The Wall", components: ["wall", "note-card", "promotion-card", "announcements"], module: () => import("./wall.js") },
+  "/campus": { title: "Campus", components: ["wall", "note-card", "promotion-card", "announcements"], module: () => import("./wall.js"), entry: "mountCampus" },
+  "/note": { title: "Note", components: ["note-card"], module: () => import("./notes.js"), entry: "mountNote" },
   "/compose": { title: "Post a note", components: ["note-composer", "note-card"], module: () => import("./notes.js"), entry: "mountComposer" },
   "/promotions": { title: "Promotions", components: ["promotions", "promotion-card"], module: () => import("./promotions.js") },
   "/advertise": { title: "Advertise", components: ["advertise"], module: () => import("./advertise.js"), entry: "mountAdvertise" },

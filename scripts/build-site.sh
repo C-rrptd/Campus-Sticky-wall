@@ -19,7 +19,7 @@ if [[ -e "$OUT" ]]; then
   rm -rf -- "$OUT"
 fi
 mkdir -p "$OUT"
-cp -R index.html _headers components assets "$OUT/"
+cp -R index.html _headers manifest.webmanifest sw.js components assets "$OUT/"
 
 if [[ -n "${PUBLIC_SUPABASE_URL:-}" || -n "${PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}" || -n "${PUBLIC_SITE_URL:-}" ]]; then
   : "${PUBLIC_SUPABASE_URL:?set PUBLIC_SUPABASE_URL}" "${PUBLIC_SUPABASE_PUBLISHABLE_KEY:?set PUBLIC_SUPABASE_PUBLISHABLE_KEY}" "${PUBLIC_SITE_URL:?set PUBLIC_SITE_URL}"

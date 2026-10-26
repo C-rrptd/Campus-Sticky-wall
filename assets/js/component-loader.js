@@ -2,6 +2,8 @@
 // <template> elements, and clones templates by id. Fragments with scripts or
 // inline event handlers are rejected.
 
+import { translate } from "./i18n.js";
+
 const loaded = new Map(); // name -> Promise<void>
 const NAME = /^[a-z][a-z0-9-]{1,40}$/;
 
@@ -48,5 +50,5 @@ export function loadComponents(names) {
 export function cloneTemplate(id) {
   const tpl = document.getElementById(id);
   if (!(tpl instanceof HTMLTemplateElement)) throw new Error(`Template "${id}" is not loaded.`);
-  return tpl.content.cloneNode(true);
+  return translate(tpl.content.cloneNode(true));
 }

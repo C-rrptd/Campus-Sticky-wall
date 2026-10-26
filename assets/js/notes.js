@@ -9,7 +9,7 @@ import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc,
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, formatMoney, isAllowedSocialUrl, pricing, setPricing, textLength, validateNote, validatePublicationAmount } from "./validation.js";
-import { busy, el, errorMessage, formatRupiah, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
+import { busy, copyText, el, errorMessage, formatRupiah, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
 
 const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
 
@@ -147,6 +147,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
     r.vote.disabled = true;
     r.bookmark.hidden = true;
     r.report.hidden = true;
+    r.share.hidden = true;
     r.body.removeAttribute("role"); r.body.removeAttribute("tabindex"); r.body.removeAttribute("title");
     r.mediaBadge.removeAttribute("role"); r.mediaBadge.removeAttribute("tabindex"); r.mediaBadge.removeAttribute("title");
     return frag;
@@ -163,7 +164,31 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   r.vote.addEventListener("click", () => toggleVote(note, r), { signal });
   r.bookmark.addEventListener("click", () => toggleBookmark(note, r), { signal });
   r.report.addEventListener("click", () => reportNote(note), { signal });
+  r.share.addEventListener("click", () => shareNote(note), { signal });
   return frag;
+}
+
+/** /n/<id> is served by functions/n/[id].js with a WhatsApp/Instagram preview, then opens #/note. */
+async function shareNote(note) {
+  const url = `${window.location.origin}/n/${note.id}`;
+  try {
+    if (navigator.share) { await navigator.share({ title: "Campus Sticky Wall", text: truncateBody(note.body ?? ""), url }); return; }
+  } catch (err) {
+    if (err?.name === "AbortError") return;
+  }
+  await copyText(url);
+  toast("Link copied.", "success");
+}
+
+/** #/note?id=<uuid>: one published note, opened from a share link. */
+export async function mountNote(view, { params, signal }) {
+  const box = el("section", { class: "note-single" }, el("h1", { class: "page-title" }, "A note from the wall"));
+  view.append(box);
+  const id = params.get("id") ?? "";
+  const note = /^[0-9a-f-]{36}$/i.test(id) ? await rpc("get_note", { p_id: id }).catch(() => null) : null;
+  if (signal.aborted) return;
+  box.append(note ? el("div", { class: "wall" }, renderNote(note, { signal })) : el("p", {}, "This note isn’t available any more."),
+    el("p", {}, el("a", { href: "#/" }, "← Back to the wall")));
 }
 
 // Video thumbnails fetch their first frame only when scrolled near, not all 24 at page load.
@@ -375,15 +400,13 @@ export async function mountComposer(view, { signal, navigate }) {
   let lastPreview = ""; // skip identical rebuilds: a blur-triggered "change" must not replace the sticker under the pointer
   const updatePreview = () => {
     const data = new FormData(r.form);
-    const amount = validatePublicationAmount(r.amount.value);
     const note = {
       body: String(data.get("body") || "Your note will look like this."),
-      author_name: String(data.get("author_name") || "You"),
+      author_name: String(data.get("author_name") || "").trim() || "Anonymous",
       color: String(data.get("color") || "yellow"),
       decorations: picked(),
       stickers: state.stickers.map((t) => ({ key: t.key, id: t.id, ...state.positions[t.key], rot: state.rotations[t.key] ?? 0 })),
-      amount: amount.ok && r.showAmount.checked ? amount.digits : null,
-      vote_count: 0,
+            vote_count: 0,
     };
     const names = Object.fromEntries(state.decorations.map((d) => [d.id, d.name]));
     r.stickerHint.hidden = note.stickers.length === 0;
@@ -575,11 +598,10 @@ export async function mountComposer(view, { signal, navigate }) {
       // shortcut: files uploaded before a failed order stay orphaned in storage, add a cleanup job if it matters.
       const media = files.length ? await uploadNoteMedia(files, user.id) : [];
       const res = await invoke("create-publication", {
-        author_name: fields.author_name.trim(),
+        author_name: fields.author_name.trim() || "Anonymous",
         body: fields.body.trim(),
         color: String(data.get("color") ?? "yellow"),
         social_link: social || null,
-        show_amount: r.showAmount.checked,
         amount: amount.digits,
         confirm_amount: amount.value > pricing.confirmAbove && r.confirm.checked ? amount.digits : null,
         promo_code: r.useFree.checked ? null : (r.promo.value.trim() || null),

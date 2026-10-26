@@ -7,6 +7,7 @@ import { currentUser, initAuth, isAdmin, onUserChange, signOut } from "./auth.js
 import { onRouteChange, rerender, startRouter } from "./router.js";
 import { captureReferral } from "./referrals.js";
 import { getClient, query } from "./supabase-client.js";
+import { lang, setLang } from "./i18n.js";
 import { clear, el, refs, safeUrl, toast } from "./utils.js";
 
 const view = () => document.getElementById("view");
@@ -73,6 +74,8 @@ async function renderHeader() {
     r.themeToggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f1424" : "#ece3b0");
   };
+  r.langToggle.textContent = lang === "id" ? "ID · EN" : "EN · ID";
+  r.langToggle.addEventListener("click", () => setLang(lang === "id" ? "en" : "id"));
   r.themeToggle.addEventListener("click", () => {
     root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
     try { localStorage.setItem("csw-theme", root.dataset.theme); } catch { /* storage blocked: choice lasts this visit */ }
@@ -152,6 +155,7 @@ async function boot() {
   await renderHeader();
   renderFooter();
   startRouter(view());
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); // installable app + offline fallback
 }
 
 boot();

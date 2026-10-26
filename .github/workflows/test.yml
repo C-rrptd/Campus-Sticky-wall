@@ -29,7 +29,7 @@ jobs:
       - name: Apply migrations
         run: for f in supabase/migrations/*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Re-apply 006 onward (must be idempotent)
-        run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+        run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql supabase/migrations/02*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Part 1 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_part1.sql
       - name: Media cleanup assertions
@@ -46,6 +46,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_sticker_rotation.sql
       - name: Ad pricing assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ad_pricing.sql
+      - name: Wall search, pin and anonymous-name assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_wall_search.sql
 
   code:
     runs-on: ubuntu-latest
@@ -60,6 +62,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Parse browser JavaScript
-        run: for f in assets/js/*.js; do node --check "$f"; done
+        run: for f in assets/js/*.js; do node --check "$f"; done; node --check sw.js; node --check "functions/n/[id].js"
       - name: Unit tests (Node)
         run: node --test tests/*.test.mjs
