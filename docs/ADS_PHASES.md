@@ -86,7 +86,7 @@ All three migrations are idempotent (safe to run twice). Run a rollback only in 
 - SQL (`supabase/tests/assert_phase1.sql`, `assert_phase2.sql`, `assert_phase3.sql`, plus all earlier suites): price immutability of existing orders and campaigns, price-lock logic and grace window, impression dedupe, bot and admin exclusion, slot reduction with active campaigns, sold-out → waitlist → hold → expiry → next person, multipliers, utilization status thresholds, price proposals not retroactive, auction reserve enforcement, minimum raise, winner selection, tie-breaking, anti-sniping extension and its cap, identity hiding, buy-now, winning price on the order, unpaid-winner fallback and strikes, kill switch.
 - Deno (`supabase/functions/**/*_test.ts`): click redirect and counting, bid handler passes the authenticated user and IP and cannot be given a different bidder, mail rendering.
 - Node (`tests/*.test.mjs`): existing front-end tests still pass.
-- CI (`.github/workflows/test.yml`) runs all of them, and re-applies the migrations to prove they are idempotent.
+- CI (`.github/workflows/ci.yml`) runs all of them, and re-applies the migrations to prove they are idempotent.
 
 ## Assumptions and things not done
 
