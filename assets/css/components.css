@@ -141,7 +141,7 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .note.deco-border { outline: 3px double rgba(43, 37, 32, 0.55); outline-offset: -9px; }
 .note.deco-stickers .note__stickers { display: block; position: absolute; right: 10px; top: 8px; font-size: 1.1rem; }
 .note.deco-stickers .note__stickers::before { content: "★ ♥"; color: #d9480f; letter-spacing: 4px; }
-.note:not(.deco-tape)::before {
+.note:not([class*="deco-tape"])::before {
   content: ""; position: absolute; top: 8px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #f87171, #b91c1c); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3);
 }

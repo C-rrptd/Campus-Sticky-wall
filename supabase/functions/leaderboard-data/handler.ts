@@ -1,17 +1,17 @@
 // POST /functions/v1/leaderboard-data  { kind: "referrals"|"donations", period: "all"|"week" }
-// Account-only rankings. Runs the SQL function as the caller (their JWT), so
-// the database itself refuses guests and applies donor-privacy opt-ins.
+// Public rankings. Signed-in callers run the SQL as themselves (so is_me works);
+// guests run it with auth.uid() = null. Donor-privacy opt-ins apply either way.
 
-import { type Deps, type Handler, requireUser } from "../_shared/auth.ts";
-import { json, rateLimit, readJson, rpc } from "../_shared/security.ts";
+import { type Deps, type Handler, optionalUser } from "../_shared/auth.ts";
+import { clientIp, json, rateLimit, readJson, rpc } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
 
 export const handler: Handler = async (req: Request, deps: Deps) => {
   const body = await readJson(req);
-  const { user, jwt } = await requireUser(req, deps);
-  await rateLimit(deps.db, `leaderboard:user:${user.id}`, 60, 60);
+  const { user, jwt } = await optionalUser(req, deps);
+  await rateLimit(deps.db, user ? `leaderboard:user:${user.id}` : `leaderboard:ip:${clientIp(req)}`, 60, 60);
 
-  const data = await rpc(deps.userDb(jwt), "leaderboard", {
+  const data = await rpc(jwt ? deps.userDb(jwt) : deps.db, "leaderboard", {
     p_kind: v.oneOf(body.kind, "kind", ["referrals", "donations"] as const),
     p_period: v.oneOf(body.period ?? "all", "period", ["all", "week"] as const),
     p_limit: 25,
