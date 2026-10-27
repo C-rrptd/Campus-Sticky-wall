@@ -1042,6 +1042,67 @@ const panels = {
   },
 };
 
+// Per-tab help shown above each panel: what the tab is for, and what to do in it.
+// `sub` describes each section heading (h2) inside the tab; it is added only where the panel has no text of its own.
+const GUIDE = {
+  overview: { what: "Health check of the whole site: money, activity and everything waiting for you.",
+    steps: ["Look at the red-flag numbers first: Ads waiting for review, Open reports, Notes in moderation, Orders needing review.", "Open the matching tab for any number above zero and clear it.", "Press “Expire stale unpaid orders” now and then to close unpaid orders that passed their time limit."] },
+  moderation: { what: "Every sticky note on the wall. Approve, reject or remove notes.",
+    steps: ["Status filter starts on Pending moderation: notes waiting for a decision (only filled when Note moderation is set to hold for approval).", "Read the note and open its media links. Approve to publish, Reject to refuse it.", "Use Remove on a published note that breaks the rules. Restore brings a removed note back.", "A reason is optional but write one: it goes into the Audit log."] },
+  reports: { what: "Notes that visitors reported. Only open reports are listed.",
+    steps: ["Read the reason, details and the note text.", "Note breaks the rules: Remove note (also closes the report).", "Report is valid but needs no removal: Resolve. Report is wrong or spam: Dismiss."] },
+  users: { what: "All accounts. Find a person, suspend them, or delete the account.",
+    steps: ["Search by name or email.", "Suspend blocks the account and its sign-in. A reason is required. Unsuspend reverses it.", "Admin accounts have no buttons here. Delete account is permanent: use it only when truly needed."] },
+  announcements: { what: "Site news shown to visitors. Pinned news stays on top of the wall.",
+    steps: ["Fill Title and Text, tick “Pin on the wall” if needed, then Save draft. Use Preview to check it first.", "A draft is not visible. Press Publish in the list to make it live.", "Unpublish moves it back to draft. Archive hides it for good. Edit loads it back into the form."],
+    sub: { "Write news": "Form for a new item, or for the item you pressed Edit on.", "Recent news": "All news items and their status. Publish, unpublish, archive or edit here." } },
+  orders: { what: "Every payment: sticky posts, donations and advertising orders.",
+    steps: ["Filter by kind and status. Tick “needs review” to see only orders the system flagged.", "Details shows the full record. Reconcile with Midtrans asks the payment provider for the true status: use it when a customer says they paid but the order did not update.", "Waive payment publishes an unpaid sticky post for free (reason required, recorded as waived).", "Clear review flag after you checked a flagged order.", "Customer sends a receipt ID? Paste it in the lookup box at the top to find that note."] },
+  revenue: { what: "Money report for a date range, in Jakarta time.",
+    steps: ["Pick From and To. “To” is not included, so use the next day to include a whole last day.", "Press Run report.", "Hover a figure name or read Definitions below to see how it is counted. Net collected is money in minus refunds."] },
+  promos: { what: "Discount codes for sticky posts.",
+    steps: ["Enter a code (4–24 letters/digits), type (% or Rp), and value. 100% makes the post free.", "Set Max uses, Uses per person and an expiry date if wanted. Press Create code.", "Disable a code to stop it. Enable brings it back. Codes cannot be deleted from here.", "The discount only cuts the minimum price. Anything paid above it is a tip."] },
+  referrals: { what: "Who invited whom, and the credits earned.",
+    steps: ["Check Status and reject reason to see if a referral counted.", "Credits are used to pay for posts. Revoke referral credits takes back unused credits from fraud or abuse (reason required). Credits already spent stay spent.", "“Credit (old)” and “Revoke credit” are for the old credit system."] },
+  campaigns: { what: "Advertiser campaigns. Review, approve and control every ad.",
+    steps: ["Status filter starts on Pending approval. Read the ad, check the creative image and the link.", "Approve a good ad. The advertiser then has a set number of days to pay (see Prices & settings). Reject a bad one and give a reason.", "Pending review + paid: approve to schedule it.", "Pause stops a running ad. Resume restarts it. Cancel ends it for good.", "Stats column is views / clicks."] },
+  adinsights: { what: "Performance per ad spot and location, plus a price suggestion.",
+    steps: ["Choose the window (7 or 30 days).", "Set Target price per 1,000 views, then Save.", "Read Views, Clicks, CTR and Fill rate. A suggested price shows only after 14 days of data.", "Waitlist shows advertisers waiting for a full location: demand to raise prices or add slots.", "Nothing here changes prices by itself."],
+    sub: { "Waitlist": "Advertisers waiting for a spot, by location and days wanted." } },
+  slots: { what: "How many ad slots each location has, how full they are, and price proposals.",
+    steps: ["Read Utilization: Fill 7d/30d/90d and status show which locations are underfilled or sold out.", "Set the thresholds and waitlist hold in Settings.", "Change a location’s slots, top slots, price multipliers and rotation in Slots per location. Fewer slots never ends a running ad.", "Review Price proposals (a sold-out location may suggest a price rise). Approve or reject each one: nothing is automatic.", "Price history shows past changes and fill before and after."],
+    sub: { "Utilization": "How full each location is over 7, 30 and 90 days, with a recommendation.", "Settings": "Where “underfilled” and “sold out” start, how long a waitlist spot is held, and the optional price-step suggestion.", "Slots per location": "Slot count, top slots and price multipliers per location. Press Edit to load one into the form.", "Price proposals": "Suggested price rises for sold-out locations. Approve or reject each.", "Price history": "Past base-fee changes for a Featured package, with fill before and after." } },
+  auctions: { what: "Auctions for the next period of a sold-out Featured slot. Off by default.",
+    steps: ["Set the rules in Settings, then Save auction settings.", "Check Auction readiness. A location is ready when it was full for enough weeks and has enough waitlist.", "Turn auctions on (type ENABLE AUCTIONS), then Enable them per location. Enabling an unready location needs a reason.", "Pick location and package, then Start auction.", "Watch Auctions: Bid log shows every bid, Cancel stops one auction.", "Kill switch turns auctions off and cancels all open auctions. Fixed prices keep working.", "Clear strikes for a bidder who won and did not pay, when appropriate."],
+    sub: { "Settings": "Length, minimum raise, payment time, strike limit and readiness rules.", "Auction readiness": "Which locations may run auctions, and whether they meet the rules.", "Start an auction": "Open a new auction. Only locations with auctions enabled appear.", "Auctions": "All auctions with status, bids and end time.", "Accounts with unpaid-win strikes": "Bidders who won and did not pay. At the strike limit they cannot bid." } },
+  catalog: { what: "Everything that sets what customers pay, plus general site settings.",
+    steps: ["Decorations: click one to change its name, price or visibility.", "Payment methods: set limits from your Midtrans agreement.", "Advertising packages: change base fee, extra-location %, and enable or disable packages. Old orders keep their old price.", "Site settings: change values, then press the save button at the bottom."],
+    sub: { "Decorations": "Stickers and decorations people add to notes. Click one to edit.", "Site settings": "Moderation mode, donation limits, order expiry, contact details, ad payment days, launch pricing and allowed campaign lengths." } },
+  locations: { what: "The places ads and notes can target: countries, regions, cities and campuses.",
+    steps: ["Add from the top down: country, then region, then city, then campus.", "Each form picks its parent, then a name. Press Add.", "Disable hides a place from pickers. Campaigns that targeted it stop matching it."],
+    sub: { "Countries": "Top level. Needs a 2-letter ISO code.", "Regions": "Provinces or states inside a country.", "Cities": "Cities inside a region.", "Campuses": "Individual campuses inside a city." } },
+  audit: { what: "Record of every admin action: who, what, on which item, and why.",
+    steps: ["Use it to check who changed something.", "Newest first, last 200 entries.", "The Reason column is what the admin typed, so ask admins to write real reasons."] },
+  security: { what: "Owner only. Permanent record of deletions made by the Owner.",
+    steps: ["Read-only. Nothing here can be deleted.", "Use it to confirm what was permanently deleted, when, and which item."] },
+};
+
+/** Adds the guide above a freshly built panel and a one-line description under each known section heading. */
+function addGuide(tab, panel, state) {
+  const g = GUIDE[tab];
+  if (!g) return;
+  for (const h of panel.querySelectorAll("h2")) {
+    const key = Object.keys(g.sub ?? {}).find((k) => h.textContent.startsWith(k));
+    const next = h.nextElementSibling;
+    if (key && !(next?.matches("p.small.muted"))) h.after(el("p", { class: "small muted" }, g.sub[key]));
+  }
+  const d = el("details", { class: "notice admin-guide" }, el("summary", {}, "What this does & how to use it"),
+    el("p", {}, g.what), el("ol", {}, ...g.steps.map((s) => el("li", {}, s))));
+  d.open = state.guideOpen !== false;
+  d.addEventListener("toggle", () => { state.guideOpen = d.open; });
+  panel.prepend(d);
+}
+
 export async function mount(view, { signal }) {
   const user = currentUser();
   if (!user || !(await isAdmin())) {
@@ -1065,6 +1126,7 @@ export async function mount(view, { signal }) {
     try {
       const panel = el("div");
       await panels[state.tab](panel, show, state);
+      addGuide(state.tab, panel, state);
       if (id === req && !signal.aborted) r.panel.replaceChildren(panel);
     } catch (err) {
       if (id === req) r.panel.replaceChildren(el("p", { class: "wall-error", role: "alert" }, errorMessage(err)));
