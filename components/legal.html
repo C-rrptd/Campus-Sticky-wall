@@ -1,34 +1,54 @@
-<!-- Static legal pages. Review with a legal adviser before launch; this is not legal advice. -->
+<!-- Static legal pages. Review with a legal adviser; this is not legal advice. -->
 <template id="tpl-privacy">
   <section class="card prose narrow">
     <h1>Privacy notice</h1>
-    <p>This summary mirrors PRIVACY.md in the project repository.</p>
+    <p>Last updated: 27 October 2026. This summary mirrors PRIVACY.md in the project repository.</p>
+    <h2>Who runs this</h2>
+    <p>Campus Sticky Wall is run by an individual, C_rrptd. For privacy questions or requests, email crrptddev@gmail.com.</p>
     <h2>What we collect</h2>
     <ul>
       <li><strong>Notes</strong>: the text, display name, colour, decorations, optional social link and the amount you chose. Published notes are public.</li>
+      <li><strong>Photos, GIFs and videos</strong> you attach to a note are stored publicly and visible to anyone once the note is published. Photo location data is removed in your browser; other video metadata may remain, so check videos yourself.</li>
       <li><strong>Accounts</strong> (optional): email, display name, optional avatar and social links, optional location preference, votes and bookmarks (private).</li>
       <li><strong>Payments</strong>: order amounts and status. Card and wallet details are handled by Midtrans; we never see or store card numbers.</li>
       <li><strong>Guest receipts</strong>: a random receipt token. We store only a hash of it.</li>
       <li><strong>Advertisers</strong>: business name, contact email, campaign content and targeting.</li>
+      <li><strong>Reports</strong> you send about a note, used for moderation.</li>
+      <li><strong>Referrals</strong>: referral code and who joined with it.</li>
+      <li><strong>Abuse prevention</strong>: short-lived request counters tied to your IP address, deleted after about a day.</li>
+      <li><strong>On your device</strong>: your sign-in session, guest receipt tokens, location and display preferences. We use no advertising or analytics cookies.</li>
     </ul>
+    <h2>Why and on what basis</h2>
+    <p>We use your data to run the wall, take payments, prevent abuse and keep financial records. Where you choose to provide something (an account, a social link, donor recognition, media), we rely on your consent, which you can withdraw at any time.</p>
     <h2>What is public</h2>
-    <p>Published notes (and the amount, if you chose to show it). Leaderboards are visible to signed-in users only. Donor names appear only if you opt in, and you can opt out at any time.</p>
+    <p>Published notes (and the amount, if you chose to show it). Leaderboards are visible to everyone, including guests. Donor names appear only if you opt in, and you can opt out at any time.</p>
+    <h2>Your rights</h2>
+    <p>You can ask to see, correct or delete your data, or withdraw consent, by emailing crrptddev@gmail.com. Account deletion is done by request; we aim to respond within 14 days. Guests can take down their own note with their receipt link.</p>
     <h2>Retention and deletion</h2>
-    <p>You can request account deletion. Payment records are retained for financial reconciliation; notes are detached from deleted accounts.</p>
-    <h2>Providers</h2>
-    <p>Supabase (database, authentication, hosting of backend functions) and Midtrans (payments).</p>
+    <p>When an account is deleted, its profile, votes, bookmarks and referral data are removed and notes are detached from it. Payment records are kept for as long as needed for accounting and tax obligations. Files are deleted when a note is removed, rejected, withdrawn or deleted.</p>
+    <h2>Providers and where data goes</h2>
+    <p>Supabase (database, authentication, storage, backend functions; servers in Singapore) and Midtrans (payments). Your data may be processed outside Indonesia by these providers. We do not sell your data.</p>
+    <h2>Age</h2>
+    <p>You must be at least 18, or have a parent or guardian's permission, to create an account or pay.</p>
+    <h2>Changes and incidents</h2>
+    <p>If we change this notice we will update the date above. If a data breach affects you, we will tell you and the authorities as the law requires.</p>
   </section>
 </template>
 
 <template id="tpl-terms">
   <section class="card prose narrow">
     <h1>Terms of use</h1>
+    <p>Last updated: 27 October 2026. Campus Sticky Wall is run by an individual, C_rrptd (crrptddev@gmail.com). By using the site you accept these terms.</p>
     <ul>
+      <li>You must be at least 18, or have a parent or guardian's permission.</li>
       <li>Be kind. Harassment, hate speech, personal information about others, scams and illegal content are removed.</li>
+      <li>You keep ownership of what you post, and you give us permission to display it on the wall for as long as it is published. Only post what you have the right to share. To report content that infringes your rights, email crrptddev@gmail.com.</li>
       <li>You choose your publication price (minimum Rp2.500). Payment publishes a note; it does not buy votes or ranking.</li>
-      <li>We may remove notes or campaigns at our discretion, including when they do not violate the examples listed above. Advertising cancellations and refunds follow the advertising policy on the Advertise page (full refund if cancelled after payment but before the start date). Refunds are not provided for deleted notes, content removed for rule violations, or other circumstances that we determine do not justify a refund, except where applicable law requires otherwise.</li>
+      <li>We may remove notes or campaigns at our discretion, including when they do not violate the examples listed above, and may suspend accounts that break these terms. Advertising cancellations and refunds follow the advertising policy on the Advertise page (full refund if cancelled after payment but before the start date). Refunds are not provided for deleted notes, content removed for rule violations, or other circumstances that we determine do not justify a refund, except where applicable law requires otherwise.</li>
       <li>Sponsored content is always labelled. Advertisers are responsible for their offers.</li>
       <li>Donations are voluntary and do not purchase any benefit.</li>
+      <li>The site is provided "as is". We do not guarantee it will always be available or error-free, and to the extent the law allows we are not liable for losses from using it.</li>
+      <li>We may change these terms; the date above shows the latest version. Indonesian law applies.</li>
     </ul>
   </section>
 </template>
