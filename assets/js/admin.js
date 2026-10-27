@@ -358,9 +358,16 @@ const panels = {
       return b;
     };
     const cats = [...new Set(c.decorations.map((d) => d.category || "Other"))];
-    const decoGrid = el("div", { class: "stack" }, ...cats.map((cat) => el("div", {},
+    const decoList = el("div", { class: "stack" });
+    const catSel = el("select", { "aria-label": "Decoration category" },
+      el("option", { value: "" }, "All categories"), ...cats.map((cat) => el("option", { value: cat }, cat)));
+    const paintDecos = () => decoList.replaceChildren(...cats.filter((cat) => !catSel.value || cat === catSel.value).map((cat) => el("div", {},
       el("h3", { class: "small muted" }, cat),
       el("div", { class: "deco-grid" }, ...c.decorations.filter((d) => (d.category || "Other") === cat).map(decoTile)))));
+    catSel.addEventListener("change", paintDecos);
+    paintDecos();
+    const decoGrid = el("div", { class: "stack" },
+      el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Category"), catSel), decoList);
 
     const pmRows = c.payment_methods.map((m) => ({ m, min: amountInput("min", m.min_amount, "none"), max: amountInput("max", m.max_amount, "none"),
       enabled: el("input", { type: "checkbox", checked: m.enabled || null }) }));
@@ -1123,6 +1130,7 @@ export async function mount(view, { signal }) {
   const show = async () => {
     const id = ++req;
     r.tabs.querySelectorAll("[data-tab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === state.tab)));
+    r.tabs.querySelector(`[data-tab="${state.tab}"]`)?.closest("details")?.setAttribute("open", "");
     r.panel.replaceChildren(el("p", { class: "muted" }, "Loading…"));
     try {
       const panel = el("div");
