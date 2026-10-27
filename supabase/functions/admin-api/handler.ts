@@ -137,9 +137,9 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
   }],
 };
 
-/** Throws 403 unless the caller is an admin (admin_overview runs require_admin() in SQL). */
+/** Throws 403 unless the caller is an admin (admin_check runs require_admin() in SQL). */
 async function assertAdmin(userDb: Db, _user: AuthUser) {
-  await rpc(userDb, "admin_overview", {});
+  await rpc(userDb, "admin_check", {});
 }
 
 // Actions after which queued media files are deleted from Storage.
@@ -211,10 +211,9 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
 /** Tells the advertiser a campaign was approved (payment due) or rejected. Best effort; see _shared/email.ts. */
 async function emailAdvertiser(deps: Deps, userDb: Db, params: P) {
   const id = v.uuid(params.campaign_id, "campaign_id");
-  // Read as the calling admin (admin_list_campaigns re-checks admin status); the list is the 200 newest campaigns.
-  const rows = await rpc<{ id: string; title: string; contact_email: string; price: string | null; moderation_reason: string | null }[]>(
-    userDb, "admin_list_campaigns", { p_status: null });
-  const c = rows.find((x) => x.id === id);
+  // Read as the calling admin (admin_get_campaign re-checks admin status).
+  const c = await rpc<{ title: string; contact_email: string; price: string | null; moderation_reason: string | null } | null>(
+    userDb, "admin_get_campaign", { p_campaign_id: id });
   if (!c?.contact_email) return;
   const site = (deps.env("SITE_URL") ?? "").replace(/\/$/, "");
   const approved = params.action === "approve";

@@ -13,6 +13,7 @@ export async function onRequestGet({ params, env, request }) {
         method: "POST",
         headers: { apikey: env.PUBLIC_SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
         body: JSON.stringify({ p_id: id }),
+        signal: AbortSignal.timeout(4000), // a slow database must not hang the share preview
       });
       if (res.ok) note = await res.json();
     } catch { /* fall through to the generic preview */ }
@@ -27,5 +28,5 @@ export async function onRequestGet({ params, env, request }) {
 <meta name="twitter:card" content="summary_large_image">
 <meta http-equiv="refresh" content="0;url=${esc(target)}"></head>
 <body><p><a href="${esc(target)}">Open this note</a></p></body></html>`;
-  return new Response(html, { status: note ? 200 : 404, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" } });
+  return new Response(html, { status: note ? 200 : 404, headers: { "content-type": "text/html; charset=utf-8", "cache-control": note ? "public, max-age=60" : "no-store" } }); // short: a removed note must stop previewing quickly
 }

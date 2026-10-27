@@ -13,6 +13,7 @@ import { errorMessage, local, refs } from "./utils.js";
 const PAGE = 24;
 const SPONSOR_EVERY = 8;
 const MAX_SPONSORED = 2;
+const MAX_OFFSET = 5000; // get_wall returns an empty page past this (migration 024)
 
 /** #/campus?id=<campus uuid>: the same wall, fixed to one campus, with its top notes and local ads. */
 export function mountCampus(view, ctx) {
@@ -22,7 +23,7 @@ export function mountCampus(view, ctx) {
 export async function mount(view, { signal }, { campus = null } = {}) {
   view.append(cloneTemplate("tpl-wall"));
   const r = refs(view);
-  const state = { offset: 0, sort: local.get("csw.wallSort", "newest"), loc: getLocationPref(), sponsored: [], requestId: 0, q: "", color: "" };
+  const state = { offset: 0, sort: local.get("csw.wallSort", "newest"), loc: getLocationPref(), sponsored: [], requestId: 0, q: "", color: "", seen: new Set() };
   if (campus) state.loc = { ...state.loc, campus };
   if (!["newest", "top"].includes(state.sort)) state.sort = "newest";
   r.sort.value = state.sort;
@@ -51,7 +52,7 @@ export async function mount(view, { signal }, { campus = null } = {}) {
         state.loc = loc;
         setLocationPref(loc);
         showCampusLink();
-        reload();
+        reload(true); // new area: sponsored and featured listings depend on it
       },
     }));
     showCampusLink();
@@ -65,18 +66,23 @@ export async function mount(view, { signal }, { campus = null } = {}) {
     }
   }
 
-  async function loadPage(reset) {
+  // fresh: also re-fetch sponsored + featured (first load and area changes only, not every search keystroke or filter).
+  async function loadPage(reset, fresh = false) {
     const id = ++state.requestId;
     r.grid.setAttribute("aria-busy", "true");
     r.error.hidden = true;
     r.more.hidden = true;
     try {
-      if (reset) await Promise.all([loadSponsored(), loadFeatured(r.featured, state.loc, signal)]);
+      if (fresh) await Promise.all([loadSponsored(), loadFeatured(r.featured, state.loc, signal)]);
       const notes = await rpc("get_wall", { p_sort: state.sort, p_campus: state.loc.campus || null, p_limit: PAGE, p_offset: state.offset, p_q: state.q || null, p_color: state.color || null });
       if (id !== state.requestId || signal.aborted) return; // stale response
       if (reset) r.grid.replaceChildren();
       notes.forEach((note, i) => {
-        r.grid.append(renderNote(note, { signal }));
+        // Offset paging on a live feed: a note posted meanwhile shifts the next page and would repeat one.
+        if (!state.seen.has(note.id)) {
+          state.seen.add(note.id);
+          r.grid.append(renderNote(note, { signal }));
+        }
         const position = state.offset + i + 1;
         const slot = position / SPONSOR_EVERY - 1;
         if (position % SPONSOR_EVERY === 0 && state.sponsored[slot]) r.grid.append(renderPromotion(state.sponsored[slot], { compact: true }));
@@ -86,7 +92,7 @@ export async function mount(view, { signal }, { campus = null } = {}) {
       }
       state.offset += notes.length;
       r.empty.hidden = state.offset > 0;
-      r.more.hidden = notes.length < PAGE;
+      r.more.hidden = notes.length < PAGE || state.offset >= MAX_OFFSET;
     } catch (err) {
       if (id !== state.requestId) return;
       r.error.textContent = `Couldn’t load notes: ${errorMessage(err)}`;
@@ -96,9 +102,10 @@ export async function mount(view, { signal }, { campus = null } = {}) {
     }
   }
 
-  function reload() {
+  function reload(fresh = false) {
     state.offset = 0;
-    loadPage(true);
+    state.seen.clear();
+    loadPage(true, fresh);
   }
 
   r.sort.addEventListener("change", () => {
@@ -115,5 +122,5 @@ export async function mount(view, { signal }, { campus = null } = {}) {
   signal.addEventListener("abort", () => clearTimeout(timer));
   r.more.addEventListener("click", () => loadPage(false), { signal });
 
-  await loadPage(true);
+  await loadPage(true, true);
 }

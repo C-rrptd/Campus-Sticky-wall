@@ -99,6 +99,31 @@ export function errorResponse(req: Request, err: unknown, env: Env = DEFAULT_ENV
 
 const MAX_BODY_BYTES = 16 * 1024;
 
+/** Read the body but stop once it passes maxBytes: Content-Length can be absent (chunked) or false. */
+async function readCapped(req: Request, maxBytes: number): Promise<string> {
+  const reader = req.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > maxBytes) {
+      await reader.cancel();
+      throw new HttpError(413, "PAYLOAD_TOO_LARGE", "Request body too large.");
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    all.set(c, at);
+    at += c.length;
+  }
+  return new TextDecoder().decode(all);
+}
+
 /** Enforce POST + JSON + size limit, return the parsed object. */
 export async function readJson(req: Request, maxBytes = MAX_BODY_BYTES): Promise<Record<string, unknown>> {
   if (req.method !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", "Use POST.");
@@ -108,10 +133,7 @@ export async function readJson(req: Request, maxBytes = MAX_BODY_BYTES): Promise
   }
   const declared = Number(req.headers.get("content-length") ?? "0");
   if (declared > maxBytes) throw new HttpError(413, "PAYLOAD_TOO_LARGE", "Request body too large.");
-  const text = await req.text();
-  if (new TextEncoder().encode(text).length > maxBytes) {
-    throw new HttpError(413, "PAYLOAD_TOO_LARGE", "Request body too large.");
-  }
+  const text = await readCapped(req, maxBytes);
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);

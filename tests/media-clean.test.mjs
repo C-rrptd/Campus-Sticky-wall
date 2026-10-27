@@ -24,6 +24,32 @@ test("MP4 without coordinates is returned unchanged", async () => {
   assert.equal(await cleanForUpload(input), input);
 });
 
+test("large MP4: coordinates in the first and last chunk are scrubbed, middle untouched", async () => {
+  const MB = 1024 * 1024;
+  const head = mp4With("+37.7749-122.4194+012.000/");
+  const middle = new Uint8Array(5 * MB).fill(7);
+  const tail = enc("©xyz\u0000\u0012ᗇ+01.2345-103.9876/");
+  const input = new File([head, middle, tail], "big.mp4", { type: "video/mp4" });
+  const out = await cleanForUpload(input);
+  const bytes = new Uint8Array(await out.arrayBuffer());
+  const text = new TextDecoder("latin1").decode(bytes);
+  assert.equal(out.size, input.size);
+  assert.ok(!/37\.7749|122\.4194|01\.2345|103\.9876/.test(text), "coordinates must be gone");
+  assert.equal(bytes[3 * MB], 7, "middle kept");
+});
+
+test("animated WebP passes through (a canvas redraw would keep one frame)", async () => {
+  const riff = (flags) => {
+    const b = new Uint8Array(30);
+    b.set(enc("RIFF"), 0); b.set(enc("WEBP"), 8); b.set(enc("VP8X"), 12);
+    b[20] = flags;
+    return new File([b], "a.webp", { type: "image/webp" });
+  };
+  const animated = riff(0x02);
+  assert.equal(await cleanForUpload(animated), animated);
+  await assert.rejects(() => cleanForUpload(riff(0))); // still image: re-drawn, which needs a browser canvas
+});
+
 test("GIF and WebM pass through untouched", async () => {
   const gif = new File([enc("GIF89a-----------")], "a.gif", { type: "image/gif" });
   assert.equal(await cleanForUpload(gif), gif);

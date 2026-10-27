@@ -99,6 +99,8 @@ Put the printed local API URL and publishable/anon key into `assets/js/config.js
 
    ```sql
    select cron.schedule('expire-stale-orders', '*/5 * * * *', $$select public.expire_stale_orders()$$);
+   -- Uploads that never became part of a note (abandoned form, failed order) are queued for deletion after 24 hours.
+   select cron.schedule('sweep-stale-uploads', '17 * * * *', $$select public.media_sweep_stale_uploads()$$);
    ```
 
 ---

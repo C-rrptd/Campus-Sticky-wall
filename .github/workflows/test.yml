@@ -50,6 +50,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_wall_search.sql
       - name: Poll, quiz and Spotify assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_polls.sql
+      - name: Audit-fix assertions (pin_until, offset cap, reserved names, paid referrals)
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_audit_fixes.sql
 
   code:
     runs-on: ubuntu-latest
@@ -60,7 +62,7 @@ jobs:
       - name: Typecheck edge functions and scripts
         run: deno check supabase/functions/*/index.ts scripts/bootstrap-admin.ts
       - name: Unit tests (Deno)
-        run: deno test supabase/functions/_shared/media_test.ts
+        run: deno test supabase/functions/_shared/
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Parse browser JavaScript
