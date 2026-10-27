@@ -66,7 +66,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
   const client = getClient();
   const day = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 864e5).toISOString().slice(0, 10); // Asia/Jakarta date
   const today = day(0);
-  const lastDay = day(180); // the server accepts start dates up to 180 days ahead
+  const lastDay = day(14); // the server accepts start dates up to 14 days ahead
   r.start.min = today;
   r.start.max = lastDay;
   r.start.value = today;
@@ -191,7 +191,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
         : file && imageProblem(file) ? imageProblem(file)
         : !p ? "Choose a placement, duration and reach."
         : targets.length === 0 ? "Choose at least one location."
-        : !r.start.value || r.start.value < today || r.start.value > lastDay ? "Pick a start date within the next 180 days."
+        : !r.start.value || r.start.value < today || r.start.value > lastDay ? "Pick a start date within the next 14 days."
         : !r.agree.checked ? "Please confirm you have read the advertising policy."
         : null;
       if (problem) { r.error.textContent = problem; return; }
@@ -304,6 +304,21 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (c.status === "expired" && !c.starts_at) item.append(el("p", { class: "small muted" }, `${c.moderation_reason || "Expired"}. Submit the ad again if you still want it.`));
     if (c.status === "awaiting_payment") item.append(el("p", { class: "small muted" }, "If you didn’t finish paying, it returns to “payment due” in about 30 minutes."));
     const buttons = [];
+    if (c.status === "approved" && c.requested_start < today) {
+      // The chosen live date has passed: let the advertiser pick a new one (still unpaid, still approved).
+      const pick = el("input", { type: "date", min: today, max: lastDay, value: today, "aria-label": "New start date" });
+      const save = el("button", { type: "button", class: "btn btn--small" }, "Change start date");
+      save.addEventListener("click", () => busy(save, async () => {
+        if (!pick.value || pick.value < today || pick.value > lastDay) { toast("Pick a start date within the next 14 days.", "error"); return; }
+        try {
+          await rpc("reschedule_my_campaign", { p_campaign_id: c.id, p_new_start: pick.value });
+          toast("Start date updated.", "success");
+          await loadMine();
+        } catch (err) { toast(errorMessage(err), "error"); }
+      }), { signal });
+      item.append(el("p", { class: "campaign-item__reason" }, `Your chosen start date (${fmtDay(c.requested_start)}) has passed. Pick a new one, or pay now to start today.`),
+        el("div", { class: "row row--tight" }, pick, save));
+    }
     if (c.status === "approved") {
       // Payment starts the ad at the requested date (Jakarta midnight), or immediately if that has passed.
       const start = Math.max(Date.now(), new Date(`${c.requested_start}T00:00:00+07:00`).getTime());

@@ -128,6 +128,15 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_kind: v.oneOf(p.kind, "kind", ["report", "note", "announcement", "campaign", "referral", "audit_entry", "country", "region", "city", "campus"] as const),
     p_id: v.str(p.id, "id", { min: 1, max: 40 }),
   })],
+  // Admin or Owner (SQL re-checks require_admin()).
+  delete_user_preview: ["admin_delete_user_preview", (p) => ({ p_user_id: v.uuid(p.user_id, "user_id") })],
+  delete_user: ["admin_delete_user", (p) => ({
+    p_user_id: v.uuid(p.user_id, "user_id"), p_confirm: v.str(p.confirm, "confirm", { min: 1, max: 20 }),
+  })],
+  find_note_by_receipt: ["admin_find_note_by_receipt", (p) => ({ p_order_ref: v.orderRef(p.order_ref) })],
+  delete_note_by_receipt: ["admin_delete_note_by_receipt", (p) => ({
+    p_order_ref: v.orderRef(p.order_ref), p_confirm: v.str(p.confirm, "confirm", { min: 1, max: 20 }),
+  })],
   security_events: ["owner_list_security_events", (p) => ({ p_limit: int(p.limit, 100, 500) })],
   revenue_report: ["admin_revenue_report", (p) => {
     const from = typeof p.from === "string" && !Number.isNaN(Date.parse(p.from)) ? p.from : null;
@@ -143,7 +152,7 @@ async function assertAdmin(userDb: Db, _user: AuthUser) {
 }
 
 // Actions after which queued media files are deleted from Storage.
-const PURGE_AFTER = new Set(["overview", "moderate_note", "owner_delete"]);
+const PURGE_AFTER = new Set(["overview", "moderate_note", "owner_delete", "delete_user", "delete_note_by_receipt"]);
 
 export const handler: Handler = async (req: Request, deps: Deps) => {
   const body = await readJson(req, 32 * 1024);

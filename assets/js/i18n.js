@@ -112,7 +112,7 @@ const ID = {
   "Unreviewed ads:": "Iklan yang belum ditinjau:",
   "an ad we haven’t reviewed within 7 days, or whose requested start date has passed, expires; submit it again. Ads are never approved automatically.": "iklan yang tidak kami tinjau dalam 7 hari, atau yang tanggal mulainya sudah lewat, akan kedaluwarsa; kirim ulang. Iklan tidak pernah disetujui otomatis.",
   "Unpaid approvals:": "Persetujuan belum dibayar:",
-  "an approved ad that is not paid within the payment window expires; submit it again if you still want it.": "iklan yang disetujui tetapi tidak dibayar dalam batas waktu pembayaran akan kedaluwarsa; kirim ulang jika kamu masih menginginkannya.",
+  "an approved ad that is not paid within the payment window expires; submit it again if you still want it. If your chosen start date passes before you pay, you can pick a new start date while the ad is still approved.": "iklan yang disetujui tetapi tidak dibayar dalam batas waktu pembayaran akan kedaluwarsa; kirim ulang jika kamu masih menginginkannya. Jika tanggal mulai yang kamu pilih terlewat sebelum kamu membayar, kamu dapat memilih tanggal mulai baru selama iklan masih berstatus disetujui.",
   "Labelling:": "Pelabelan:",
   "every paid ad is shown with a “Sponsored” label.": "setiap iklan berbayar ditampilkan dengan label “Bersponsor”.",
   "Refunds": "Pengembalian dana",
