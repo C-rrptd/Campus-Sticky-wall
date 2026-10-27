@@ -5,8 +5,8 @@
   },
   "lint": {
     "include": ["assets/js/", "supabase/functions/", "scripts/"],
-    "exclude": ["assets/js/vendor/"],
+    "exclude": ["assets/vendor/"],
     "rules": { "exclude": ["no-window", "no-window-prefix", "require-await", "no-import-prefix"] }
   },
-  "fmt": { "lineWidth": 140, "exclude": ["assets/js/vendor/"] }
+  "fmt": { "lineWidth": 140, "exclude": ["assets/vendor/"] }
 }

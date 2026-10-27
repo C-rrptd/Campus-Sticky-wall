@@ -162,7 +162,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
   async function uploadCreative(file) {
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await client.storage.from(config.creativeBucket).upload(path, file, { contentType: file.type, upsert: false });
+    const { error } = await client.storage.from(config.creativeBucket).upload(path, file, { contentType: file.type, upsert: false, cacheControl: "31536000" });
     if (error) throw new Error("Image upload failed. Please try again.");
     return path;
   }
@@ -342,8 +342,11 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (!user) { r.mine.replaceChildren(el("li", { class: "muted" }, "Sign in to see your campaigns.")); return; }
     try {
       const mine = await query(client.from("campaigns")
-        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,moderation_reason,impressions,clicks,created_at,product_id,description,category,advertiser_name,contact_email,destination_url,creative_path")
+        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,moderation_reason,created_at,product_id,description,category,advertiser_name,contact_email,destination_url,creative_path")
         .order("created_at", { ascending: false }).limit(20));
+      // Views/clicks live in campaign_daily_stats only (campaigns.impressions is frozen).
+      const totals = mine.length ? await rpc("campaign_totals", { p_ids: mine.map((c) => c.id) }).catch(() => []) : [];
+      for (const c of mine) Object.assign(c, { impressions: 0, clicks: 0 }, totals.find((t) => t.campaign_id === c.id));
       r.mine.replaceChildren(...(mine.length ? mine.map(campaignItem) : [el("li", { class: "muted" }, "No campaigns yet.")]));
     } catch {
       r.mine.replaceChildren(el("li", { class: "muted" }, "Couldn’t load your campaigns."));

@@ -1,23 +1,26 @@
 // Privacy: re-draw JPEG/PNG/WebP photos on a canvas before upload so camera
 // metadata (GPS location, device, timestamps) is not published. Large images are
-// scaled to 4096px. It fails closed: a photo that cannot be cleaned is not uploaded.
+// scaled to 1600px, re-encoded at quality 0.82 (PNG becomes WebP) to save Storage and egress. It fails closed: a photo that cannot be cleaned is not uploaded.
 // GIFs and animated WebP are passed through. MP4 videos get a best-effort scrub of embedded GPS
-// coordinates; other video metadata is not touched.
+// coordinates; other video metadata is not touched. Where the browser supports WebCodecs, videos are instead re-encoded
+// to a small MP4 (video-compress.js), which drops all metadata.
 
 const REDRAW = new Set(["image/jpeg", "image/png", "image/webp"]);
+// Output type per input type. Safari cannot encode WebP and hands back PNG: the File type follows the blob, not this table.
+const OUT_TYPE = { "image/jpeg": "image/jpeg", "image/png": "image/webp", "image/webp": "image/webp" };
 const ISO6709 = /[+-]\d{2,3}\.\d{2,}[+-]\d{2,3}\.\d{2,}(?:[+-]\d+(?:\.\d+)?)?\/?/g;
 
 async function redraw(file) {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   try {
-    const scale = Math.min(1, 4096 / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, file.type, 0.92));
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, OUT_TYPE[file.type], 0.82));
     if (!blob || blob.size === 0) throw new Error("re-encode failed");
-    return new File([blob], file.name, { type: file.type });
+    return new File([blob], file.name, { type: blob.type });
   } finally {
     bitmap.close?.();
   }
@@ -61,6 +64,31 @@ async function isAnimatedWebp(file) {
 export async function cleanForUpload(file) {
   if (file.type === "image/webp" && (await isAnimatedWebp(file))) return file;
   if (REDRAW.has(file.type)) return redraw(file);
-  if (file.type === "video/mp4") return scrubLocation(file);
+  if (file.type === "video/mp4" || file.type === "video/webm") {
+    // Re-encode small (also drops all metadata); any failure falls back to the old behaviour.
+    try {
+      const small = await (await import("./video-compress.js")).compressVideo(file);
+      if (small) return small;
+    } catch { /* unsupported browser or decode error */ }
+    if (file.type === "video/mp4") return scrubLocation(file);
+  }
   return file;
+}
+
+/** Optional ~400px WebP thumbnail of a cleaned image, stored as "<name>-t.webp" next to it so the wall can skip the full file.
+ *  Returns null for GIFs/videos or when the browser cannot encode WebP (Safari hands back PNG): the wall then uses the full image. */
+export async function makeThumb(file) {
+  if (!REDRAW.has(file.type)) return null;
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 400 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.7));
+    return blob && blob.type === "image/webp" && blob.size > 0 ? new File([blob], "thumb.webp", { type: "image/webp" }) : null;
+  } finally {
+    bitmap.close?.();
+  }
 }

@@ -78,6 +78,19 @@ open(path, "w").write(src)
 PY
 fi
 
+# Minify our own JS and CSS (esbuild, pinned; no bundling, so modules and imports stay as they are). Optional: if npx or the
+# network is missing the site is shipped unminified. Runs before the secret scan so the scan checks what actually ships.
+if command -v npx >/dev/null 2>&1; then
+  if npx --yes esbuild@0.28.2 "$OUT"/assets/js/*.js --minify --allow-overwrite --outdir="$OUT/assets/js" --log-level=warning \
+     && npx --yes esbuild@0.28.2 "$OUT"/assets/css/*.css --minify --allow-overwrite --outdir="$OUT/assets/css" --log-level=warning; then
+    echo "JS and CSS minified"
+  else
+    echo "warning: minify failed, shipping unminified files" >&2
+  fi
+else
+  echo "warning: npx not found, shipping unminified files" >&2
+fi
+
 # Nothing secret may ship to browsers.
 if grep -rEq 'sb_secret_[A-Za-z0-9_-]{8,}|SB-Mid-server-[A-Za-z0-9_-]{8,}|Mid-server-[A-Za-z0-9_-]{16,}|"role" *: *"service_role"' "$OUT"; then
   echo "Refusing: a secret-looking value is present in $OUT" >&2
