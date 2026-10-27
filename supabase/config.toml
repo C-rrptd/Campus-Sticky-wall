@@ -33,13 +33,16 @@ enable_confirmations = true
 double_confirm_changes = true
 
 [auth.rate_limit]
-email_sent = 4
+# Emails per hour for the WHOLE project (signup confirmations + password resets). 4 would let anyone starve
+# signups with four reset requests. Above the built-in mailer's own cap this needs custom SMTP (see OPERATIONS.md).
+email_sent = 30
 sign_in_sign_ups = 30
 token_verifications = 30
 
 [storage]
 enabled = true
-file_size_limit = "1MiB"
+# Project-wide ceiling: the note-media bucket allows 25 MB files, so this must not be lower.
+file_size_limit = "26MiB"
 
 # Every function authenticates the caller itself (see _shared/auth.ts). The
 # gateway JWT check is disabled because guests call several functions with

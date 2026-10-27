@@ -67,3 +67,8 @@ Both the inviter and the invited friend get **2 free posts + 2 free decorations*
 - **API:** `decoration_positions` is now a list `[{id,x,y,rot}]`, one per copy; the old `{ "<id>": {x,y,rot} }` form is still accepted. `note_json` gains `stickers` (one entry per copy); `placements` stays for clients cached from before 017 and can be dropped later.
 - **Deploy order:** run `017_repeat_stickers.sql`, deploy `create-publication` (and `check-promo` is unchanged), then the site.
 - Tests: `supabase/tests/assert_repeat_stickers.sql` (needs psql like the others). The older `assert_posting_v2.sql`, `assert_sticker_rotation.sql` and, with its `\gset` lines emulated, `assert_stickers.sql` also pass on 017.
+
+
+> **Update (perf):** upload cleaning now scales to 1600px and re-encodes at quality 0.82 (PNG becomes WebP). Uploads carry `Cache-Control: max-age=31536000`.
+
+> **Update (video):** in browsers with WebCodecs, videos are now re-encoded to a small MP4 before upload (all metadata dropped). Other browsers upload the original, capped at 10 MB.

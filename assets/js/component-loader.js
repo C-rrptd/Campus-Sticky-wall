@@ -26,7 +26,7 @@ export function loadComponent(name) {
     const res = await fetch(url, { credentials: "same-origin", cache: "no-cache" });
     if (!res.ok) throw new Error(`Component "${name}" failed to load (${res.status}).`);
     const html = await res.text();
-    if (/<script\b/i.test(html) || /\son[a-z]+\s*=/i.test(html)) {
+    if (/<script\b/i.test(html) || /[\s/"']on[a-z]+\s*=/i.test(html)) {
       throw new Error(`Component "${name}" contains executable markup and was rejected.`);
     }
     const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");

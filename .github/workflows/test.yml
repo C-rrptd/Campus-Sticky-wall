@@ -29,11 +29,13 @@ jobs:
       - name: Apply migrations
         run: for f in supabase/migrations/*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Re-apply 006 onward (must be idempotent)
-        run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql supabase/migrations/02*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+        run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql supabase/migrations/02*_*.sql supabase/migrations/03*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Part 1 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_part1.sql
       - name: Media cleanup assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_media_cleanup.sql
+      - name: Media thumbnail assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_media_thumbnails.sql
       - name: Paid posting v2 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_posting_v2.sql
       - name: Sticker placement assertions
@@ -50,6 +52,12 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_wall_search.sql
       - name: Poll, quiz and Spotify assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_polls.sql
+      - name: Admin delete-account and note-by-receipt assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_admin_delete.sql
+      - name: Reschedule approved ad assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_reschedule.sql
+      - name: Audit-fix assertions (pin_until, offset cap, reserved names, paid referrals)
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_audit_fixes.sql
 
   code:
     runs-on: ubuntu-latest
@@ -60,7 +68,7 @@ jobs:
       - name: Typecheck edge functions and scripts
         run: deno check supabase/functions/*/index.ts scripts/bootstrap-admin.ts
       - name: Unit tests (Deno)
-        run: deno test supabase/functions/_shared/media_test.ts
+        run: deno test supabase/functions/_shared/
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Parse browser JavaScript

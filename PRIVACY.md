@@ -30,7 +30,7 @@ Browser storage holds the Supabase session, guest receipt tokens for this device
 
 ## Donor recognition
 
-Donor recognition is **off by default**. A donor appears on the donor leaderboard (signed-in users only) only after they opt in through Profile, or the checkbox on the donation form. Opting out removes them immediately, because leaderboards are computed live and nothing is cached. Guest donations are never linked to any identity.
+Donor recognition is **off by default**. A donor appears on the donor leaderboard (public, visible to guests too) only after they opt in through Profile, or the checkbox on the donation form. Opting out removes them immediately, because leaderboards are computed live and nothing is cached. Guest donations are never linked to any identity.
 
 ## Processors
 

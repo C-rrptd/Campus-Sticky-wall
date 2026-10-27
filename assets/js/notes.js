@@ -5,7 +5,7 @@
 import { decoPicker } from "./deco-picker.js";
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
-import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc, uploadNoteMedia } from "./supabase-client.js";
+import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc, thumbPath, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
@@ -117,7 +117,8 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
       const video = first.kind === "video";
       const thumb = video
         ? el("video", { class: "note__thumb", preload: "metadata", muted: "", playsinline: "", "aria-hidden": "true" })
-        : el("img", { class: "note__thumb", src, alt: "", loading: "lazy" });
+        : el("img", { class: "note__thumb", src: /\.gif$/i.test(first.path) ? src : mediaUrl(thumbPath(first.path)) ?? src, alt: "", loading: "lazy", decoding: "async" });
+      if (!video) thumb.addEventListener("error", () => { if (thumb.src !== src) thumb.src = src; }, { once: true }); // no thumbnail (older note): use the full image
       if (video) lazyVideo(thumb, `${src}#t=0.1`);
       r.mediaBadge.replaceChildren(thumb, el("span", { class: "note__media-label" },
         `${video ? "▶ Video" : "Photo"}${note.media.length > 1 ? ` +${note.media.length - 1} more` : ""}`));

@@ -33,7 +33,7 @@ export function referralLink(code) {
   return `${base}/?ref=${encodeURIComponent(code)}#/auth?mode=register`;
 }
 
-const STATUS = { pending_verification: "Waiting for their first post", qualified: "Successful", rejected: "Not eligible" };
+const STATUS = { pending_verification: "Waiting for their first paid post", qualified: "Successful", rejected: "Not eligible" };
 
 export async function mount(view, { signal }) {
   const user = currentUser();
@@ -70,7 +70,7 @@ export async function mount(view, { signal }) {
   if (navigator.share) {
     r.share.hidden = false;
     r.share.addEventListener("click", () => {
-      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — we both get 2 free posts and 2 free decorations after your first note.", url: link }).catch(() => {});
+      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — we both get 2 free posts and 2 free decorations after your first paid note.", url: link }).catch(() => {});
     }, { signal });
   }
 
@@ -79,5 +79,5 @@ export async function mount(view, { signal }) {
     : [el("li", { class: "muted" }, "No referrals yet — share your link!")]));
   r.credits.replaceChildren(...(data.credit_history.length
     ? data.credit_history.map((c) => el("li", {}, `${formatDate(c.created_at)} · ${c.label ?? "Credit"} · ${c.status}${c.redeemed_at ? ` (used ${formatDate(c.redeemed_at)})` : ""}`))
-    : [el("li", { class: "muted" }, "No referral credits yet. Publish your first note after joining through a friend’s link, or invite a friend.")]));
+    : [el("li", { class: "muted" }, "No referral credits yet. Pay for your first note after joining through a friend’s link, or invite a friend.")]));
 }

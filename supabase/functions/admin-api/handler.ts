@@ -128,6 +128,15 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_kind: v.oneOf(p.kind, "kind", ["report", "note", "announcement", "campaign", "referral", "audit_entry", "country", "region", "city", "campus"] as const),
     p_id: v.str(p.id, "id", { min: 1, max: 40 }),
   })],
+  // Admin or Owner (SQL re-checks require_admin()).
+  delete_user_preview: ["admin_delete_user_preview", (p) => ({ p_user_id: v.uuid(p.user_id, "user_id") })],
+  delete_user: ["admin_delete_user", (p) => ({
+    p_user_id: v.uuid(p.user_id, "user_id"), p_confirm: v.str(p.confirm, "confirm", { min: 1, max: 20 }),
+  })],
+  find_note_by_receipt: ["admin_find_note_by_receipt", (p) => ({ p_order_ref: v.orderRef(p.order_ref) })],
+  delete_note_by_receipt: ["admin_delete_note_by_receipt", (p) => ({
+    p_order_ref: v.orderRef(p.order_ref), p_confirm: v.str(p.confirm, "confirm", { min: 1, max: 20 }),
+  })],
   security_events: ["owner_list_security_events", (p) => ({ p_limit: int(p.limit, 100, 500) })],
   revenue_report: ["admin_revenue_report", (p) => {
     const from = typeof p.from === "string" && !Number.isNaN(Date.parse(p.from)) ? p.from : null;
@@ -137,13 +146,13 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
   }],
 };
 
-/** Throws 403 unless the caller is an admin (admin_overview runs require_admin() in SQL). */
+/** Throws 403 unless the caller is an admin (admin_check runs require_admin() in SQL). */
 async function assertAdmin(userDb: Db, _user: AuthUser) {
-  await rpc(userDb, "admin_overview", {});
+  await rpc(userDb, "admin_check", {});
 }
 
 // Actions after which queued media files are deleted from Storage.
-const PURGE_AFTER = new Set(["overview", "moderate_note", "owner_delete"]);
+const PURGE_AFTER = new Set(["overview", "moderate_note", "owner_delete", "delete_user", "delete_note_by_receipt"]);
 
 export const handler: Handler = async (req: Request, deps: Deps) => {
   const body = await readJson(req, 32 * 1024);
@@ -211,10 +220,9 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
 /** Tells the advertiser a campaign was approved (payment due) or rejected. Best effort; see _shared/email.ts. */
 async function emailAdvertiser(deps: Deps, userDb: Db, params: P) {
   const id = v.uuid(params.campaign_id, "campaign_id");
-  // Read as the calling admin (admin_list_campaigns re-checks admin status); the list is the 200 newest campaigns.
-  const rows = await rpc<{ id: string; title: string; contact_email: string; price: string | null; moderation_reason: string | null }[]>(
-    userDb, "admin_list_campaigns", { p_status: null });
-  const c = rows.find((x) => x.id === id);
+  // Read as the calling admin (admin_get_campaign re-checks admin status).
+  const c = await rpc<{ title: string; contact_email: string; price: string | null; moderation_reason: string | null } | null>(
+    userDb, "admin_get_campaign", { p_campaign_id: id });
   if (!c?.contact_email) return;
   const site = (deps.env("SITE_URL") ?? "").replace(/\/$/, "");
   const approved = params.action === "approve";

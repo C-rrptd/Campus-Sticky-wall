@@ -16,5 +16,17 @@
 /sw.js
   Cache-Control: no-cache
 
-/assets/*
+# Cloudflare joins header values when several rules match, so these are separate paths, not /assets/*.
+# Our own files are revalidated on every load (JS modules import each other without ?v=).
+/assets/js/*
   Cache-Control: no-cache
+
+/assets/css/*
+  Cache-Control: no-cache
+
+/assets/images/*
+  Cache-Control: public, max-age=86400
+
+# Vendored, version in the file name: a new version is a new URL, so it can be cached for a year.
+/assets/vendor/*
+  Cache-Control: public, max-age=31536000, immutable

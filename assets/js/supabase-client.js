@@ -2,7 +2,7 @@
 // for RPC and Edge Function calls. Errors become ApiError {code, message, status}.
 
 import { config } from "./config.js";
-import { cleanForUpload } from "./media-clean.js";
+import { cleanForUpload, makeThumb } from "./media-clean.js";
 
 let client = null;
 
@@ -83,6 +83,7 @@ export function creativeUrl(path) {
 const MEDIA_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "video/mp4": "mp4", "video/webm": "webm" };
 export const MEDIA_MAX_FILES = 4;
 export const MEDIA_MAX_BYTES = 25 * 1024 * 1024;
+const VIDEO_MAX_BYTES = 10 * 1024 * 1024; // checked after compression; the bucket still allows 25 MB
 
 /** Error text for a file that can't be attached, or null when it is fine. */
 export function mediaProblem(file) {
@@ -90,6 +91,9 @@ export function mediaProblem(file) {
   if (file.size > MEDIA_MAX_BYTES) return `${file.name}: files can be at most 25 MB.`;
   return null;
 }
+
+/** Storage path of the optional thumbnail of an image path (see makeThumb). */
+export const thumbPath = (path) => path.replace(/\.[A-Za-z0-9]+$/, "-t.webp");
 
 /** Public URL of an uploaded note attachment (path is "<user-id>/<file>"). */
 export function mediaUrl(path) {
@@ -109,9 +113,19 @@ export async function uploadNoteMedia(files, userId) {
     }
     const problem = mediaProblem(file);
     if (problem) throw new ApiError("UPLOAD_FAILED", problem, 0);
+    if (file.type.startsWith("video/") && file.size > VIDEO_MAX_BYTES) {
+      throw new ApiError("UPLOAD_FAILED", `${original.name}: videos can be at most 10 MB after compression. Trim it or use a shorter clip.`, 0);
+    }
     const path = `${userId}/${crypto.randomUUID()}.${MEDIA_EXT[file.type]}`;
-    const { error } = await getClient().storage.from("note-media").upload(path, file, { contentType: file.type });
+    const { error } = await getClient().storage.from("note-media").upload(path, file, { contentType: file.type, cacheControl: "31536000" }); // uuid path, never overwritten: cache for a year
     if (error) throw new ApiError("UPLOAD_FAILED", `Couldn’t upload ${original.name}. Please try again.`, 0);
+    // Only the first attachment is shown on the wall, so only it gets a thumbnail. Best effort: no thumbnail is fine.
+    if (out.length === 0 && file.type !== "image/gif" && !file.type.startsWith("video/")) {
+      try {
+        const thumb = await makeThumb(file);
+        if (thumb) await getClient().storage.from("note-media").upload(thumbPath(path), thumb, { contentType: "image/webp", cacheControl: "31536000" });
+      } catch { /* the wall falls back to the full image */ }
+    }
     out.push({ path, kind: file.type.startsWith("video/") ? "video" : "image" });
   }
   return out;

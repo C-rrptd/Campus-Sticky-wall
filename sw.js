@@ -8,7 +8,10 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/n/")) return;
   e.respondWith(fetch(e.request).then((res) => {
-    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
+    // Only plain 200 responses for static files: no 206 ranges (cache.put throws) and no query strings
+    // (Midtrans returns to /?order_id=…, which must not be stored on the device). ?v=… asset URLs are cached.
+    const cacheable = res.status === 200 && (!url.search || /^\?v=\d+$/.test(url.search));
+    if (cacheable) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {}); }
     return res;
   }).catch(() => caches.match(e.request)));
 });

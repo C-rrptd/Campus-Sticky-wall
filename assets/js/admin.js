@@ -66,6 +66,53 @@ function ownerDelete(state, kind, id, what, reload) {
   }, "btn btn--small btn--danger");
 }
 
+/** Typed-DELETE confirmation shared by the Admin/Owner deletes below. Resolves true when confirmed. */
+async function confirmDelete(title, intro, lines = []) {
+  const input = el("input", { name: "confirm", required: true, pattern: "DELETE", autocomplete: "off", placeholder: "DELETE" });
+  const body = el("div", { class: "stack" }, el("p", {}, intro),
+    lines.length ? el("ul", { class: "small" }, ...lines.map((t) => el("li", {}, t))) : null,
+    el("label", { class: "field" }, el("span", { class: "field__label" }, "Type DELETE to confirm"), input));
+  const data = await openDialog({ title, body, okLabel: "Delete permanently", danger: true });
+  return !!data && data.get("confirm") === "DELETE";
+}
+
+/** Admin or Owner: delete an account and everything tied to it. Payment records stay (detached). */
+function deleteUserButton(row, reload) {
+  return button("Delete", async () => {
+    let p;
+    try { p = await api("delete_user_preview", { user_id: row.id }); } catch (err) { toast(errorMessage(err), "error"); return; }
+    if (p.live_campaigns > 0) { toast("This account has a live or unpaid campaign. Cancel it first.", "error"); return; }
+    const ok = await confirmDelete(`Delete account “${p.display_name}”`,
+      "Permanently delete this account and everything associated with it? This cannot be undone.",
+      [`${p.notes} note(s), with their photos and videos`, `${p.votes} vote(s), ${p.bookmarks} bookmark(s)`, `${p.campaigns} campaign(s)`,
+        "Profile, referral data and credits", `${p.orders_kept} order(s) stay for accounting but are detached from the account.`]);
+    if (!ok) return;
+    try { await api("delete_user", { user_id: row.id, confirm: "DELETE" }); toast("Account deleted.", "success"); } catch (err) { toast(errorMessage(err), "error"); }
+    reload();
+  }, "btn btn--small btn--danger");
+}
+
+/** Admin or Owner: find a note by receipt ID (or pasted receipt link) and delete it. Works for guest notes. */
+function receiptLookup(reload) {
+  const input = el("input", { type: "search", placeholder: "Receipt ID or receipt link", autocomplete: "off" });
+  const go = button("Find note", async () => {
+    const raw = input.value.trim();
+    const ref = (raw.match(/[?&]order=([^&#\s]+)/)?.[1] ?? raw).replace(/^#?\/?/, "");
+    if (!ref) return;
+    let r;
+    try { r = await api("find_note_by_receipt", { order_ref: decodeURIComponent(ref) }); } catch (err) { toast(errorMessage(err), "error"); return; }
+    if (!r.note) { toast(`Order ${r.order_ref} has no note (${r.order_status}).`, "info"); return; }
+    const ok = await confirmDelete("Delete note",
+      `Permanently delete this ${r.is_guest ? "guest " : ""}note? This cannot be undone.`,
+      [`Receipt: ${r.order_ref} (${r.order_status}, ${formatRupiah(r.total_amount)})`, `Status: ${r.note.status} · by ${r.note.author_name}`, `“${r.note.body}”`,
+        "Votes, bookmarks, reports and media go with it. The order and payment record stay."]);
+    if (!ok) return;
+    try { await api("delete_note_by_receipt", { order_ref: r.order_ref, confirm: "DELETE" }); toast("Note deleted.", "success"); input.value = ""; } catch (err) { toast(errorMessage(err), "error"); }
+    reload();
+  });
+  return actions(input, go);
+}
+
 const REJECT_REASONS = ["Misleading or false claims", "Not relevant to students", "Prohibited content (see advertising policy)",
   "Image or text is unclear or low quality", "Missing or invalid business information"];
 /** Reject needs a reason the advertiser will read: pick a preset and/or write your own. */
@@ -173,13 +220,13 @@ const panels = {
       { label: "Notes", key: "published_notes" },
       { label: "Admin", render: (r) => (r.is_admin ? "yes" : "") },
       { label: "Status", render: (r) => (r.suspended_at ? `suspended (${r.suspension_reason ?? ""})` : "active") },
-      { label: "Actions", render: (r) => r.is_admin ? "" : button(r.suspended_at ? "Unsuspend" : "Suspend", async () => {
+      { label: "Actions", render: (r) => r.is_admin ? "" : actions(button(r.suspended_at ? "Unsuspend" : "Suspend", async () => {
         const reason = await promptReason(r.suspended_at ? "Unsuspend this account?" : "Suspend this account?", { required: !r.suspended_at, danger: !r.suspended_at });
         if (reason === null) return;
         const res = await invoke("admin-api", { action: "set_user_suspension", params: { user_id: r.id, suspend: !r.suspended_at, reason } });
         if (res.auth_ban === "failed") toast("Saved, but the sign-in ban could not be updated in Supabase Auth.", "error");
         reload();
-      }, r.suspended_at ? "btn btn--small" : "btn btn--small btn--danger") },
+      }, r.suspended_at ? "btn btn--small" : "btn btn--small btn--danger"), deleteUserButton(r, reload)) },
     ], rows));
   },
 
@@ -192,7 +239,7 @@ const panels = {
     const review = el("input", { type: "checkbox", checked: f.review_only || null });
     const apply = button("Filter", async () => { Object.assign(f, { kind: kind.value, status: status.value, review_only: review.checked }); reload(); });
     const rows = await api("list_orders", { kind: f.kind || null, status: f.status || null, review_only: f.review_only, limit: 100 });
-    panel.replaceChildren(actions(kind, status, el("label", { class: "check" }, review, " needs review"), apply), table([
+    panel.replaceChildren(receiptLookup(reload), actions(kind, status, el("label", { class: "check" }, review, " needs review"), apply), table([
       { label: "Order", key: "order_ref" },
       { label: "Kind", key: "kind" },
       { label: "Status", key: "status" },

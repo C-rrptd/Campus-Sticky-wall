@@ -97,6 +97,12 @@ async function anonymiseMediaPaths(deps: Deps, media: { path: string; kind: "ima
     } catch {
       throw new HttpError(502, "MEDIA_MOVE_FAILED", "Could not prepare your attachment. Please try again.");
     }
+    if (m.kind === "image") {
+      // Optional thumbnail "<name>-t.webp" travels with the file. It may not exist; the wall falls back to the full image.
+      try {
+        await deps.storage.move(m.path.replace(/\.[A-Za-z0-9]+$/, "-t.webp"), to.replace(/\.[A-Za-z0-9]+$/, "-t.webp"));
+      } catch { /* no thumbnail */ }
+    }
     out.push({ path: to, kind: m.kind });
   }
   return out;

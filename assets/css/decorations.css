@@ -1,4 +1,8 @@
 /* Decorations (CSS only). Generated from the catalog; each id matches decorations.id as .deco-<id>. */
+/* Layering: --bi/--bs/--bp/--br = background image/size/position/repeat, --sh = box-shadow; one slot per category so decorations stack instead of overwriting each other. */
+.note[class*=deco-],.deco-swatch[class*=deco-]{background-image:var(--bi-theme,none),var(--bi-border,none),var(--bi-sticker,none),var(--bi-bg,none);background-size:var(--bs-theme,auto),var(--bs-border,auto),var(--bs-sticker,auto),var(--bs-bg,auto);background-position:var(--bp-theme,0 0),var(--bp-border,0 0),var(--bp-sticker,0 0),var(--bp-bg,0 0);background-repeat:var(--br-theme,repeat),var(--br-border,repeat),var(--br-sticker,repeat),var(--br-bg,repeat)}
+.note[class*=deco-]{box-shadow:var(--sh-boost,0 0 #0000),var(--sh-border,0 0 #0000),var(--sh-theme,0 0 #0000),var(--shadow-note)}
+.deco-swatch[class*=deco-]{box-shadow:var(--sh-boost,0 0 #0000),var(--sh-border,0 0 #0000),var(--sh-theme,0 0 #0000)}
 .deco-swatch{position:relative;display:inline-block;flex:none;width:2.6rem;height:2.6rem;font-size:.7rem;border:1px solid var(--line);border-radius:4px;background-color:var(--note-yellow);overflow:hidden}
 .deco-option__cat{display:block;font-size:.75rem;color:var(--muted)}
 .deco-option:focus-within{outline:3px solid var(--focus);outline-offset:2px}
@@ -36,21 +40,21 @@
 .sticker.deco-badge-star::after{content:"★";width:1.8em;height:1.8em;display:grid;place-items:center;border-radius:50%;background:#fbbf24;color:#78350f;font-size:1.1em;}
 .deco-swatch.deco-label-nametag::after{content:"HELLO";position:absolute;left:.6em;top:.5em;background:#2563eb;color:#fff;font-size:.65em;font-weight:700;padding:.2em .8em;border-radius:.2em;letter-spacing:.15em;pointer-events:none}
 .sticker.deco-label-nametag::after{content:"HELLO";background:#2563eb;color:#fff;font-size:.65em;font-weight:700;padding:.2em .8em;border-radius:.2em;letter-spacing:.15em;}
-.note.deco-corner-fold::after,.deco-swatch.deco-corner-fold::after{content:"";position:absolute;right:0;bottom:0;width:2.2em;height:2.2em;background:linear-gradient(135deg,transparent 50%,rgba(0,0,0,.14) 50%,rgba(255,255,255,.75));pointer-events:none}
+.note.deco-corner-fold,.deco-swatch.deco-corner-fold{--bi-border:linear-gradient(135deg,transparent 50%,rgba(0,0,0,.14) 50%,rgba(255,255,255,.75));--bs-border:2.2em 2.2em;--bp-border:right bottom;--br-border:no-repeat}
 .note.deco-corner-photo,.deco-swatch.deco-corner-photo{background-image:linear-gradient(#374151,#374151) left .5em top .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) left .5em top .5em/.15em 1.2em no-repeat,linear-gradient(#374151,#374151) right .5em top .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) right .5em top .5em/.15em 1.2em no-repeat,linear-gradient(#374151,#374151) left .5em bottom .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) left .5em bottom .5em/.15em 1.2em no-repeat,linear-gradient(#374151,#374151) right .5em bottom .5em/1.2em .15em no-repeat,linear-gradient(#374151,#374151) right .5em bottom .5em/.15em 1.2em no-repeat}
 .note.deco-frame-dashed,.deco-swatch.deco-frame-dashed{outline:.15em dashed rgba(43,37,32,.6);outline-offset:-.6em}
-.note.deco-frame-thick,.deco-swatch.deco-frame-thick{box-shadow:inset 0 0 0 .3em rgba(43,37,32,.75),var(--shadow-note)}
+.note.deco-frame-thick,.deco-swatch.deco-frame-thick{--sh-border:inset 0 0 0 .3em rgba(43,37,32,.75)}
 .note.deco-frame-dotted,.deco-swatch.deco-frame-dotted{outline:.2em dotted rgba(194,65,12,.75);outline-offset:-.6em}
-.note.deco-frame-offset,.deco-swatch.deco-frame-offset{border:.1em solid #2b2520;box-shadow:.4em .4em 0 rgba(43,37,32,.85)}
-.note.deco-frame-bubble,.deco-swatch.deco-frame-bubble{border-radius:2em;box-shadow:inset 0 0 0 .2em rgba(255,255,255,.8),var(--shadow-note)}
-.note.deco-frame-ticket,.deco-swatch.deco-frame-ticket{background-image:radial-gradient(circle at 0 50%,var(--paper) .7em,transparent .75em),radial-gradient(circle at 100% 50%,var(--paper) .7em,transparent .75em);outline:.12em dashed rgba(43,37,32,.45);outline-offset:-.5em}
-.note.deco-paper-lined,.deco-swatch.deco-paper-lined{background-image:repeating-linear-gradient(transparent 0 1.4em,rgba(59,130,246,.28) 1.4em calc(1.4em + 1px))}
-.note.deco-paper-grid,.deco-swatch.deco-paper-grid{background-image:linear-gradient(rgba(59,130,246,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.18) 1px,transparent 1px);background-size:1.2em 1.2em}
-.note.deco-paper-dots,.deco-swatch.deco-paper-dots{background-image:radial-gradient(rgba(43,37,32,.25) 1px,transparent 1.5px);background-size:1em 1em}
-.note.deco-paper-kraft,.deco-swatch.deco-paper-kraft{background-image:radial-gradient(rgba(120,80,40,.2) 1px,transparent 1.5px),linear-gradient(rgba(180,130,80,.2),rgba(180,130,80,.2));background-size:.7em .7em,auto}
+.note.deco-frame-offset,.deco-swatch.deco-frame-offset{--sh-border:.4em .4em 0 rgba(43,37,32,.85);border:.1em solid #2b2520}
+.note.deco-frame-bubble,.deco-swatch.deco-frame-bubble{--sh-border:inset 0 0 0 .2em rgba(255,255,255,.8);border-radius:2em}
+.note.deco-frame-ticket,.deco-swatch.deco-frame-ticket{--bi-border:radial-gradient(circle at 0 50%,var(--paper) .7em,transparent .75em),radial-gradient(circle at 100% 50%,var(--paper) .7em,transparent .75em);--bp-border:0 0,0 0;--br-border:repeat,repeat;--bs-border:auto,auto;outline:.12em dashed rgba(43,37,32,.45);outline-offset:-.5em}
+.note.deco-paper-lined,.deco-swatch.deco-paper-lined{--bi-bg:repeating-linear-gradient(transparent 0 1.4em,rgba(59,130,246,.28) 1.4em calc(1.4em + 1px));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-paper-grid,.deco-swatch.deco-paper-grid{--bi-bg:linear-gradient(rgba(59,130,246,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.18) 1px,transparent 1px);--bp-bg:0 0,0 0;--br-bg:repeat,repeat;--bs-bg:1.2em 1.2em,1.2em 1.2em}
+.note.deco-paper-dots,.deco-swatch.deco-paper-dots{--bi-bg:radial-gradient(rgba(43,37,32,.25) 1px,transparent 1.5px);--bp-bg:0 0;--br-bg:repeat;--bs-bg:1em 1em}
+.note.deco-paper-kraft,.deco-swatch.deco-paper-kraft{--bi-bg:radial-gradient(rgba(120,80,40,.2) 1px,transparent 1.5px),linear-gradient(rgba(180,130,80,.2),rgba(180,130,80,.2));--bp-bg:0 0,0 0;--br-bg:repeat,repeat;--bs-bg:.7em .7em,auto}
 .note.deco-paper-torn,.deco-swatch.deco-paper-torn{clip-path:polygon(0 0,100% 0,100% 96%,95% 100%,90% 96%,85% 100%,80% 96%,75% 100%,70% 96%,65% 100%,60% 96%,55% 100%,50% 96%,45% 100%,40% 96%,35% 100%,30% 96%,25% 100%,20% 96%,15% 100%,10% 96%,5% 100%,0% 96%,0 96%)}
-.note.deco-doodle-squiggle::after,.deco-swatch.deco-doodle-squiggle::after{content:"";position:absolute;left:1em;right:1em;bottom:.8em;height:.6em;background:linear-gradient(135deg,#ef4444 25%,transparent 25%) -.3em 0/.6em .6em,linear-gradient(225deg,#ef4444 25%,transparent 25%) -.3em 0/.6em .6em;opacity:.7;pointer-events:none}
-.note.deco-doodle-stars,.deco-swatch.deco-doodle-stars{background-image:radial-gradient(circle at 20% 30%,rgba(217,119,6,.4) .14em,transparent .17em),radial-gradient(circle at 70% 60%,rgba(217,119,6,.4) .14em,transparent .17em);background-size:3em 3em,2.2em 2.2em}
+.note.deco-doodle-squiggle,.deco-swatch.deco-doodle-squiggle{--bi-sticker:linear-gradient(135deg,rgba(239,68,68,.7) 25%,transparent 25%),linear-gradient(225deg,rgba(239,68,68,.7) 25%,transparent 25%);--bs-sticker:.6em .6em,.6em .6em;--bp-sticker:left -.3em bottom .8em,left -.3em bottom .8em;--br-sticker:repeat-x,repeat-x}
+.note.deco-doodle-stars,.deco-swatch.deco-doodle-stars{--bi-sticker:radial-gradient(circle at 20% 30%,rgba(217,119,6,.4) .14em,transparent .17em),radial-gradient(circle at 70% 60%,rgba(217,119,6,.4) .14em,transparent .17em);--bp-sticker:0 0,0 0;--br-sticker:repeat,repeat;--bs-sticker:3em 3em,2.2em 2.2em}
 .deco-swatch.deco-doodle-heart::after{content:"♡";position:absolute;left:.5em;bottom:.3em;color:#e11d48;font-size:1.6em;line-height:1;pointer-events:none}
 .sticker.deco-doodle-heart::after{content:"♡";color:#e11d48;font-size:1.6em;line-height:1;}
 .deco-swatch.deco-campus-graduation::after{content:"🎓";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
@@ -59,11 +63,11 @@
 .sticker.deco-campus-books::after{content:"📚";font-size:1.5em;line-height:1;}
 .deco-swatch.deco-campus-grade::after{content:"A+";position:absolute;right:.5em;top:.4em;transform:rotate(10deg);color:#dc2626;font:700 1.3em/1 cursive;padding:.1em .3em;border:.12em solid #dc2626;border-radius:50%;pointer-events:none}
 .sticker.deco-campus-grade::after{content:"A+";transform:rotate(10deg);color:#dc2626;font:700 1.3em/1 cursive;padding:.1em .3em;border:.12em solid #dc2626;border-radius:50%;}
-.note.deco-campus-pencil::after,.deco-swatch.deco-campus-pencil::after{content:"";position:absolute;left:0;right:0;bottom:0;height:.7em;background:linear-gradient(90deg,#fbbf24 0 85%,#f9a8a8 85% 92%,#9ca3af 92%);pointer-events:none}
-.note.deco-campus-margin,.deco-swatch.deco-campus-margin{background-image:linear-gradient(90deg,transparent 2em,rgba(220,38,38,.45) 2em,rgba(220,38,38,.45) calc(2em + 1px),transparent calc(2em + 1px))}
-.note.deco-mood-calm,.deco-swatch.deco-mood-calm{background-image:linear-gradient(180deg,transparent 60%,rgba(147,197,253,.45))}
-.note.deco-mood-minimal,.deco-swatch.deco-mood-minimal{box-shadow:inset 0 .15em 0 #2b2520,var(--shadow-note)}
-.note.deco-mood-bold,.deco-swatch.deco-mood-bold{box-shadow:inset .6em 0 0 #c2410c,var(--shadow-note)}
+.note.deco-campus-pencil,.deco-swatch.deco-campus-pencil{--bi-theme:linear-gradient(90deg,#fbbf24 0 85%,#f9a8a8 85% 92%,#9ca3af 92%);--bs-theme:100% .7em;--bp-theme:left bottom;--br-theme:no-repeat}
+.note.deco-campus-margin,.deco-swatch.deco-campus-margin{--bi-theme:linear-gradient(90deg,transparent 2em,rgba(220,38,38,.45) 2em,rgba(220,38,38,.45) calc(2em + 1px),transparent calc(2em + 1px));--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-mood-calm,.deco-swatch.deco-mood-calm{--bi-theme:linear-gradient(180deg,transparent 60%,rgba(147,197,253,.45));--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-mood-minimal,.deco-swatch.deco-mood-minimal{--sh-theme:inset 0 .15em 0 #2b2520}
+.note.deco-mood-bold,.deco-swatch.deco-mood-bold{--sh-theme:inset .6em 0 0 #c2410c}
 .deco-swatch.deco-mood-lol::after{content:"LOL";position:absolute;right:.6em;bottom:.6em;transform:rotate(8deg);background:#fef08a;border:.12em solid #2b2520;border-radius:1em;font-weight:700;font-size:.8em;padding:.1em .7em;pointer-events:none}
 .sticker.deco-mood-lol::after{content:"LOL";transform:rotate(8deg);background:#fef08a;border:.12em solid #2b2520;border-radius:1em;font-weight:700;font-size:.8em;padding:.1em .7em;}
 .deco-swatch.deco-mood-sleepy::after{content:"💤";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
@@ -72,13 +76,13 @@
 .sticker.deco-nature-leaf::after{content:"🍃";font-size:1.5em;line-height:1;}
 .deco-swatch.deco-nature-flower::after{content:"🌸";position:absolute;right:.5em;bottom:.4em;font-size:1.5em;line-height:1;pointer-events:none}
 .sticker.deco-nature-flower::after{content:"🌸";font-size:1.5em;line-height:1;}
-.note.deco-nature-grass::after,.deco-swatch.deco-nature-grass::after{content:"";position:absolute;left:0;right:0;bottom:0;height:.7em;background:linear-gradient(135deg,#16a34a 25%,transparent 25%) 0 0/.7em .7em,linear-gradient(225deg,#16a34a 25%,transparent 25%) 0 0/.7em .7em;pointer-events:none}
-.note.deco-season-confetti,.deco-swatch.deco-season-confetti{background-image:radial-gradient(circle at 10% 20%,#ef4444 .18em,transparent .2em),radial-gradient(circle at 85% 15%,#3b82f6 .18em,transparent .2em),radial-gradient(circle at 25% 88%,#22c55e .18em,transparent .2em),radial-gradient(circle at 92% 78%,#f59e0b .18em,transparent .2em),radial-gradient(circle at 60% 94%,#a855f7 .18em,transparent .2em)}
-.note.deco-season-rain,.deco-swatch.deco-season-rain{background-image:repeating-linear-gradient(100deg,transparent 0 .5em,rgba(59,130,246,.14) .5em calc(.5em + 1px))}
-.note.deco-season-merdeka::after,.deco-swatch.deco-season-merdeka::after{content:"";position:absolute;left:0;right:0;top:0;height:.7em;background:linear-gradient(#dc2626 50%,#fff 50%);pointer-events:none}
-.note.deco-retro-checker::after,.deco-swatch.deco-retro-checker::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1em;background:repeating-conic-gradient(#2b2520 0 25%,#fff 0 50%) 0 0/1em 1em;pointer-events:none}
-.note.deco-retro-sunset,.deco-swatch.deco-retro-sunset{background-image:linear-gradient(180deg,transparent 55%,rgba(251,146,60,.38),rgba(236,72,153,.38))}
-.note.deco-retro-scanlines,.deco-swatch.deco-retro-scanlines{background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 1px,transparent 1px 3px)}
+.note.deco-nature-grass,.deco-swatch.deco-nature-grass{--bi-sticker:linear-gradient(135deg,#16a34a 25%,transparent 25%),linear-gradient(225deg,#16a34a 25%,transparent 25%);--bs-sticker:.7em .7em,.7em .7em;--bp-sticker:left bottom,left bottom;--br-sticker:repeat-x,repeat-x}
+.note.deco-season-confetti,.deco-swatch.deco-season-confetti{--bi-theme:radial-gradient(circle at 10% 20%,#ef4444 .18em,transparent .2em),radial-gradient(circle at 85% 15%,#3b82f6 .18em,transparent .2em),radial-gradient(circle at 25% 88%,#22c55e .18em,transparent .2em),radial-gradient(circle at 92% 78%,#f59e0b .18em,transparent .2em),radial-gradient(circle at 60% 94%,#a855f7 .18em,transparent .2em);--bp-theme:0 0,0 0,0 0,0 0,0 0;--br-theme:repeat,repeat,repeat,repeat,repeat;--bs-theme:auto,auto,auto,auto,auto}
+.note.deco-season-rain,.deco-swatch.deco-season-rain{--bi-theme:repeating-linear-gradient(100deg,transparent 0 .5em,rgba(59,130,246,.14) .5em calc(.5em + 1px));--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-season-merdeka,.deco-swatch.deco-season-merdeka{--bi-theme:linear-gradient(#dc2626 50%,#fff 50%);--bs-theme:100% .7em;--bp-theme:left top;--br-theme:no-repeat}
+.note.deco-retro-checker,.deco-swatch.deco-retro-checker{--bi-bg:repeating-conic-gradient(#2b2520 0 25%,#fff 0 50%);--bs-bg:1em 1em;--bp-bg:left bottom;--br-bg:repeat-x}
+.note.deco-retro-sunset,.deco-swatch.deco-retro-sunset{--bi-bg:linear-gradient(180deg,transparent 55%,rgba(251,146,60,.38),rgba(236,72,153,.38));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-retro-scanlines,.deco-swatch.deco-retro-scanlines{--bi-bg:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 1px,transparent 1px 3px);--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
 .note.deco-tape-washi-pink::after,.deco-swatch.deco-tape-washi-pink::after,.note.deco-tape-washi-blue::after,.deco-swatch.deco-tape-washi-blue::after,.note.deco-tape-masking::after,.deco-swatch.deco-tape-masking::after{content:"";position:absolute;left:50%;top:-.5em;width:46%;height:1.5em;transform:translateX(-50%) rotate(-2deg);opacity:.9;pointer-events:none}
 .note.deco-tape-washi-pink::after,.deco-swatch.deco-tape-washi-pink::after{background:repeating-linear-gradient(45deg,#f9a8d4 0 .4em,#fbcfe8 .4em .8em)}
 .note.deco-tape-washi-blue::after,.deco-swatch.deco-tape-washi-blue::after{background:radial-gradient(circle,#fff .12em,transparent .14em) 0 0/.7em .7em,#93c5fd}
@@ -97,5 +101,5 @@
 .sticker.deco-sticker-fire::after{content:"🔥";font-size:1.5em;line-height:1}
 .deco-swatch.deco-sticker-grad::after{content:"🎓";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
 .sticker.deco-sticker-grad::after{content:"🎓";font-size:1.5em;line-height:1}
-.note.deco-pin-top::after,.deco-swatch.deco-pin-top::after{content:"📌";position:absolute;top:-.6em;left:.5em;font-size:1.5em;line-height:1;pointer-events:none}
-.note.deco-highlight-glow,.deco-swatch.deco-highlight-glow{box-shadow:0 0 0 .18em #fbbf24,0 0 1.4em .3em rgba(251,191,36,.75)}
+.note.deco-pin-top::before,.deco-swatch.deco-pin-top::before{content:"📌";position:absolute;top:-.6em;left:.5em;width:auto;height:auto;margin:0;border-radius:0;background:none;box-shadow:none;font-size:1.5em;line-height:1;pointer-events:none}
+.note.deco-highlight-glow,.deco-swatch.deco-highlight-glow{--sh-boost:0 0 0 .18em #fbbf24,0 0 1.4em .3em rgba(251,191,36,.75)}

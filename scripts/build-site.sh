@@ -20,6 +20,7 @@ if [[ -e "$OUT" ]]; then
 fi
 mkdir -p "$OUT"
 cp -R index.html _headers manifest.webmanifest sw.js components assets "$OUT/"
+rm -f "$OUT/assets/js/mock-supabase.js" # test double used only by local.html, which is not packaged
 
 if [[ -n "${PUBLIC_SUPABASE_URL:-}" || -n "${PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}" || -n "${PUBLIC_SITE_URL:-}" ]]; then
   : "${PUBLIC_SUPABASE_URL:?set PUBLIC_SUPABASE_URL}" "${PUBLIC_SUPABASE_PUBLISHABLE_KEY:?set PUBLIC_SUPABASE_PUBLISHABLE_KEY}" "${PUBLIC_SITE_URL:?set PUBLIC_SITE_URL}"
@@ -75,6 +76,19 @@ src, m = re.subn(r"https://\*\.supabase\.co", url, src)
 assert m == 3, "expected connect-src, img-src and media-src wildcards"
 open(path, "w").write(src)
 PY
+fi
+
+# Minify our own JS and CSS (esbuild, pinned; no bundling, so modules and imports stay as they are). Optional: if npx or the
+# network is missing the site is shipped unminified. Runs before the secret scan so the scan checks what actually ships.
+if command -v npx >/dev/null 2>&1; then
+  if npx --yes esbuild@0.28.2 "$OUT"/assets/js/*.js --minify --allow-overwrite --outdir="$OUT/assets/js" --log-level=warning \
+     && npx --yes esbuild@0.28.2 "$OUT"/assets/css/*.css --minify --allow-overwrite --outdir="$OUT/assets/css" --log-level=warning; then
+    echo "JS and CSS minified"
+  else
+    echo "warning: minify failed, shipping unminified files" >&2
+  fi
+else
+  echo "warning: npx not found, shipping unminified files" >&2
 fi
 
 # Nothing secret may ship to browsers.

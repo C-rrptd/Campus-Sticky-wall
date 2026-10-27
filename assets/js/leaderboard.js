@@ -1,8 +1,6 @@
-// Account-only leaderboards. Guests get a sign-in prompt and no data is
-// requested at all; the server also refuses unauthenticated calls.
+// Public leaderboards: guests see them too ("you" highlighting only when signed in).
 
 import { cloneTemplate } from "./component-loader.js";
-import { currentUser } from "./auth.js";
 import { invoke } from "./supabase-client.js";
 import { el, errorMessage, formatRupiah, local, refs } from "./utils.js";
 
@@ -13,14 +11,6 @@ const EXPLAIN = {
 const HEADER = { referrals: "Referrals", donations: "Donated" };
 
 export async function mount(view, { signal }) {
-  if (!currentUser()) {
-    const frag = cloneTemplate("tpl-signin-required");
-    const r = refs(frag);
-    r.title.textContent = "Leaderboards are for members";
-    r.message.textContent = "Sign in or create a free account to see who’s topping the wall.";
-    view.append(frag);
-    return;
-  }
   view.append(cloneTemplate("tpl-leaderboard"));
   const r = refs(view);
   const state = { kind: local.get("csw.lbKind", "referrals"), period: "all", req: 0 };

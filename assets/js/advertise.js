@@ -25,9 +25,12 @@ const STATUS = {
   draft: ["Draft", ""], scheduled: ["Scheduled", "ok"], active: ["Live", "ok"], expired: ["Ended", ""],
 };
 
+// Paid ads can be cancelled for a refund only until 24 hours before they start (also enforced in cancel_my_campaign).
+const CANCEL_CUTOFF_MS = 24 * 3600e3;
+
 /** Display status from the stored status + dates (the server switches stored status every 15 minutes; this is never behind). */
 function campaignStatus(c, now = Date.now()) {
-  if (c.status === "expired" && !c.starts_at) return ["Expired — not paid", "bad"];
+  if (c.status === "expired" && !c.starts_at) return ["Expired", "bad"];
   if ((c.status === "active" || c.status === "scheduled") && c.starts_at && c.ends_at) {
     if (now >= new Date(c.ends_at).getTime()) return ["Ended", ""];
     if (now < new Date(c.starts_at).getTime()) return ["Scheduled", "ok"];
@@ -63,7 +66,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
   const client = getClient();
   const day = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 864e5).toISOString().slice(0, 10); // Asia/Jakarta date
   const today = day(0);
-  const lastDay = day(180); // the server accepts start dates up to 180 days ahead
+  const lastDay = day(14); // the server accepts start dates up to 14 days ahead
   r.start.min = today;
   r.start.max = lastDay;
   r.start.value = today;
@@ -162,7 +165,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
   async function uploadCreative(file) {
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await client.storage.from(config.creativeBucket).upload(path, file, { contentType: file.type, upsert: false });
+    const { error } = await client.storage.from(config.creativeBucket).upload(path, file, { contentType: file.type, upsert: false, cacheControl: "31536000" });
     if (error) throw new Error("Image upload failed. Please try again.");
     return path;
   }
@@ -188,7 +191,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
         : file && imageProblem(file) ? imageProblem(file)
         : !p ? "Choose a placement, duration and reach."
         : targets.length === 0 ? "Choose at least one location."
-        : !r.start.value || r.start.value < today || r.start.value > lastDay ? "Pick a start date within the next 180 days."
+        : !r.start.value || r.start.value < today || r.start.value > lastDay ? "Pick a start date within the next 14 days."
         : !r.agree.checked ? "Please confirm you have read the advertising policy."
         : null;
       if (problem) { r.error.textContent = problem; return; }
@@ -298,10 +301,31 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (c.starts_at && ["active", "scheduled", "expired", "paused"].includes(c.status)) item.append(resultsChart(c));
     if (c.status === "rejected" && c.moderation_reason) item.append(el("p", { class: "campaign-item__reason" }, `Rejected: ${c.moderation_reason}`));
     if (c.status === "canceled" && c.moderation_reason) item.append(el("p", { class: "small muted" }, c.moderation_reason));
-    if (c.status === "expired" && !c.starts_at) item.append(el("p", { class: "small muted" }, "The payment window passed. Submit the ad again if you still want it."));
+    if (c.status === "expired" && !c.starts_at) item.append(el("p", { class: "small muted" }, `${c.moderation_reason || "Expired"}. Submit the ad again if you still want it.`));
     if (c.status === "awaiting_payment") item.append(el("p", { class: "small muted" }, "If you didn’t finish paying, it returns to “payment due” in about 30 minutes."));
     const buttons = [];
+    if (c.status === "approved" && c.requested_start < today) {
+      // The chosen live date has passed: let the advertiser pick a new one (still unpaid, still approved).
+      const pick = el("input", { type: "date", min: today, max: lastDay, value: today, "aria-label": "New start date" });
+      const save = el("button", { type: "button", class: "btn btn--small" }, "Change start date");
+      save.addEventListener("click", () => busy(save, async () => {
+        if (!pick.value || pick.value < today || pick.value > lastDay) { toast("Pick a start date within the next 14 days.", "error"); return; }
+        try {
+          await rpc("reschedule_my_campaign", { p_campaign_id: c.id, p_new_start: pick.value });
+          toast("Start date updated.", "success");
+          await loadMine();
+        } catch (err) { toast(errorMessage(err), "error"); }
+      }), { signal });
+      item.append(el("p", { class: "campaign-item__reason" }, `Your chosen start date (${fmtDay(c.requested_start)}) has passed. Pick a new one, or pay now to start today.`),
+        el("div", { class: "row row--tight" }, pick, save));
+    }
     if (c.status === "approved") {
+      // Payment starts the ad at the requested date (Jakarta midnight), or immediately if that has passed.
+      const start = Math.max(Date.now(), new Date(`${c.requested_start}T00:00:00+07:00`).getTime());
+      const cutoff = start - CANCEL_CUTOFF_MS;
+      item.append(el("p", { class: "small muted" }, cutoff > Date.now()
+        ? `Free cancellation with full refund until ${formatDate(new Date(cutoff).toISOString(), true)}. After that, no cancellation or refund.`
+        : "This ad would start within 24 hours, so there is no cancellation or refund after you pay."));
       const pay = el("button", { type: "button", class: "btn btn--small btn--primary" }, `Pay ${formatRupiah(String(c.price_snapshot))}`);
       pay.addEventListener("click", () => busy(pay, async () => {
         try {
@@ -314,15 +338,15 @@ export async function mountAdvertise(view, { signal, navigate }) {
       }), { signal });
       buttons.push(pay);
     }
-    const cancellable = ["pending_approval", "approved"].includes(c.status) || (c.status === "scheduled" && c.starts_at && new Date(c.starts_at) > new Date());
+    const cancellable = ["pending_approval", "approved"].includes(c.status) || (c.status === "scheduled" && c.starts_at && new Date(c.starts_at) > new Date(Date.now() + CANCEL_CUTOFF_MS));
     if (cancellable) {
       const cancel = el("button", { type: "button", class: "btn btn--small" }, "Cancel");
       cancel.addEventListener("click", () => busy(cancel, async () => {
         const paid = Boolean(c.starts_at);
-        if (!window.confirm(paid ? "Cancel this campaign? You paid for it, so a full refund is due since it hasn’t started." : "Cancel this campaign? Nothing has been charged.")) return;
+        if (!window.confirm(paid ? "Cancel this campaign? You paid for it and it starts more than 24 hours from now, so a full refund is due." : "Cancel this campaign? Nothing has been charged.")) return;
         try {
           const res = await rpc("cancel_my_campaign", { p_campaign_id: c.id });
-          toast(res?.refund_due ? "Cancelled. We’ll refund you through your original payment method." : "Campaign cancelled.", "success");
+          toast(res?.refund_due ? "Cancelled. We’ll refund you through your original payment method." : res?.refund_review ? "Cancelled. You’ve reached the refund limit, so we’ll review your refund and email you." : "Campaign cancelled.", "success");
           await loadMine();
         } catch (err) {
           toast(errorMessage(err), "error");
@@ -342,8 +366,11 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (!user) { r.mine.replaceChildren(el("li", { class: "muted" }, "Sign in to see your campaigns.")); return; }
     try {
       const mine = await query(client.from("campaigns")
-        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,moderation_reason,impressions,clicks,created_at,product_id,description,category,advertiser_name,contact_email,destination_url,creative_path")
+        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,moderation_reason,created_at,product_id,description,category,advertiser_name,contact_email,destination_url,creative_path")
         .order("created_at", { ascending: false }).limit(20));
+      // Views/clicks live in campaign_daily_stats only (campaigns.impressions is frozen).
+      const totals = mine.length ? await rpc("campaign_totals", { p_ids: mine.map((c) => c.id) }).catch(() => []) : [];
+      for (const c of mine) Object.assign(c, { impressions: 0, clicks: 0 }, totals.find((t) => t.campaign_id === c.id));
       r.mine.replaceChildren(...(mine.length ? mine.map(campaignItem) : [el("li", { class: "muted" }, "No campaigns yet.")]));
     } catch {
       r.mine.replaceChildren(el("li", { class: "muted" }, "Couldn’t load your campaigns."));
@@ -359,15 +386,14 @@ export async function mountAdvertise(view, { signal, navigate }) {
   }).catch(() => {});
   loadMine();
 
+  // Only packages the admin has enabled are readable; wall-only packages were folded into Random Placement.
+  // A package is offered only if its locations really exist and are enabled.
+  const fetchProducts = async () => (await query(client.from("ad_products")
+    .select("id,name,placement,scope_level,duration_days,price_per_target::text,extra_location_pct").neq("placement", "wall_inline").order("sort_order")))
+    .filter((p) => p.scope_level === "global" || optionsFor(p.scope_level).length > 0);
   try {
-    // Only packages the admin has enabled are readable; wall-only packages were folded into Random Placement.
-    const [products, locs] = await Promise.all([
-      query(client.from("ad_products").select("id,name,placement,scope_level,duration_days,price_per_target::text,extra_location_pct").neq("placement", "wall_inline").order("sort_order")),
-      loadLocations(),
-    ]);
-    locations = locs;
-    // A package is offered only if its locations really exist and are enabled.
-    available = products.filter((p) => p.scope_level === "global" || optionsFor(p.scope_level).length > 0);
+    locations = await loadLocations();
+    available = await fetchProducts();
   } catch (err) {
     r.error.textContent = `Advertising options are unavailable: ${errorMessage(err)}`;
     return;
@@ -376,6 +402,18 @@ export async function mountAdvertise(view, { signal, navigate }) {
     r.error.textContent = "No advertising packages are available right now. Please check back soon or contact us.";
     return;
   }
+  // Pick up admin price / "% per extra location" changes without a reload: re-check every minute and when the tab regains focus.
+  // The server always prices from the current package at submit, so this only keeps the screen honest.
+  const syncPrices = async () => {
+    if (document.hidden) return;
+    try {
+      const next = await fetchProducts();
+      if (next.length && JSON.stringify(next) !== JSON.stringify(available)) { available = next; renderPlacement(); }
+    } catch { /* keep showing the last good prices */ }
+  };
+  const timer = setInterval(syncPrices, 60000);
+  document.addEventListener("visibilitychange", syncPrices, { signal });
+  signal.addEventListener("abort", () => clearInterval(timer));
   renderPlacement();
   r.submit.disabled = false;
 }
