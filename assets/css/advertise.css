@@ -31,3 +31,5 @@
 .auction { margin-top: var(--space-2, .5rem); }
 .auction h3 { margin: 0 0 .25rem; font-size: 1rem; }
 .auction input[type=number] { max-width: 9rem; }
+.auction .row { flex-wrap: wrap; }
+.auction select { max-width: 100%; }

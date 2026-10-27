@@ -26,7 +26,10 @@ function table(columns, rows, empty = "Nothing here.") {
 
 function button(label, onClick, cls = "btn btn--small") {
   const b = el("button", { type: "button", class: cls }, label);
-  b.addEventListener("click", () => busy(b, onClick));
+  // A failed action must say why (e.g. "This location still has a free slot"), not fall through to a generic error.
+  b.addEventListener("click", () => busy(b, async () => {
+    try { await onClick(); } catch (err) { toast(errorMessage(err), "error", 8000); }
+  }));
   return b;
 }
 
@@ -143,21 +146,37 @@ function amountInput(name, value, placeholder = "") {
 }
 
 const panels = {
-  async overview(panel, reload) {
+  async overview(panel, reload, state) {
     const jakarta = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 864e5).toISOString().slice(0, 10);
     const [o, d, rev] = await Promise.all([api("overview"), api("leaderboard_diagnostics"),
       api("revenue_report", { from: `${jakarta(-6)}T00:00:00+07:00`, to: `${jakarta(1)}T00:00:00+07:00` })]);
+    const go = (tab) => { state.tab = tab; reload(); };
+    const stat = (title, items) => el("dl", { class: "stats stats--grid", "aria-label": title },
+      ...Object.entries(items).map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, String(v ?? 0)))));
+    // Things waiting for a human, each with a button that opens the right tab. Zero items = nothing to do.
+    const todo = [
+      [o.campaigns_pending_review, "ad(s) waiting for your review", "campaigns", "Review ads"],
+      [o.notes_pending_moderation, "note(s) waiting for approval", "moderation", "Review notes"],
+      [o.open_reports, "open report(s) about notes", "reports", "Open reports"],
+      [o.orders_needing_review, "payment(s) that need a check", "orders", "Check payments"],
+    ].filter(([n]) => Number(n) > 0);
     panel.replaceChildren(
-      el("dl", { class: "stats stats--grid" },
-        ...Object.entries({
-          "Revenue, last 7 days (net)": formatRupiah(rev.net_collected), "Paid orders, last 7 days": rev.paid_orders,
-          "Notes posted today": o.notes_today, "Notes posted, last 7 days": o.notes_7d,
-          "Ads waiting for review": o.campaigns_pending_review,
-          "Open reports": o.open_reports, "Notes in moderation": o.notes_pending_moderation,
-          "Orders needing review": o.orders_needing_review,
-          "Published notes": o.published_notes, "Accounts": o.users, "Qualified referrals": d.qualified_referrals,
-          "Opted-in donors": d.opted_in_donors, "Successful donations": d.successful_donations,
-        }).map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, String(v))))),
+      el("h2", {}, "Needs your attention"),
+      todo.length
+        ? el("ul", { class: "todo-list" }, ...todo.map(([n, text, tab, label]) =>
+          el("li", {}, el("span", {}, el("span", { class: "todo-n" }, String(n)), text), button(label, () => go(tab), "btn btn--small btn--primary"))))
+        : el("p", { class: "notice" }, "All clear. Nothing is waiting for you right now."),
+      el("h2", {}, "Last 7 days"),
+      stat("Last 7 days", { "Money in, after refunds": formatRupiah(rev.net_collected), "Paid orders": rev.paid_orders,
+        "Notes posted today": o.notes_today, "Notes posted this week": o.notes_7d }),
+      el("h2", {}, "Whole site"),
+      stat("Whole site", { "Notes on the wall": o.published_notes, "Accounts": o.users, "Referrals that counted": d.qualified_referrals,
+        "Donors who opted in": d.opted_in_donors, "Successful donations": d.successful_donations }),
+      el("h2", {}, "Common tasks"),
+      actions(button("Change prices & settings", () => go("catalog")), button("Post site news", () => go("announcements")),
+        button("See all payments", () => go("orders")), button("Revenue report", () => go("revenue"))),
+      el("h2", {}, "Housekeeping"),
+      el("p", { class: "small muted" }, "Unpaid orders close by themselves after their time limit. Use this if you want to close them right now."),
       actions(button("Expire stale unpaid orders", async () => {
         const res = await api("expire_stale_orders");
         toast(`${res.expired} order(s) expired.`, "success");
@@ -773,9 +792,18 @@ const panels = {
       }, "btn btn--small"));
 
     const locSel = el("select", { "aria-label": "Location" }, ...o.locations.filter((l) => l.enabled).map((l) => el("option", { value: l.key }, l.label)));
-    const prodSel = el("select", { "aria-label": "Package" }, ...cat.ad_products.filter((x) => x.placement === "featured" && x.enabled).map((x) => el("option", { value: x.id }, x.name)));
+    const prodSel = el("select", { "aria-label": "Package" });
+    // The server only accepts a package whose reach matches the location (campus package for a campus, and so on).
+    const fillProducts = () => {
+      const level = String(locSel.value).split(":")[0];
+      const ok = cat.ad_products.filter((x) => x.placement === "featured" && x.enabled && x.scope_level === level);
+      prodSel.replaceChildren(...(ok.length ? ok : []).map((x) => el("option", { value: x.id }, x.name)));
+    };
+    locSel.addEventListener("change", fillProducts);
+    fillProducts();
     const open = button("Start auction", async () => {
-      if (!locSel.value) { toast("Enable a location first.", "error"); return; }
+      if (!locSel.value) { toast("Enable auctions for a location first (table above).", "error"); return; }
+      if (!prodSel.value) { toast("No enabled Featured package matches this location's reach.", "error"); return; }
       const res = await api("auction_open", { key: locSel.value, product_id: prodSel.value });
       toast(`Auction started. Reserve ${formatRupiah(res.reserve)}; slot starts ${res.period_start}.`, "success", 8000);
       reload();
@@ -827,7 +855,7 @@ const panels = {
       el("h2", {}, "Auctions"),
       table([
         { label: "Location", key: "label" },
-        { label: "Status", key: "status" },
+        { label: "Status", render: (a) => ({ open: "Open for bids", awaiting_payment: "Winner must pay", settled: "Sold", no_winner: "No winner", canceled: "Canceled" }[a.status] ?? humanize(a.status)) },
         { label: "Slot starts", key: "period_start" },
         { label: "Reserve", render: (a) => formatRupiah(a.reserve) },
         { label: "High bid", render: (a) => (a.high ? formatRupiah(a.high) : "—") },
@@ -1053,8 +1081,9 @@ const panels = {
 // Per-tab help shown above each panel: what the tab is for, and what to do in it.
 // `sub` describes each section heading (h2) inside the tab; it is added only where the panel has no text of its own.
 const GUIDE = {
-  overview: { what: "Health check of the whole site: money, activity and everything waiting for you.",
-    steps: ["Look at the red-flag numbers first: Ads waiting for review, Open reports, Notes in moderation, Orders needing review.", "Open the matching tab for any number above zero and clear it.", "Press “Expire stale unpaid orders” now and then to close unpaid orders that passed their time limit."] },
+  overview: { what: "Your starting page: what needs doing now, and how the site is doing.",
+    steps: ["Start with “Needs your attention”. Each line has a button that opens the right tab.", "When it says “All clear”, nothing is waiting for you.", "Last 7 days and Whole site are just for reading. Nothing on them changes anything.", "Use Common tasks for the jobs you will do most. The left menu has everything else."],
+    sub: { "Needs your attention": "Work that only you can do. Clear these first.", "Last 7 days": "Recent money and activity.", "Whole site": "Totals since the site started.", "Common tasks": "Shortcuts to the tabs you will use most.", "Housekeeping": "Optional cleanup." } },
   moderation: { what: "Every sticky note on the wall. Approve, reject or remove notes.",
     steps: ["Status filter starts on Pending moderation: notes waiting for a decision (only filled when Note moderation is set to hold for approval).", "Read the note and open its media links. Approve to publish, Reject to refuse it.", "Use Remove on a published note that breaks the rules. Restore brings a removed note back.", "A reason is optional but write one: it goes into the Audit log."] },
   reports: { what: "Notes that visitors reported. Only open reports are listed.",

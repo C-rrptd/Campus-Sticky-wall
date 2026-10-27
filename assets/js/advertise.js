@@ -9,7 +9,7 @@ import { getClient, invoke, query, rpc } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { getLocationPref, loadLocations } from "./location.js";
 import { adPrice, isEmail, isHttpsUrl } from "./validation.js";
-import { busy, el, errorMessage, formatDate, formatRupiah, refs, renderFilePreviews, setInputFiles, toast } from "./utils.js";
+import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, refs, renderFilePreviews, setInputFiles, toast } from "./utils.js";
 
 const LEVEL_LABEL = { global: "Everywhere", country: "Whole country", region: "Provinces / regions", city: "Cities", campus: "Campuses" };
 const LEVEL_ORDER = ["campus", "city", "region", "country", "global"];
@@ -562,30 +562,66 @@ export async function mountAdvertise(view, { signal, navigate }) {
   };
   let auctions = [];
   const ticks = [];
-  async function loadAuctions() {
+  const drafts = new Map(); // auction id -> { ad, amount }: survives the 20-second refresh so typing is never wiped
+  let loadSeq = 0;
+  async function loadAuctions(poll = false) {
+    // Never redraw under someone who is typing a bid or picking an ad.
+    if (poll && r.auctionList.contains(document.activeElement) && document.activeElement !== r.auctionList) return;
+    const seq = ++loadSeq;
     let list = [], offers = [];
     try {
       list = (await rpc("list_open_auctions")) ?? [];
       if (user) offers = (await rpc("my_auction_offers")) ?? [];
     } catch { /* auctions are optional; the fixed-price flow never depends on them */ }
+    if (seq !== loadSeq || signal.aborted) return; // a newer load is running: drop this stale answer
     auctions = list;
     r.auctionBox.hidden = list.length === 0 && offers.length === 0;
     r.offerBanner.hidden = offers.length === 0;
     r.offerBanner.textContent = offers.map((o) => `You won ${o.label} at ${formatRupiah(o.amount)}. Pay before ${formatDate(o.pay_by, true)} in “Your campaigns” below.`).join(" ");
     ticks.length = 0;
     if (!user) { r.auctionList.replaceChildren(...list.map((a) => el("p", { class: "small" }, `${a.label}: ${a.high_amount ? `highest bid ${formatRupiah(a.high_amount)}` : `reserve ${formatRupiah(a.reserve)}`}. Sign in to bid.`))); return; }
-    const { data: ads } = await client.from("campaigns").select("id,title,product_id").eq("status", "approved");
+    // Only ads the server will accept: approved, your own, same package, and aimed at exactly this one location.
+    let ads = [];
+    const targets = new Map();
+    try {
+      const { data } = await client.from("campaigns").select("id,title,product_id").eq("owner_id", user.id).eq("status", "approved");
+      ads = data ?? [];
+      if (ads.length) {
+        const { data: t } = await client.from("campaign_targets").select("campaign_id,target_key").in("campaign_id", ads.map((c) => c.id));
+        for (const row of t ?? []) targets.set(row.campaign_id, [...(targets.get(row.campaign_id) ?? []), row.target_key]);
+      }
+    } catch { /* show auctions without bid controls rather than nothing */ }
+    if (seq !== loadSeq || signal.aborted) return;
     r.auctionList.replaceChildren(...list.map((a) => {
-      const mine = (ads ?? []).filter((c) => c.product_id === a.product_id);
+      const mine = ads.filter((c) => c.product_id === a.product_id && (targets.get(c.id) ?? []).length === 1 && targets.get(c.id)[0] === a.target_key);
+      const d = drafts.get(a.id) ?? {};
       const left = el("strong", {});
-      ticks.push(() => { left.textContent = fmtLeft(new Date(a.ends_at).getTime() - Date.now()); });
-      const pick = el("select", { "aria-label": "Your ad" }, ...mine.map((c) => el("option", { value: c.id }, c.title)));
-      const amount = el("input", { type: "number", min: "1", step: "1000", value: a.min_next_bid, inputmode: "numeric", "aria-label": "Your bid in rupiah" });
+      const state = a.leading ? el("span", { class: "badge" }, "You are leading") : a.my_bid ? el("span", { class: "badge badge--warn" }, "You were outbid") : "";
+      const head = [
+        el("h3", {}, `${a.label} · ${a.duration_days} days`),
+        el("p", { class: "small" }, `Slot starts ${fmtDay(a.period_start)}. `, left, ` · ${a.bid_count} bid${a.bid_count === 1 ? "" : "s"}`),
+        el("p", {}, a.high_amount ? `Highest bid: ${formatRupiah(a.high_amount)}` : `No bids yet. Reserve: ${formatRupiah(a.reserve)}`, " ", state),
+        el("p", { class: "small muted" }, `Minimum next bid ${formatRupiah(a.min_next_bid)} (raise by ${formatRupiah(a.min_increment)}). Buy now ${formatRupiah(a.buy_now)}. Bids cannot be withdrawn. A bid in the last 5 minutes extends the auction by 5 minutes.`),
+      ];
+      if (!mine.length) {
+        ticks.push(() => { left.textContent = fmtLeft(new Date(a.ends_at).getTime() - Date.now()); });
+        return el("div", { class: "auction card" }, ...head,
+          el("p", { class: "notice" }, "To bid you need an approved ad for this exact package and one location. Submit one in the form (free), wait for approval, then come back."));
+      }
+      const pick = el("select", { "aria-label": "Your ad" }, ...mine.map((c) => el("option", { value: c.id, selected: c.id === d.ad || null }, c.title)));
+      const amount = el("input", { type: "number", min: a.min_next_bid, step: "1000", value: String(Math.max(Number(d.amount ?? 0), Number(a.min_next_bid))), inputmode: "numeric", "aria-label": "Your bid in rupiah" });
+      pick.addEventListener("change", () => drafts.set(a.id, { ...drafts.get(a.id), ad: pick.value }));
+      amount.addEventListener("input", () => drafts.set(a.id, { ...drafts.get(a.id), amount: amount.value }));
       const bid = async (buy) => {
-        if (!mine.length) { toast("You need an approved ad for this package and location first. Submit one above; it is free.", "info", 8000); return; }
+        const value = Number(amount.value);
+        if (!buy && !(value >= Number(a.min_next_bid))) { toast(`The minimum bid is ${formatRupiah(a.min_next_bid)}.`, "error"); return; }
+        const ok = await openDialog({ title: buy ? "Buy now?" : "Place this bid?", okLabel: buy ? "Buy now" : "Place bid",
+          body: el("p", {}, `${buy ? "Buy" : "Bid"} ${formatRupiah(buy ? a.buy_now : String(value))} for ${a.label}. A bid cannot be withdrawn. Nothing is charged now: if you win, we email you the payment deadline.`) });
+        if (!ok) return;
         try {
-          const res = await invoke("auction-bid", { auction_id: a.id, campaign_id: pick.value, amount: buy ? undefined : amount.value, buy_now: buy });
-          toast(res.bought ? `Bought at ${formatRupiah(res.amount)}. Pay within 24 hours.` : res.extended ? "Bid placed. The auction was extended by 5 minutes." : "Bid placed.", "success", 7000);
+          const res = await invoke("auction-bid", { auction_id: a.id, campaign_id: pick.value, amount: buy ? undefined : String(value), buy_now: buy });
+          drafts.delete(a.id);
+          toast(res.bought ? `Bought at ${formatRupiah(res.amount)}. Pay it in “Your campaigns” below.` : res.extended ? "Bid placed. The auction was extended by 5 minutes." : "Bid placed.", "success", 7000);
         } catch (err) { toast(errorMessage(err), "error", 8000); }
         loadAuctions();
       };
@@ -593,18 +629,19 @@ export async function mountAdvertise(view, { signal, navigate }) {
       const buyBtn = el("button", { type: "button", class: "btn btn--small" }, "Buy now");
       placeBtn.addEventListener("click", () => busy(placeBtn, () => bid(false)));
       buyBtn.addEventListener("click", () => busy(buyBtn, () => bid(true)));
-      const state = a.leading ? el("span", { class: "badge" }, "You are leading") : a.my_bid ? el("span", { class: "badge badge--warn" }, "You were outbid") : "";
-      return el("div", { class: "auction card" },
-        el("h3", {}, `${a.label} · ${a.duration_days} days`),
-        el("p", { class: "small" }, `Slot starts ${fmtDay(a.period_start)}. `, left, ` · ${a.bid_count} bid${a.bid_count === 1 ? "" : "s"}`),
-        el("p", {}, a.high_amount ? `Highest bid: ${formatRupiah(a.high_amount)}` : `No bids yet. Reserve: ${formatRupiah(a.reserve)}`, " ", state),
-        el("p", { class: "small muted" }, `Minimum next bid ${formatRupiah(a.min_next_bid)} (raise by ${formatRupiah(a.min_increment)}). Buy now ${formatRupiah(a.buy_now)}. Bids cannot be withdrawn. A bid in the last 5 minutes extends the auction by 5 minutes.`),
-        el("div", { class: "row row--tight" }, pick, amount, placeBtn, buyBtn));
+      ticks.push(() => {
+        const ms = new Date(a.ends_at).getTime() - Date.now();
+        left.textContent = fmtLeft(ms);
+        // The server refuses both once the auction ended or when you already lead, so do not offer them.
+        const off = ms <= 0 || a.leading;
+        for (const b of [placeBtn, buyBtn]) if (b.dataset.busy !== "1") { b.disabled = off; b.title = a.leading ? "You already have the highest bid." : ""; }
+      });
+      return el("div", { class: "auction card" }, ...head, el("div", { class: "row row--tight" }, pick, amount, placeBtn, buyBtn));
     }));
     ticks.forEach((t) => t());
   }
   const auctionClock = setInterval(() => ticks.forEach((t) => t()), 1000);
-  const auctionPoll = setInterval(() => { if (!document.hidden) loadAuctions(); }, 20000);
+  const auctionPoll = setInterval(() => { if (!document.hidden) loadAuctions(true); }, 20000);
   signal.addEventListener("abort", () => { clearInterval(auctionClock); clearInterval(auctionPoll); });
   loadAuctions();
 }
