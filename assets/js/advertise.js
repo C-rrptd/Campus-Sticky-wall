@@ -89,14 +89,65 @@ export async function mountAdvertise(view, { signal, navigate }) {
   const selectedTargets = () => (sel.scope === "global" ? [{ level: "global" }]
     : [...r.targets.querySelectorAll("input[name=target]:checked")].map((i) => ({ level: sel.scope, id: i.value })));
 
-  function updatePrice() {
+  const targetKey = (level, id) => (level === "global" ? "global:*" : `${level}:${id}`);
+  let trustSeq = 0;
+  /** Real recent views for the selected locations, or the launch message when there is no data yet. */
+  async function refreshTrust() {
+    const p = product();
+    const t = p ? selectedTargets() : [];
+    if (!p || t.length === 0) { r.trust.textContent = ""; return; }
+    const seq = ++trustSeq;
+    try {
+      const rows = await rpc("get_locations_recent_views", { p_spot: group(p), p_keys: t.map((x) => targetKey(x.level, x.id)) });
+      if (seq !== trustSeq) return;
+      const total = rows.reduce((sum, x) => sum + Number(x.views_7d), 0);
+      r.trust.textContent = total > 0
+        ? `${total.toLocaleString("en-US")} ad views at ${rows.length === 1 ? rows[0].label : "the selected locations"} in the last 7 days.`
+        : "New platform, launch pricing applies.";
+    } catch { if (seq === trustSeq) r.trust.textContent = ""; }
+  }
+  // ---- Slots: "1 of 3 slots left", next free date, rotation share, top-slot price ------------------------
+  let availSeq = 0;
+  let slotMult = 1; // display only: the server prices at submit
+  async function refreshAvailability() {
+    const p = product();
+    const t = p ? selectedTargets() : [];
+    const seq = ++availSeq;
+    if (!p || group(p) !== "featured" || !t.length || !r.start.value) {
+      r.avail.replaceChildren(); r.slotField.hidden = true; slotMult = 1; return;
+    }
+    try {
+      const slot = r.slotType.value === "top" ? "top" : "standard";
+      const rows = await rpc("get_ad_availability", { p_keys: t.map((x) => targetKey(x.level, x.id)), p_slot_type: slot, p_start: r.start.value, p_days: p.duration_days });
+      if (seq !== availSeq) return;
+      r.slotField.hidden = !rows.some((x) => x.top_slots > 0);
+      if (r.slotField.hidden) r.slotType.value = "standard";
+      slotMult = Math.max(1, ...rows.map((x) => Number(slot === "top" ? x.top_multiplier : x.standard_multiplier)));
+      r.slotHint.textContent = `Top slot costs ${Math.max(...rows.map((x) => Number(x.top_multiplier)))}× the standard price.`;
+      r.avail.replaceChildren(...rows.map((x) => el("li", {},
+        x.total === 0 ? `No ${slot} slot at this location.`
+        : x.available > 0 ? `${x.available} of ${x.total} ${slot} slot${x.total === 1 ? "" : "s"} left. ${x.rotation_mode === "equal_share" ? `Expected share of views: about ${x.expected_share_pct}% (rotation).` : "Fixed position."}`
+        : `Sold out.${x.next_free_date ? ` Next free from ${fmtDay(x.next_free_date)}.` : ""} Use “Notify me” below.`)));
+      updatePrice(false);
+    } catch { if (seq === availSeq) r.avail.replaceChildren(); }
+  }
+  const priceText = (p) => (p.launch ? `${formatRupiah(p.list_price_per_target)} → ${formatRupiah(p.price_per_target)}` : formatRupiah(p.price_per_target));
+
+  function updatePrice(refresh = true) {
     const p = product();
     const count = p ? selectedTargets().length : 0;
     r.sumPlacement.textContent = p ? PLACEMENT[group(p)].label : "—";
     r.sumDuration.textContent = p ? `${p.duration_days} days` : "—";
     r.sumTargets.textContent = String(count);
     r.sumStart.textContent = r.start.value ? fmtDay(r.start.value) : "—";
-    r.sumTotal.textContent = p ? formatRupiah(adPrice(p.price_per_target, p.extra_location_pct, count)) : "—";
+    const total = p ? Math.round(adPrice(p.price_per_target, p.extra_location_pct, count) * slotMult) : null;
+    const list = p ? Math.round(adPrice(p.list_price_per_target, p.extra_location_pct, count) * slotMult) : null;
+    r.sumTotal.textContent = p ? formatRupiah(total) : "—";
+    const discounted = Boolean(p && p.launch && count > 0 && list > total);
+    r.sumList.hidden = !discounted;
+    r.sumList.textContent = discounted ? formatRupiah(list) : "";
+    r.sumBadge.hidden = !discounted;
+    if (refresh) { refreshTrust(); refreshAvailability(); }
   }
   function renderTargets() {
     if (sel.scope === "global") {
@@ -118,7 +169,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (!levels.includes(sel.scope)) sel.scope = levels[0];
     r.scope.replaceChildren(...options(levels.map((l) => {
       const p = available.find((x) => group(x) === sel.placement && x.duration_days === sel.duration && x.scope_level === l);
-      return [l, `${REACH[l]} — ${formatRupiah(String(p.price_per_target))}${l === "global" ? "" : p.extra_location_pct ? ` for the first location, +${p.extra_location_pct}% for each extra` : " for any number of locations"}`];
+      return [l, `${REACH[l]} — ${priceText(p)}${l === "global" ? "" : p.extra_location_pct ? ` for the first location, +${p.extra_location_pct}% for each extra` : " for any number of locations"}`];
     })));
     r.scope.value = sel.scope;
     renderTargets();
@@ -127,7 +178,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
     const list = available.filter((p) => group(p) === sel.placement);
     const days = [...new Set(list.map((p) => p.duration_days))].sort((a, b) => a - b);
     if (!days.includes(sel.duration)) sel.duration = days[0];
-    r.duration.replaceChildren(...options(days.map((d) => [String(d), `${d} days — from ${formatRupiah(String(cheapest(list.filter((p) => p.duration_days === d)).price_per_target))}`])));
+    r.duration.replaceChildren(...options(days.map((d) => [String(d), `${d} days — from ${priceText(cheapest(list.filter((p) => p.duration_days === d)))}`])));
     r.duration.value = String(sel.duration);
     renderScope();
   }
@@ -147,7 +198,8 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (sel.scope !== "global") keep.set(sel.scope, new Set([...r.targets.querySelectorAll("input[name=target]:checked")].map((i) => i.value)));
     updatePrice();
   }, { signal });
-  r.start.addEventListener("change", updatePrice, { signal });
+  r.start.addEventListener("change", () => updatePrice(), { signal });
+  r.slotType.addEventListener("change", () => updatePrice(), { signal });
   r.form.elements.description.addEventListener("input", (e) => { r.descCount.textContent = String(e.target.value.length); }, { signal });
 
   // ---- Image: validate + preview before anything is uploaded ---------------------------------
@@ -200,7 +252,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
         const res = await invoke("create-advertiser-campaign", {
           advertiser_name: text("advertiser_name"), contact_email: text("contact_email"), title: text("title"),
           description: text("description"), category: data.get("category"), destination_url: link || null,
-          creative_path: file ? uploaded.path : reuseCreative, product_id: p.id, requested_start: r.start.value, targets,
+          creative_path: file ? uploaded.path : reuseCreative, product_id: p.id, requested_start: r.start.value, targets, slot_type: r.slotType.value,
         });
         toast(`Submitted! Quoted price ${formatRupiah(String(res.price))}. We’ll review it and you can pay once it’s approved.`, "success", 9000);
         uploaded = null;
@@ -213,6 +265,12 @@ export async function mountAdvertise(view, { signal, navigate }) {
         await loadMine();
       } catch (err) {
         r.error.textContent = errorMessage(err);
+        if (err?.code === "SOLD_OUT") { // offer the waitlist with the current choices filled in
+          r.waitlistForm.elements.spot.value = group(p);
+          r.waitlistForm.elements.scope.value = sel.scope;
+          r.waitlistForm.elements.duration.value = String(sel.duration);
+          r.waitlistBox.open = true;
+        }
       }
     });
   }, { signal });
@@ -249,7 +307,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
         const rows = await query(client.from("campaign_daily_stats").select("day,impressions,clicks").eq("campaign_id", c.id).gte("day", from).order("day"));
         if (rows.length === 0) { box.append(el("p", { class: "small muted" }, "No views yet.")); return; }
         box.append(barChart(rows, "impressions", "Views", "chart--views"), barChart(rows, "clicks", "Clicks", "chart--clicks"),
-          el("p", { class: "small muted" }, "Views are approximate (counted in the visitor’s browser)."));
+          el("p", { class: "small muted" }, "Views count once per visitor per hour; bots and our own admins are excluded. Clicks are counted by our server."));
       } catch {
         loaded = false;
         box.append(el("p", { class: "small muted" }, "Couldn’t load the chart."));
@@ -280,17 +338,93 @@ export async function mountAdvertise(view, { signal, navigate }) {
     toast(p ? "Copied into the form. Check the dates and submit to run it again." : "Copied the text. That package is no longer offered, so choose a new one.", "info", 7000);
   }
 
+  // ---- Price cell, report download, locked rate ------------------------------------------------------
+  function priceCell(c) {
+    if (c.price_snapshot == null) return "—";
+    const now = formatRupiah(String(c.price_snapshot));
+    if (c.price_locked) return el("span", {}, now, " ", el("span", { class: "badge badge--founding" }, "Locked founding rate"), " ", el("s", { class: "price-was" }, formatRupiah(String(c.list_price_snapshot))));
+    if (c.list_price_snapshot != null && BigInt(c.list_price_snapshot) > BigInt(c.price_snapshot)) {
+      return el("span", {}, now, " ", el("s", { class: "price-was" }, formatRupiah(String(c.list_price_snapshot))), " ", el("span", { class: "badge badge--founding" }, "Founding advertiser rate"));
+    }
+    return now;
+  }
+  const csvCell = (v) => {
+    let t = String(v ?? "");
+    if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`; // stop spreadsheet formula injection from advertiser-controlled text
+    return /[",\n]/.test(t) ? `"${t.replaceAll('"', '""')}"` : t;
+  };
+  /** CSV with the totals, the daily numbers and where the clicks came from. */
+  async function downloadReport(c) {
+    const rep = await rpc("campaign_report", { p_campaign_id: c.id });
+    const t = rep.totals;
+    const lines = [
+      ["Campaign", rep.campaign.title], ["Package", rep.campaign.product], ["Runs", `${rep.campaign.starts_at ?? ""} to ${rep.campaign.ends_at ?? ""}`],
+      ["Price paid (Rp)", rep.campaign.price_paid ?? ""], ["Views", t.impressions], ["Unique visitors", t.unique_visitors], ["Clicks", t.clicks], ["CTR %", t.ctr ?? ""], [],
+      ["Day", "Views", "Clicks", "CTR %"], ...rep.daily.map((d) => [d.day, d.impressions, d.clicks, d.ctr ?? ""]), [],
+      ["Click source (referrer)", "Clicks"], ...rep.referrers.map((x) => [x.host, x.clicks]), [],
+      ["UTM source", "Clicks"], ...rep.utm_sources.map((x) => [x.source, x.clicks]),
+    ];
+    const blob = new Blob([`\ufeff${lines.map((l) => l.map(csvCell).join(",")).join("\r\n")}\r\n`], { type: "text/csv;charset=utf-8" });
+    const a = el("a", { href: URL.createObjectURL(blob), download: `campaign-report-${c.id.slice(0, 8)}.csv` });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+  function reportButton(c) {
+    const b = el("button", { type: "button", class: "btn btn--small" }, "Download report (CSV)");
+    b.addEventListener("click", () => busy(b, async () => {
+      try { await downloadReport(c); } catch (err) { toast(errorMessage(err), "error"); }
+    }), { signal });
+    return b;
+  }
+  async function loadLocks() {
+    if (!user) return;
+    try {
+      const res = await rpc("my_price_locks");
+      r.locks.replaceChildren(...(res.locks ?? []).map((l) => el("p", { class: "notice lock-note" },
+        el("strong", {}, `Your rate is locked at ${formatRupiah(l.base_fee)}`), ` for “${l.name}” (first location). `,
+        l.renewal_open ? `Renew now to keep it.` : `Renew within ${res.grace_days} days of your campaign ending to keep it.`)));
+    } catch { /* the banner is a nicety; the price is decided by the server anyway */ }
+  }
+
+  // ---- Waitlist ("Notify me") -------------------------------------------------------------------------
+  r.waitlistForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    busy(r.waitSubmit, async () => {
+      r.waitError.textContent = "";
+      const f = new FormData(r.waitlistForm);
+      const email = String(f.get("email") ?? "").trim();
+      if (!isEmail(email)) { r.waitError.textContent = "Enter a valid email address."; return; }
+      const scope = String(f.get("scope"));
+      const t = selectedTargets();
+      const key = t.length === 1 && t[0].level === scope ? targetKey(scope, t[0].id) : null; // a specific location only when exactly that one is ticked
+      try {
+        await rpc("join_ad_waitlist", { p_email: email, p_spot: f.get("spot"), p_scope_level: scope, p_target_key: key, p_duration: Number(f.get("duration")), p_max_budget: f.get("max_budget") ? Number(f.get("max_budget")) : null });
+        toast("You are on the list. We will email you when it opens.", "success");
+        r.waitlistForm.reset();
+        fillWaitDurations();
+      } catch (err) { r.waitError.textContent = errorMessage(err); }
+    });
+  }, { signal });
+  function fillWaitDurations() {
+    const days = [...new Set([7, 30, 60, 90, ...available.map((p) => p.duration_days)])].sort((a, b) => a - b);
+    r.waitDuration.replaceChildren(...options(days.map((d) => [String(d), `${d} days`])));
+  }
+
   // ---- Your campaigns ---------------------------------------------------------------------------
   function campaignItem(c) {
     const [label, tone] = campaignStatus(c);
     const rows = [
       ["Placement", PLACEMENT[group(c)].label],
       ["Duration", `${c.duration_days} days`],
-      ["Price", c.price_snapshot != null ? formatRupiah(String(c.price_snapshot)) : "—"],
+      ["Price", priceCell(c)],
       ["Payment", paymentStatus(c)],
       [c.starts_at ? "Runs" : "Requested start", c.starts_at ? `${formatDate(c.starts_at)} – ${formatDate(c.ends_at)}` : fmtDay(c.requested_start)],
     ];
-    if (["active", "scheduled", "expired", "paused"].includes(c.status) && c.starts_at) rows.push(["Results", `${c.impressions} views, ${c.clicks} clicks`]);
+    if (["active", "scheduled", "expired", "paused"].includes(c.status) && c.starts_at) {
+      rows.push(["Results", `${c.impressions} views, ${c.clicks} clicks, CTR ${Number(c.impressions) > 0 ? ((Number(c.clicks) * 100) / Number(c.impressions)).toFixed(2) : "0.00"}%`]);
+    }
     const item = el("li", { class: "campaign-item" },
       el("div", { class: "campaign-item__head" }, el("strong", {}, c.title), el("span", { class: `badge${tone ? ` badge--${tone}` : ""}` }, label)),
       el("dl", {}, ...rows.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])));
@@ -298,7 +432,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
     const ended = ["active", "scheduled", "expired"].includes(c.status) && c.starts_at && msLeft <= 0;
     const endingSoon = c.status === "active" && msLeft > 0 && msLeft <= 3 * 864e5;
     if (endingSoon) item.append(el("p", { class: "campaign-item__reason" }, `Ends in ${Math.ceil(msLeft / 864e5)} day(s). Run it again to keep your spot.`));
-    if (c.starts_at && ["active", "scheduled", "expired", "paused"].includes(c.status)) item.append(resultsChart(c));
+    if (c.starts_at && ["active", "scheduled", "expired", "paused"].includes(c.status)) item.append(resultsChart(c), reportButton(c));
     if (c.status === "rejected" && c.moderation_reason) item.append(el("p", { class: "campaign-item__reason" }, `Rejected: ${c.moderation_reason}`));
     if (c.status === "canceled" && c.moderation_reason) item.append(el("p", { class: "small muted" }, c.moderation_reason));
     if (c.status === "expired" && !c.starts_at) item.append(el("p", { class: "small muted" }, `${c.moderation_reason || "Expired"}. Submit the ad again if you still want it.`));
@@ -366,7 +500,7 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (!user) { r.mine.replaceChildren(el("li", { class: "muted" }, "Sign in to see your campaigns.")); return; }
     try {
       const mine = await query(client.from("campaigns")
-        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,moderation_reason,created_at,product_id,description,category,advertiser_name,contact_email,destination_url,creative_path")
+        .select("id,title,status,placement,duration_days,requested_start,starts_at,ends_at,price_snapshot,list_price_snapshot,launch_discount_pct,price_locked,moderation_reason,created_at,product_id,description,category,advertiser_name,contact_email,destination_url,creative_path")
         .order("created_at", { ascending: false }).limit(20));
       // Views/clicks live in campaign_daily_stats only (campaigns.impressions is frozen).
       const totals = mine.length ? await rpc("campaign_totals", { p_ids: mine.map((c) => c.id) }).catch(() => []) : [];
@@ -385,11 +519,13 @@ export async function mountAdvertise(view, { signal, navigate }) {
     r.whatsapp.hidden = false;
   }).catch(() => {});
   loadMine();
+  loadLocks();
+  fillWaitDurations();
 
   // Only packages the admin has enabled are readable; wall-only packages were folded into Random Placement.
   // A package is offered only if its locations really exist and are enabled.
-  const fetchProducts = async () => (await query(client.from("ad_products")
-    .select("id,name,placement,scope_level,duration_days,price_per_target::text,extra_location_pct").neq("placement", "wall_inline").order("sort_order")))
+  const fetchProducts = async () => (await rpc("ad_catalog"))
+    .filter((p) => p.placement !== "wall_inline")
     .filter((p) => p.scope_level === "global" || optionsFor(p.scope_level).length > 0);
   try {
     locations = await loadLocations();
@@ -414,6 +550,61 @@ export async function mountAdvertise(view, { signal, navigate }) {
   const timer = setInterval(syncPrices, 60000);
   document.addEventListener("visibilitychange", syncPrices, { signal });
   signal.addEventListener("abort", () => clearInterval(timer));
+  fillWaitDurations();
   renderPlacement();
   r.submit.disabled = false;
+
+  // ---- Auctions (shown only while an admin has switched them on and one is open) --------------------------------
+  const fmtLeft = (ms) => {
+    if (ms <= 0) return "ended";
+    const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m ${s % 60}s left`;
+  };
+  let auctions = [];
+  const ticks = [];
+  async function loadAuctions() {
+    let list = [], offers = [];
+    try {
+      list = (await rpc("list_open_auctions")) ?? [];
+      if (user) offers = (await rpc("my_auction_offers")) ?? [];
+    } catch { /* auctions are optional; the fixed-price flow never depends on them */ }
+    auctions = list;
+    r.auctionBox.hidden = list.length === 0 && offers.length === 0;
+    r.offerBanner.hidden = offers.length === 0;
+    r.offerBanner.textContent = offers.map((o) => `You won ${o.label} at ${formatRupiah(o.amount)}. Pay before ${formatDate(o.pay_by, true)} in “Your campaigns” below.`).join(" ");
+    ticks.length = 0;
+    if (!user) { r.auctionList.replaceChildren(...list.map((a) => el("p", { class: "small" }, `${a.label}: ${a.high_amount ? `highest bid ${formatRupiah(a.high_amount)}` : `reserve ${formatRupiah(a.reserve)}`}. Sign in to bid.`))); return; }
+    const { data: ads } = await client.from("campaigns").select("id,title,product_id").eq("status", "approved");
+    r.auctionList.replaceChildren(...list.map((a) => {
+      const mine = (ads ?? []).filter((c) => c.product_id === a.product_id);
+      const left = el("strong", {});
+      ticks.push(() => { left.textContent = fmtLeft(new Date(a.ends_at).getTime() - Date.now()); });
+      const pick = el("select", { "aria-label": "Your ad" }, ...mine.map((c) => el("option", { value: c.id }, c.title)));
+      const amount = el("input", { type: "number", min: "1", step: "1000", value: a.min_next_bid, inputmode: "numeric", "aria-label": "Your bid in rupiah" });
+      const bid = async (buy) => {
+        if (!mine.length) { toast("You need an approved ad for this package and location first. Submit one above; it is free.", "info", 8000); return; }
+        try {
+          const res = await invoke("auction-bid", { auction_id: a.id, campaign_id: pick.value, amount: buy ? undefined : amount.value, buy_now: buy });
+          toast(res.bought ? `Bought at ${formatRupiah(res.amount)}. Pay within 24 hours.` : res.extended ? "Bid placed. The auction was extended by 5 minutes." : "Bid placed.", "success", 7000);
+        } catch (err) { toast(errorMessage(err), "error", 8000); }
+        loadAuctions();
+      };
+      const placeBtn = el("button", { type: "button", class: "btn btn--small btn--primary" }, "Place bid");
+      const buyBtn = el("button", { type: "button", class: "btn btn--small" }, "Buy now");
+      placeBtn.addEventListener("click", () => busy(placeBtn, () => bid(false)));
+      buyBtn.addEventListener("click", () => busy(buyBtn, () => bid(true)));
+      const state = a.leading ? el("span", { class: "badge" }, "You are leading") : a.my_bid ? el("span", { class: "badge badge--warn" }, "You were outbid") : "";
+      return el("div", { class: "auction card" },
+        el("h3", {}, `${a.label} · ${a.duration_days} days`),
+        el("p", { class: "small" }, `Slot starts ${fmtDay(a.period_start)}. `, left, ` · ${a.bid_count} bid${a.bid_count === 1 ? "" : "s"}`),
+        el("p", {}, a.high_amount ? `Highest bid: ${formatRupiah(a.high_amount)}` : `No bids yet. Reserve: ${formatRupiah(a.reserve)}`, " ", state),
+        el("p", { class: "small muted" }, `Minimum next bid ${formatRupiah(a.min_next_bid)} (raise by ${formatRupiah(a.min_increment)}). Buy now ${formatRupiah(a.buy_now)}. Bids cannot be withdrawn. A bid in the last 5 minutes extends the auction by 5 minutes.`),
+        el("div", { class: "row row--tight" }, pick, amount, placeBtn, buyBtn));
+    }));
+    ticks.forEach((t) => t());
+  }
+  const auctionClock = setInterval(() => ticks.forEach((t) => t()), 1000);
+  const auctionPoll = setInterval(() => { if (!document.hidden) loadAuctions(); }, 20000);
+  signal.addEventListener("abort", () => { clearInterval(auctionClock); clearInterval(auctionPoll); });
+  loadAuctions();
 }

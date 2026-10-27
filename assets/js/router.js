@@ -12,6 +12,7 @@ const routes = {
   "/compose": { title: "Post a note", components: ["note-composer", "note-card"], module: () => import("./notes.js"), entry: "mountComposer" },
   "/promotions": { title: "Promotions", components: ["promotions", "promotion-card"], module: () => import("./promotions.js") },
   "/advertise": { title: "Advertise", components: ["advertise"], module: () => import("./advertise.js"), entry: "mountAdvertise" },
+  "/stats": { title: "Statistics", components: ["stats"], module: () => import("./stats.js") },
   "/leaderboard": { title: "Leaderboards", components: ["leaderboard"], module: () => import("./leaderboard.js") },
   "/announcements": { title: "News", components: ["announcements"], module: () => import("./announcements.js") },
   "/auth": { title: "Sign in", components: ["auth"], module: () => import("./auth.js"), entry: "mountAuthView" },

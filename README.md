@@ -10,6 +10,8 @@ A public sticky-note wall for college students. Anyone can post a note and **cho
 
 ---
 
+> **Advertising system (launch pricing, tracking, slots, waitlist, auctions):** see `docs/ADS_PHASES.md` for what each phase does, the migrations and their rollbacks, assumptions, and manual test steps. Auctions ship switched **off**.
+
 ## Contents
 
 1. [Project layout](#project-layout)

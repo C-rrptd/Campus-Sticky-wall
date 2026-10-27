@@ -1,0 +1,24 @@
+<!-- Public ad statistics. Real numbers only. -->
+<template id="tpl-stats">
+  <section class="stats-view">
+    <h1 class="page-title">Platform statistics</h1>
+    <p class="page-lead">How often sponsored placements were seen and clicked on Campus Sticky Wall. Counted by our server; bots, repeat views within the hour and our own admins are excluded.</p>
+    <p class="notice" data-ref="empty" hidden>New platform, launch pricing applies. Numbers appear here as soon as ads start running.</p>
+    <div data-ref="body" hidden>
+      <dl class="stats-grid">
+        <div class="card"><dt>Ad views (all time)</dt><dd data-ref="viewsTotal">0</dd></div>
+        <div class="card"><dt>Ad clicks (all time)</dt><dd data-ref="clicksTotal">0</dd></div>
+        <div class="card"><dt>Views, last 30 days</dt><dd data-ref="views30">0</dd></div>
+        <div class="card"><dt>Clicks, last 30 days</dt><dd data-ref="clicks30">0</dd></div>
+      </dl>
+      <h2>By location</h2>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th scope="col">Location</th><th scope="col">Views</th><th scope="col">Clicks</th><th scope="col">CTR</th><th scope="col">Views, 30 days</th></tr></thead>
+        <tbody data-ref="rows"></tbody>
+      </table></div>
+      <p class="small muted">A view counts once per visitor per ad per hour. An ad shown at several locations counts at each of them, so location rows add up to more than the platform total.</p>
+    </div>
+    <p class="small muted" data-ref="updated" aria-live="polite"></p>
+    <p class="field__error" data-ref="error" role="alert"></p>
+  </section>
+</template>

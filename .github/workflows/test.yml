@@ -58,6 +58,12 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_reschedule.sql
       - name: Audit-fix assertions (pin_until, offset cap, reserved names, paid referrals)
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_audit_fixes.sql
+      - name: Phase 1 assertions (launch pricing, price lock, tracking dedupe, stats, waitlist)
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase1.sql
+      - name: Phase 2 assertions (slots, waitlist holds, utilization, price proposals)
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase2.sql
+      - name: Phase 3 assertions (auctions: reserve, raise, tie-break, anti-sniping, fallback, kill switch)
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase3.sql
 
   code:
     runs-on: ubuntu-latest
@@ -68,7 +74,7 @@ jobs:
       - name: Typecheck edge functions and scripts
         run: deno check supabase/functions/*/index.ts scripts/bootstrap-admin.ts
       - name: Unit tests (Deno)
-        run: deno test supabase/functions/_shared/
+        run: deno test supabase/functions/
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Parse browser JavaScript

@@ -39,6 +39,15 @@ const details = (d) => (d && typeof d === "object"
   ? Object.entries(d).map(([k, v]) => `${humanize(k)}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(" · ")
   : String(d ?? ""));
 
+/** "launch −50% (list Rp…)", "🔒 locked rate Rp…", "founding #2" next to a price. Real fields only; nothing is invented. */
+function rateText(r, base) {
+  const bits = [];
+  if (r.list_price && String(r.list_price) !== String(r.price) && !r.price_locked) bits.push(`launch −${r.launch_discount_pct ?? 0}% (list ${formatRupiah(r.list_price)})`);
+  if (r.price_locked) bits.push(`🔒 locked at base ${formatRupiah(r.price_base_used ?? r.locked_base_fee)} (list ${formatRupiah(r.list_price)})`);
+  if (r.founding_rank) bits.push(`founding #${r.founding_rank}`);
+  return [base, ...bits].filter(Boolean).join(" · ");
+}
+
 function actions(...nodes) {
   return el("div", { class: "row row--tight" }, ...nodes.filter(Boolean));
 }
@@ -244,6 +253,7 @@ const panels = {
       { label: "Kind", key: "kind" },
       { label: "Status", key: "status" },
       { label: "Total", render: (r) => formatRupiah(r.total_amount) },
+      { label: "Rate", render: (r) => (r.kind === "advertising" ? rateText({ ...r, price: r.total_amount, price_base_used: r.locked_base_fee }, "") : "") },
       { label: "Refunded", render: (r) => formatRupiah(r.refunded_amount) },
       { label: "Review", render: (r) => (r.review_required ? `⚠ ${r.review_reason ?? ""}` : "") },
       { label: "Created", render: (r) => formatDate(r.created_at, true) },
@@ -294,7 +304,7 @@ const panels = {
         const link = r.destination_url && el("a", { href: r.destination_url, target: "_blank", rel: "noopener noreferrer" }, "Link ↗");
         return img || link ? el("div", { class: "stack" }, img, link) : "Text only";
       } },
-      { label: "Package", render: (r) => `${r.placement === "featured" ? "Featured" : "Random"} · ${r.duration_days ?? "?"}d · ${formatRupiah(r.price)}` },
+      { label: "Package", render: (r) => rateText(r, `${r.placement === "featured" ? "Featured" : "Random"} · ${r.duration_days ?? "?"}d · ${formatRupiah(r.price)}`) },
       { label: "Targets", render: (r) => (r.targets ?? []).join(", ") },
       { label: "Payment", render: (r) => humanize(r.payment_status) },
       { label: "Status", render: (r) => el("span", { class: `badge${r.status === "active" ? " badge--ok" : ["rejected", "canceled"].includes(r.status) ? " badge--bad" : r.status === "pending_approval" ? " badge--warn" : ""}` }, humanize(r.status)) },
@@ -367,38 +377,74 @@ const panels = {
       }) },
     ], pmRows);
 
-    const adRows = c.ad_products.map((a) => {
+    const cfgNow = Object.fromEntries(c.config.map((row) => [row.key, row.value]));
+    const allowedDays = Array.isArray(cfgNow.ad_allowed_durations) ? cfgNow.ad_allowed_durations : [7, 30, 60, 90];
+    const launchOn = cfgNow.launch_mode_enabled === true;
+    const launchGlobal = Number(cfgNow.launch_discount_pct ?? 50);
+    const FORMULA = "total = base + (extra locations × % × base)";
+    // Retired lengths (e.g. 14 days) stay in the database but are not listed here unless still enabled.
+    const adRows = c.ad_products.filter((a) => allowedDays.includes(a.duration_days) || a.enabled).map((a) => {
       const price = amountInput("price", a.price_per_target);
       const global = a.scope_level === "global"; // always one location, so no extra-location %
-      const pct = el("input", { type: "number", min: "0", max: "1000", step: "1", value: String(a.extra_location_pct), disabled: global || null, class: "input--small" });
-      const example = el("span", { class: "small muted" });
+      const pct = el("input", { type: "number", min: "0", max: "100", step: "1", value: String(a.extra_location_pct), disabled: global || null, class: "input--small", title: FORMULA, "aria-label": "Extra-location surcharge (%)" });
+      const launch = el("input", { type: "number", min: "0", max: "90", step: "1", value: a.launch_discount_pct ?? "", placeholder: `${launchGlobal}`, class: "input--small", "aria-label": "Launch discount override (%), empty = global" });
+      const days = el("select", { class: "input--small", "aria-label": "Duration in days" },
+        ...[...new Set([...allowedDays, a.duration_days])].sort((x, y) => x - y).map((d) => el("option", { value: String(d), selected: d === a.duration_days || null }, String(d))));
+      const example = el("span", { class: "small" });
       const paint = () => {
         const p = parseRupiah(price.value);
-        example.textContent = !p.ok ? "—" : `${global ? "" : "3 locations: "}${formatRupiah(adPrice(p.digits, Number(pct.value) || 0, global ? 1 : 3))}`;
+        const extra = global ? 0 : Number(pct.value);
+        if (!p.ok || BigInt(p.digits) < 1n || !Number.isInteger(extra) || extra < 0 || extra > 100) { example.textContent = "—"; return; }
+        const n = global ? 1 : 3;
+        let text = `${global ? "" : "3 locations: "}${formatRupiah(adPrice(p.digits, extra, n))}`;
+        if (launchOn) {
+          const d = launch.value === "" ? launchGlobal : Number(launch.value);
+          const disc = (BigInt(p.digits) * BigInt(100 - (Number.isFinite(d) ? d : 0)) + 50n) / 100n;
+          text += ` → launch ${formatRupiah(adPrice(String(disc), extra, n))}`;
+        }
+        example.textContent = text;
       };
-      price.addEventListener("input", paint);
-      pct.addEventListener("input", paint);
+      [price, pct, launch].forEach((i) => i.addEventListener("input", paint));
       paint();
-      return { a, price, pct, example,
-        days: el("input", { type: "number", min: "1", max: "365", value: String(a.duration_days), class: "input--small" }),
+      return { a, price, pct, launch, days, example, global,
         enabled: el("input", { type: "checkbox", checked: a.enabled || null }) };
     });
+    const saveAd = async (x) => {
+      const p = parseRupiah(x.price.value);
+      if (!p.ok || BigInt(p.digits) < 1n) { toast("Base fee must be more than Rp0.", "error"); return; }
+      const extra = x.global ? 100 : Number(x.pct.value);
+      if (!Number.isInteger(extra) || extra < 0 || extra > 100) { toast("Extra-location surcharge must be a whole number from 0 to 100.", "error"); return; }
+      const lp = x.launch.value === "" ? null : Number(x.launch.value);
+      if (lp !== null && (!Number.isInteger(lp) || lp < 0 || lp > 90)) { toast("Launch discount must be a whole number from 0 to 90.", "error"); return; }
+      const params = { id: x.a.id, name: x.a.name, placement: x.a.placement, scope_level: x.a.scope_level, duration_days: Number(x.days.value),
+        price: p.digits, extra_pct: extra, launch_pct: lp, enabled: x.enabled.checked, sort: x.a.sort_order };
+      // The server asks for each confirmation it needs; we show it and resend with the matching flag.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await api("upsert_ad_product", params);
+          Object.assign(x.a, { price_per_target: p.digits, extra_location_pct: extra, launch_discount_pct: lp, duration_days: params.duration_days, enabled: params.enabled });
+          toast(`Saved “${x.a.name}”. Existing campaigns and orders keep their original price; only new quotes use this.`, "success");
+          return;
+        } catch (err) {
+          const flag = { PRICE_CHANGE_CONFIRM_BIG: "confirm_big", PRICE_CHANGE_CONFIRM_ACTIVE: "confirm_active" }[err.code];
+          if (!flag) { toast(`Not saved: ${errorMessage(err)}`, "error"); return; }
+          const ok = await openDialog({ title: err.code === "PRICE_CHANGE_CONFIRM_BIG" ? "Large price change" : "Campaigns use this package",
+            body: el("p", {}, errorMessage(err)), okLabel: "Yes, save", danger: true });
+          if (!ok) return;
+          params[flag] = true;
+        }
+      }
+    };
+    const surchargeHead = el("span", {}, "Extra-location surcharge (%) ", el("span", { class: "help", tabindex: "0", title: FORMULA, "aria-label": `Formula: ${FORMULA}` }, "ⓘ"));
     const adTable = table([
       { label: "Package", render: (x) => `${x.a.name} [${x.a.placement} · ${x.a.scope_level}]` },
       { label: "Days", render: (x) => x.days },
       { label: "Base fee (Rp)", render: (x) => x.price },
-      { label: "Extra per added location (%)", render: (x) => x.pct },
-      { label: "Example", render: (x) => x.example },
-      { label: "Enabled", render: (x) => x.enabled },
-      { label: "", render: (x) => button("Save", async () => {
-        const p = parseRupiah(x.price.value);
-        if (!p.ok || p.value < 1n) { toast("Base fee must be a positive whole rupiah amount.", "error"); return; }
-        const extra = Number(x.pct.value);
-        if (!Number.isInteger(extra) || extra < 0 || extra > 1000) { toast("Extra % must be a whole number from 0 to 1000.", "error"); return; }
-        await api("upsert_ad_product", { id: x.a.id, name: x.a.name, placement: x.a.placement, scope_level: x.a.scope_level,
-          duration_days: Number(x.days.value), price: p.digits, extra_pct: extra, enabled: x.enabled.checked, sort: x.a.sort_order });
-        toast("Package saved.", "success");
-      }) },
+      { label: surchargeHead, render: (x) => x.pct },
+      { label: "Launch % (blank = global)", render: (x) => x.launch },
+      { label: "Computed (live, before Save)", render: (x) => x.example },
+      { label: "Active", render: (x) => x.enabled },
+      { label: "", render: (x) => button("Save", () => saveAd(x)) },
     ], adRows);
 
     const cfg = Object.fromEntries(c.config.map((row) => [row.key, row.value]));
@@ -412,6 +458,12 @@ const panels = {
     const ads = el("input", { type: "checkbox", checked: cfg.display_ads_enabled === true || null });
     const wa = el("input", { type: "tel", inputmode: "numeric", maxlength: "15", placeholder: "6281234567890", value: cfg.ad_whatsapp ?? "" });
     const payDays = el("input", { type: "number", min: "1", max: "60", value: String(cfg.ad_payment_window_days ?? 7), class: "input--small" });
+    const launchMode = el("input", { type: "checkbox", checked: cfg.launch_mode_enabled === true || null });
+    const launchPct = el("input", { type: "number", min: "0", max: "90", step: "1", value: String(cfg.launch_discount_pct ?? 50), class: "input--small" });
+    const foundingCount = el("input", { type: "number", min: "0", max: "1000", step: "1", value: String(cfg.founding_advertiser_count ?? 10), class: "input--small" });
+    const graceDays = el("input", { type: "number", min: "0", max: "365", step: "1", value: String(cfg.price_lock_grace_days ?? 7), class: "input--small" });
+    const durations = el("input", { value: (cfg.ad_allowed_durations ?? [7, 30, 60, 90]).join(", "), placeholder: "7, 30, 60, 90" });
+    const reportMail = el("input", { type: "checkbox", checked: cfg.ad_report_email_enabled !== false || null });
     const setConfig = async (key, value) => { await api("set_config", { key, value }); };
     const saveCfg = button("Save settings", async () => {
       let links;
@@ -429,7 +481,15 @@ const panels = {
       if (!/^(\d{8,15})?$/.test(wa.value.trim())) { toast("WhatsApp number: digits only with country code, e.g. 6281234567890.", "error"); return; }
       await setConfig("ad_whatsapp", wa.value.trim());
       await setConfig("ad_payment_window_days", Number(payDays.value));
-      toast("Settings saved.", "success");
+      const dur = durations.value.split(",").map((t) => Number(t.trim())).filter((n) => n);
+      if (!dur.length || dur.some((n) => !Number.isInteger(n) || n < 1 || n > 365)) { toast("Allowed durations: whole days separated by commas, e.g. 7, 30, 60, 90.", "error"); return; }
+      await setConfig("launch_mode_enabled", launchMode.checked);
+      await setConfig("launch_discount_pct", Number(launchPct.value));
+      await setConfig("founding_advertiser_count", Number(foundingCount.value));
+      await setConfig("price_lock_grace_days", Number(graceDays.value));
+      await setConfig("ad_allowed_durations", dur);
+      await setConfig("ad_report_email_enabled", reportMail.checked);
+      toast("Settings saved. Launch mode and price changes affect new quotes only.", "success");
       reload();
     }, "btn btn--primary");
 
@@ -439,7 +499,7 @@ const panels = {
       el("p", { class: "small muted" }, "Set limits from your Midtrans/acquirer agreement. A method is offered only when the order total fits its limits; totals are never reduced to fit."),
       pmTable,
       el("h2", {}, "Advertising packages"),
-      el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. The base fee covers the first location; each added location costs the extra % of the base fee (100% = the same price again, 50% = half). The total is frozen when an advertiser submits."),
+      el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. The base fee covers the first location; each added location costs the extra % of the base fee (100% = the same price again, 50% = half). The total is frozen when an advertiser submits, and changing a price never changes an existing campaign or order. Hover ⓘ for the formula."),
       adTable,
       el("h2", {}, "Site settings"),
       el("div", { class: "stack narrow" },
@@ -451,8 +511,340 @@ const panels = {
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Official social links (JSON)"), socials),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Ads: WhatsApp number for custom packages (digits, country code; empty hides the button)"), wa),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Ads: days to pay after approval"), payDays),
+        el("h3", {}, "Launch pricing and price lock"),
+        el("label", { class: "check" }, launchMode, el("span", {}, "Launch mode: show “Founding advertiser rate” (struck-through list price) for new quotes. Existing campaigns and orders never change.")),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Launch discount % off the base fee (a package can override it)"), launchPct),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Founding advertisers: how many first paying advertisers get a locked rate"), foundingCount),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Price lock: renew within this many days of expiry to keep the rate"), graceDays),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Allowed campaign lengths in days (comma separated)"), durations),
+        el("label", { class: "check" }, reportMail, el("span", {}, "Email advertisers a summary when their campaign ends")),
         el("label", { class: "check" }, ads, el("span", {}, "Enable third-party display ad slots (requires provider setup; see OPERATIONS.md)")),
         saveCfg));
+  },
+
+  /** Ad insights: per spot and location views/visitors/clicks/CTR/fill, the CPM-based suggested price, waitlist demand. */
+  async adinsights(panel, reload, state) {
+    state.insightDays ??= 30;
+    const [res, wl, cat] = await Promise.all([api("pricing_analytics", { days: state.insightDays }), api("waitlist_counts"), api("list_catalog")]);
+    const days = el("select", { "aria-label": "Window" }, ...[7, 30].map((d) => el("option", { value: String(d), selected: d === state.insightDays || null }, `Last ${d} days`)));
+    days.addEventListener("change", () => { state.insightDays = Number(days.value); reload(); });
+    const cpm = amountInput("cpm", res.target_cpm ? String(res.target_cpm) : "", "e.g. 15000");
+    const saveCpm = button("Save target CPM", async () => {
+      const v = cpm.value.trim() === "" ? { ok: true, digits: "0" } : parseRupiah(cpm.value);
+      if (!v.ok) { toast("Enter whole rupiah per 1,000 views.", "error"); return; }
+      await api("set_config", { key: "target_cpm", value: Number(v.digits) });
+      toast("Target CPM saved.", "success");
+      reload();
+    });
+    const spotName = (s) => (s === "featured" ? "Featured" : "Random");
+    const rows = res.rows.map((r) => r);
+    const price = (n) => (n == null ? "—" : formatRupiah(String(Math.round(Number(n)))));
+    const suggest = (r) => {
+      if (!r.enough) return el("span", { class: "muted" }, `Not enough data (${r.days_of_data}/${res.min_days_required} days)`);
+      if (!res.target_cpm) return el("span", { class: "muted" }, "Set a target CPM");
+      return el("span", {}, price(r.suggested_weekly_price));
+    };
+    const warn = (r) => (r.price_warning
+      ? el("span", { class: "badge badge--warn" }, r.price_warning === "above" ? "Current price >30% above suggestion" : "Current price >30% below suggestion") : "");
+    const wlRows = wl.rows;
+    panel.replaceChildren(
+      el("p", { class: "small muted" }, "Real numbers only. A spot needs 14 days of data before a price is suggested. Suggested weekly price = average weekly views × target CPM ÷ 1,000. Fill rate counts sold slot-days ÷ available slot-days (Featured spots; Random rotation has no fixed slots)."),
+      actions(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Window"), days),
+        el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Target price per 1,000 views (Rp)"), cpm), saveCpm,
+        button("Run ad jobs now", async () => {
+          const out = await api("run_ad_jobs");
+          toast(`Ad jobs ran: ${JSON.stringify(out)}`, "success");
+        })),
+      table([
+        { label: "Spot", render: (r) => spotName(r.spot) },
+        { label: "Location", key: "label" },
+        { label: "Views", key: "impressions" },
+        { label: "Unique visitors", key: "unique_visitors" },
+        { label: "Clicks", key: "clicks" },
+        { label: "CTR", render: (r) => (r.ctr_pct == null ? "—" : `${r.ctr_pct}%`) },
+        { label: "Fill rate", render: (r) => (r.fill_rate_pct == null ? "n/a" : `${r.fill_rate_pct}%`) },
+        { label: "Current weekly price (1 location)", render: (r) => price(r.current_weekly_price) },
+        { label: "Suggested weekly price", render: suggest },
+        { label: "Check", render: warn },
+      ], rows, "No ad data yet. New platform: launch pricing applies."),
+      el("h2", {}, `Waitlist (${wl.total_waiting} waiting)`),
+      table([
+        { label: "Spot", render: (r) => spotName(r.spot) },
+        { label: "Reach", key: "scope_level" },
+        { label: "Location", render: (r) => r.label ?? "any" },
+        { label: "Days wanted", key: "desired_duration" },
+        { label: "Waiting", key: "waiting" },
+      ], wlRows, "Nobody is on the waitlist yet."));
+  },
+
+  /** Slots & utilization: per-location slot settings, fill/status metrics, waitlist price proposals, price history. */
+  async slots(panel, reload, state) {
+    const c = getClient();
+    const [util, cfgs, props, cat, countries, regions, cities, campuses] = await Promise.all([
+      api("utilization"), api("list_slot_configs"), api("list_price_proposals"), api("list_catalog"),
+      query(c.from("countries").select("code,name").order("name")), query(c.from("regions").select("id,name").order("name")),
+      query(c.from("cities").select("id,name").order("name")), query(c.from("campuses").select("id,name,short_name").order("name")),
+    ]);
+    const cfg = Object.fromEntries(cat.config.map((row) => [row.key, row.value]));
+    const cv = (k, d) => cfg[k] ?? d;
+    const num = (value, attrs = {}) => el("input", { type: "number", value: String(value), ...attrs });
+    const under = num(cv("slot_underfilled_pct", 50), { min: "1", max: "99" });
+    const sold = num(cv("slot_soldout_pct", 85), { min: "2", max: "100" });
+    const hold = num(cv("waitlist_hold_hours", 24), { min: "1", max: "168" });
+    const stepOn = el("input", { type: "checkbox", checked: cv("ad_auto_price_step_enabled", false) || null });
+    const step = num(cv("ad_auto_price_step_pct", 20), { min: "0", max: "30" });
+    const saveSet = button("Save settings", async () => {
+      await api("set_config", { key: "slot_underfilled_pct", value: Number(under.value) });
+      await api("set_config", { key: "slot_soldout_pct", value: Number(sold.value) });
+      await api("set_config", { key: "waitlist_hold_hours", value: Number(hold.value) });
+      await api("set_config", { key: "ad_auto_price_step_pct", value: Number(step.value) });
+      await api("set_config", { key: "ad_auto_price_step_enabled", value: stepOn.checked });
+      toast("Saved.", "success");
+      reload();
+    });
+    const badge = (st) => el("span", { class: `badge ${st === "sold_out" ? "badge--warn" : ""}` },
+      { sold_out: "Sold out", healthy: "Healthy", underfilled: "Underfilled", no_data: "Not enough data" }[st] ?? st);
+    const pct = (n) => (n == null ? "—" : `${n}%`);
+
+    // location picker for the slot editor
+    const locs = [["global:*", "Everywhere"], ...countries.map((x) => [`country:${x.code}`, `Country: ${x.name}`]),
+      ...regions.map((x) => [`region:${x.id}`, `Region: ${x.name}`]), ...cities.map((x) => [`city:${x.id}`, `City: ${x.name}`]),
+      ...campuses.map((x) => [`campus:${x.id}`, `Campus: ${x.short_name ?? x.name}`])];
+    const pick = el("select", { "aria-label": "Location" }, ...locs.map(([v, l]) => el("option", { value: v }, l)));
+    const eSlots = num(cfgs.default_slots, { min: "1", max: "10" });
+    const eTop = num(0, { min: "0", max: "10" });
+    const eTopM = num(1.5, { min: "1", max: "5", step: "0.1" });
+    const eStdM = num(1, { min: "0.5", max: "5", step: "0.1" });
+    const eRot = el("select", {}, el("option", { value: "equal_share" }, "Equal share (rotation)"), el("option", { value: "fixed_position" }, "Fixed position"));
+    const fill = (key) => {
+      const row = cfgs.rows.find((x) => x.key === key);
+      const k = row?.cfg ?? { slots: cfgs.default_slots, top_slots: 0, top_multiplier: 1.5, standard_multiplier: 1, rotation_mode: "equal_share" };
+      eSlots.value = k.slots; eTop.value = k.top_slots; eTopM.value = k.top_multiplier; eStdM.value = k.standard_multiplier; eRot.value = k.rotation_mode;
+      pick.value = key;
+    };
+    pick.addEventListener("change", () => fill(pick.value));
+    const saveSlots = button("Save slots", async () => {
+      const res = await api("set_slot_config", { key: pick.value, slots: Number(eSlots.value), top_slots: Number(eTop.value),
+        top_multiplier: Number(eTopM.value), standard_multiplier: Number(eStdM.value), rotation_mode: eRot.value });
+      toast(res.blocks_new_sales ? "Saved. Running campaigns are untouched; new sales are blocked until space frees up." : "Saved.", "success", 7000);
+      reload();
+    });
+
+    // price history for one package
+    const histBox = el("div", {});
+    const histSel = el("select", { "aria-label": "Package" }, ...cat.ad_products.filter((x) => x.placement === "featured").map((x) => el("option", { value: x.id }, x.name)));
+    const showHist = async () => {
+      const rows = await api("price_history", { id: histSel.value });
+      histBox.replaceChildren(table([
+        { label: "When", render: (r) => formatDate(r.changed_at) },
+        { label: "Base fee", render: (r) => (r.old_base == null || r.new_base == null || r.old_base === r.new_base) ? "unchanged" : `${formatRupiah(r.old_base)} → ${formatRupiah(r.new_base)}` },
+        { label: "Fill 30d before", render: (r) => pct(r.fill_before_30d) },
+        { label: "Fill 30d after", render: (r) => pct(r.fill_after_30d) },
+      ], rows, "No price changes yet."));
+    };
+    histSel.addEventListener("change", showHist);
+
+    panel.replaceChildren(
+      el("p", { class: "small muted" }, "Recommendations only: nothing here changes a price or a slot by itself. Fill rate = sold slot-days ÷ available slot-days at the current slot count. Reducing slots never ends a running campaign; it only blocks new sales."),
+      el("h2", {}, "Utilization"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Slots", key: "slots" },
+        { label: "Fill 7d", render: (r) => pct(r.fill_7) },
+        { label: "Fill 30d", render: (r) => pct(r.fill_30) },
+        { label: "Fill 90d", render: (r) => pct(r.fill_90) },
+        { label: "Avg days to sell out", render: (r) => (r.avg_days_to_sell_out == null ? "—" : r.avg_days_to_sell_out) },
+        { label: "Waitlist", key: "waitlist" },
+        { label: "Status", render: (r) => badge(r.status) },
+        { label: "Recommendation", render: (r) => r.recommendation ?? "" },
+      ], util.rows, util.enough_data ? "No featured locations yet. New platform: launch pricing applies." : "Not enough data yet (14 days of featured sales are needed)."),
+      el("h2", {}, "Settings"),
+      el("div", { class: "form-grid" },
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Underfilled below (% fill, 30 days)"), under),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Sold out above (% fill, 30 days)"), sold),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Waitlist hold (hours)"), hold),
+        el("label", { class: "check" }, stepOn, el("span", {}, "Suggest a price step for locations that sold out (you approve each one; never automatic)")),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Price step % (max 30)"), step), saveSet),
+      el("h2", {}, "Slots per location"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Slots", render: (r) => r.cfg.slots },
+        { label: "Top slots", render: (r) => r.cfg.top_slots },
+        { label: "Top ×", render: (r) => r.cfg.top_multiplier },
+        { label: "Standard ×", render: (r) => r.cfg.standard_multiplier },
+        { label: "Rotation", render: (r) => (r.cfg.rotation_mode === "equal_share" ? "Equal share" : "Fixed position") },
+        { label: "Running now (peak 30d)", key: "in_use_peak_30d" },
+        { label: "", render: (r) => button("Edit", () => { fill(r.key); pick.scrollIntoView({ block: "center" }); }, "btn btn--small") },
+      ], cfgs.rows, `All locations use the default of ${cfgs.default_slots} slots until you change one.`),
+      el("div", { class: "form-grid" },
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Location"), pick),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Slots (1–10)"), eSlots),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Of which top slots"), eTop),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Top price multiplier"), eTopM),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Standard price multiplier"), eStdM),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Rotation"), eRot), saveSlots),
+      el("h2", {}, "Price proposals"),
+      actions(button("Check for proposals now", async () => {
+        const out = await api("generate_price_proposals");
+        toast(`${out.created} new proposal(s).`, "success");
+        reload();
+      })),
+      table([
+        { label: "Package", key: "product_name" },
+        { label: "Change", render: (r) => `${formatRupiah(r.old_base)} → ${formatRupiah(r.new_base)} (+${r.step_pct}%)` },
+        { label: "Why", key: "reason" },
+        { label: "Status", key: "status" },
+        { label: "", render: (r) => (r.status !== "pending" ? "" : actions(
+          button("Approve", async () => {
+            const ok = await openDialog({ title: "Apply this price?", body: el("p", {}, "It applies to NEW submissions only. Existing campaigns and orders keep the price they were sold at."), okLabel: "Approve" });
+            if (!ok) return;
+            await api("decide_price_proposal", { id: r.id, approve: true });
+            toast("Price updated for new quotes.", "success");
+            reload();
+          }),
+          button("Reject", async () => { await api("decide_price_proposal", { id: r.id, approve: false }); reload(); }, "btn btn--small btn--danger"))) },
+      ], props, "No proposals."),
+      el("h2", {}, "Price history"),
+      actions(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Package"), histSel)),
+      histBox);
+    fill(locs[0][0]);
+    if (histSel.value) showHist();
+  },
+
+  /** Auctions: OFF by default. Global switch + kill switch, per-location flags with a readiness check, open/cancel, bid log. */
+  async auctions(panel, reload) {
+    const [o, cat] = await Promise.all([api("auction_overview"), api("list_catalog")]);
+    const cfg = Object.fromEntries(cat.config.map((row) => [row.key, row.value]));
+    const num = (k, d, attrs = {}) => el("input", { type: "number", value: String(cfg[k] ?? d), ...attrs });
+    const hours = num("auction_hours", 72, { min: "1", max: "168" });
+    const incr = num("auction_min_increment", 10000, { min: "1000", step: "1000" });
+    const payH = num("auction_pay_hours", 24, { min: "1", max: "168" });
+    const strikes = num("auction_max_strikes", 3, { min: "1", max: "10" });
+    const fillPct = num("auction_min_fill_pct", 85, { min: "1", max: "100" });
+    const fillWeeks = num("auction_fill_weeks", 4, { min: "1", max: "12" });
+    const wlMult = num("auction_waitlist_multiple", 2, { min: "1", max: "20" });
+    const saveCfg = button("Save auction settings", async () => {
+      for (const [k, i] of [["auction_hours", hours], ["auction_min_increment", incr], ["auction_pay_hours", payH], ["auction_max_strikes", strikes],
+        ["auction_min_fill_pct", fillPct], ["auction_fill_weeks", fillWeeks], ["auction_waitlist_multiple", wlMult]]) await api("set_config", { key: k, value: Number(i.value) });
+      toast("Saved.", "success");
+      reload();
+    });
+
+    const toggleGlobal = button(o.enabled ? "Turn auctions off" : "Turn auctions on…", async () => {
+      if (o.enabled) { await api("auction_set_enabled", { enabled: false }); reload(); return; }
+      const input = el("input", { name: "confirm", autocomplete: "off" });
+      const data = await openDialog({ title: "Turn auctions on?", okLabel: "Turn on", danger: true,
+        body: el("div", { class: "stack" }, el("p", {}, "Auctions only run on locations you enable below, and only for the next period of a sold-out slot. Type ENABLE AUCTIONS to continue."), input) });
+      if (!data) return;
+      await api("auction_set_enabled", { enabled: true, confirm: String(data.get("confirm") ?? "") });
+      toast("Auctions are on.", "success");
+      reload();
+    }, o.enabled ? "btn btn--small" : "btn btn--small btn--primary");
+    const kill = button("Kill switch", async () => {
+      const reason = await promptReason("Kill switch: turn auctions off and cancel every open auction?", { required: true, danger: true, okLabel: "Cancel all auctions" });
+      if (!reason) return;
+      const res = await api("auction_kill_switch", { reason });
+      toast(`Auctions off. ${res.canceled} open auction(s) canceled. Fixed prices continue.`, "success", 8000);
+      reload();
+    }, "btn btn--small btn--danger");
+
+    const readiness = (r) => {
+      const x = r.readiness;
+      return el("span", { class: x.ready ? "" : "muted" }, `${x.weeks_ok}/${x.weeks_required} weeks above ${x.fill_threshold}% · waitlist ${x.waitlist}/${x.waitlist_needed}`);
+    };
+    const locationFlag = (r) => (r.enabled
+      ? button("Disable", async () => { await api("auction_set_location", { key: r.key, enabled: false }); reload(); }, "btn btn--small")
+      : button("Enable", async () => {
+        let override = null;
+        if (!r.readiness.ready) {
+          override = await promptReason("This location is not ready for auctions. Enable anyway?", { required: true, okLabel: "Override and enable", danger: true });
+          if (!override) return;
+        }
+        await api("auction_set_location", { key: r.key, enabled: true, override_reason: override });
+        reload();
+      }, "btn btn--small"));
+
+    const locSel = el("select", { "aria-label": "Location" }, ...o.locations.filter((l) => l.enabled).map((l) => el("option", { value: l.key }, l.label)));
+    const prodSel = el("select", { "aria-label": "Package" }, ...cat.ad_products.filter((x) => x.placement === "featured" && x.enabled).map((x) => el("option", { value: x.id }, x.name)));
+    const open = button("Start auction", async () => {
+      if (!locSel.value) { toast("Enable a location first.", "error"); return; }
+      const res = await api("auction_open", { key: locSel.value, product_id: prodSel.value });
+      toast(`Auction started. Reserve ${formatRupiah(res.reserve)}; slot starts ${res.period_start}.`, "success", 8000);
+      reload();
+    });
+
+    const bidLog = async (a) => {
+      const d = await api("auction_bids", { id: a.id });
+      const rows = d.bids.map((b) => el("tr", {},
+        el("td", {}, formatDate(b.created_at, true)), el("td", {}, b.email ?? b.bidder_id), el("td", {}, formatRupiah(b.amount)),
+        el("td", {}, `${b.status}${b.buy_now ? " (buy now)" : ""}${b.cancel_reason ? `: ${b.cancel_reason}` : ""}`), el("td", {}, b.ip),
+        el("td", {}, b.status === "valid" && a.status === "open" ? button("Cancel bid", async () => {
+          const reason = await promptReason("Cancel this bid?", { required: true, danger: true, okLabel: "Cancel bid" });
+          if (!reason) return;
+          await api("auction_cancel_bid", { id: b.id, reason });
+          toast("Bid canceled.", "success");
+          reload();
+        }, "btn btn--small btn--danger") : "")));
+      await openDialog({ title: `Bid log · ${a.label}`, okLabel: "Close",
+        body: el("div", { class: "stack" },
+          d.flags.length ? el("p", { class: "notice" }, `Flags: ${d.flags.map((f) => `${f.kind} (${f.details.bidders?.length ?? 0} accounts on one network)`).join("; ")}`) : "",
+          el("table", { class: "table" }, el("thead", {}, el("tr", {}, ...["Time", "Bidder", "Amount", "Status", "Network", ""].map((h) => el("th", {}, h)))), el("tbody", {}, ...rows)),
+          d.offers.length ? el("p", { class: "small" }, `Offers: ${d.offers.map((x) => `${x.bidder} ${formatRupiah(x.amount)} (${x.status})`).join("; ")}`) : "") });
+    };
+
+    panel.replaceChildren(
+      el("p", { class: o.enabled ? "notice" : "notice notice--warn" }, o.enabled ? "Auctions are ON globally." : "Auctions are OFF. Nothing here affects fixed-price sales while they are off."),
+      actions(toggleGlobal, kill),
+      el("p", { class: "small muted" }, "Rules: next period of a full slot only · reserve = current fixed price · buy now = 1.5× reserve · highest valid bid wins, earliest bid breaks ties · anti-sniping +5 min (max 6) · no money is taken at bid time (Midtrans has no authorization hold here): the winner gets a payment window, unpaid goes to the next bidder and earns a strike."),
+      el("h2", {}, "Settings"),
+      el("div", { class: "form-grid" },
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Auction length (hours)"), hours),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Minimum raise (Rp)"), incr),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Winner payment window (hours)"), payH),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Strikes before bidding is blocked"), strikes),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Readiness: fill above (%)"), fillPct),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Readiness: consecutive weeks"), fillWeeks),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Readiness: waitlist ≥ this × slots"), wlMult), saveCfg),
+      el("h2", {}, "Auction readiness"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Readiness", render: readiness },
+        { label: "Ready", render: (r) => (r.readiness.ready ? "Yes" : "No") },
+        { label: "Auctions", render: (r) => (r.enabled ? "On" : "Off") },
+        { label: "", render: locationFlag },
+      ], o.locations, "No featured locations yet."),
+      el("h2", {}, "Start an auction"),
+      actions(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Location"), locSel),
+        el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Package"), prodSel), open),
+      el("h2", {}, "Auctions"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Status", key: "status" },
+        { label: "Slot starts", key: "period_start" },
+        { label: "Reserve", render: (a) => formatRupiah(a.reserve) },
+        { label: "High bid", render: (a) => (a.high ? formatRupiah(a.high) : "—") },
+        { label: "Bids", key: "bids" },
+        { label: "Ends", render: (a) => `${formatDate(a.ends_at, true)}${a.extensions ? ` (+${a.extensions})` : ""}` },
+        { label: "Flags", key: "flags" },
+        { label: "", render: (a) => actions(button("Bid log", () => bidLog(a), "btn btn--small"),
+          ["open", "awaiting_payment"].includes(a.status) ? button("Cancel", async () => {
+            const reason = await promptReason("Cancel this auction?", { required: true, danger: true, okLabel: "Cancel auction" });
+            if (!reason) return;
+            await api("auction_cancel", { id: a.id, reason });
+            reload();
+          }, "btn btn--small btn--danger") : "") },
+      ], o.auctions, "No auctions yet."),
+      el("h2", {}, "Accounts with unpaid-win strikes"),
+      table([
+        { label: "Account", render: (x) => x.email ?? x.user_id },
+        { label: "Strikes", key: "strikes" },
+        { label: "", render: (x) => button("Clear", async () => {
+          const reason = await promptReason("Clear this account's strikes?", { required: true, okLabel: "Clear" });
+          if (!reason) return;
+          await api("auction_clear_strikes", { user_id: x.user_id, reason });
+          reload();
+        }, "btn btn--small") },
+      ], o.strikes, "No strikes."));
   },
 
   async locations(panel, reload, state) {

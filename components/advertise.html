@@ -33,6 +33,15 @@
               <option value="other">Other</option>
             </select>
           </label>
+          <details class="small guidelines" open>
+            <summary><strong>Ad guidelines</strong> (every ad is reviewed before it goes live)</summary>
+            <ul>
+              <li>Say clearly what you offer, to whom, and until when. Keep the title short; no ALL CAPS or misleading claims.</li>
+              <li>Image: PNG, JPG or WebP up to 1 MB, text readable on a phone. Only images you have the right to use.</li>
+              <li>The link must be https:// and go to the thing you advertise. No adult, gambling, illegal or guaranteed-return content.</li>
+              <li>Ads that break these rules are rejected with a reason, and you can fix and resubmit for free.</li>
+            </ul>
+          </details>
           <label class="field"><span class="field__label">Destination link (optional)</span><input name="destination_url" type="url" placeholder="https://" inputmode="url"><span class="field__hint">Leave empty to promote with text only.</span></label>
           <label class="field">
             <span class="field__label">Image (optional)</span>
@@ -53,6 +62,11 @@
           <label class="field"><span class="field__label">Where it appears</span><select data-ref="scope"></select></label>
           <div class="field" data-ref="targets"></div>
           <label class="field"><span class="field__label">Preferred start date</span><input name="requested_start" type="date" data-ref="start" required></label>
+          <label class="field" data-ref="slotField" hidden>
+            <span class="field__label">Slot type</span>
+            <select name="slot_type" data-ref="slotType"><option value="standard">Standard</option><option value="top">Top slot (shown first)</option></select>
+            <span class="field__hint" data-ref="slotHint"></span>
+          </label>
         </fieldset>
 
         <label class="check"><input type="checkbox" data-ref="agree"><span>I have read the advertising policy and confirm my ad follows it.</span></label>
@@ -69,8 +83,11 @@
             <div><dt>Duration</dt><dd data-ref="sumDuration">—</dd></div>
             <div><dt>Locations</dt><dd data-ref="sumTargets">0</dd></div>
             <div><dt>Starts</dt><dd data-ref="sumStart">—</dd></div>
-            <div class="summary__total"><dt>Total</dt><dd data-ref="sumTotal">Rp0</dd></div>
+            <div class="summary__total"><dt>Total</dt><dd><s class="price-was" data-ref="sumList" hidden></s><span data-ref="sumTotal">Rp0</span></dd></div>
           </dl>
+          <p data-ref="sumBadge" hidden><span class="badge badge--founding">Founding advertiser rate</span></p>
+          <p class="adv-trust" data-ref="trust" aria-live="polite"></p>
+          <ul class="adv-avail small" data-ref="avail" aria-live="polite"></ul>
           <p class="muted small">Prices are set by our server and fixed when you submit.</p>
         </div>
         <div class="card">
@@ -83,6 +100,25 @@
             <li>It ends automatically after your chosen duration.</li>
           </ol>
         </div>
+        <section class="card" data-ref="auctionBox" hidden>
+          <h2 class="summary__title">Live auctions</h2>
+          <p class="small muted">Sold-out featured slots can be won for the next period. Bid with one of your approved ads. You only pay if you win, within 24 hours of the result.</p>
+          <p class="notice" data-ref="offerBanner" hidden></p>
+          <div class="auction-list" data-ref="auctionList"></div>
+        </section>
+        <details class="card small" data-ref="waitlistBox">
+          <summary><strong>Sold out or not listed? Notify me</strong></summary>
+          <form class="waitlist-form" data-ref="waitlistForm" novalidate>
+            <p class="muted">Tell us what you want. We will email you when it opens. No payment, no spam.</p>
+            <label class="field"><span class="field__label">Email</span><input name="email" type="email" maxlength="200" required autocomplete="email"></label>
+            <label class="field"><span class="field__label">Placement</span><select name="spot"><option value="featured">Featured Placement</option><option value="random">Random Placement</option></select></label>
+            <label class="field"><span class="field__label">Where</span><select name="scope"><option value="campus">Campus</option><option value="city">City</option><option value="region">Province / region</option><option value="country">Nationwide</option><option value="global">Everywhere</option></select></label>
+            <label class="field"><span class="field__label">Duration (days)</span><select name="duration" data-ref="waitDuration"></select></label>
+            <label class="field"><span class="field__label">Maximum budget (Rp, optional)</span><input name="max_budget" type="number" min="1" step="1000" inputmode="numeric" placeholder="No limit"></label>
+            <p class="field__error" data-ref="waitError" role="alert"></p>
+            <button type="submit" class="btn btn--small" data-ref="waitSubmit">Notify me</button>
+          </form>
+        </details>
         <div class="card" data-ref="whatsapp" hidden>
           <h2 class="summary__title">Custom package or questions?</h2>
           <p class="small">Want a longer run, several campuses or something special? Chat with us — completely optional.</p>
@@ -105,6 +141,7 @@
         </details>
         <div class="card">
           <h2 class="summary__title">Your campaigns</h2>
+          <div data-ref="locks"></div>
           <ul class="campaign-list" data-ref="mine"><li class="muted">Loading…</li></ul>
         </div>
       </aside>

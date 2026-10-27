@@ -8,6 +8,7 @@
 | Daily | Review campaigns | Admin → **Campaigns** (status `pending_approval`). Approve = the advertiser may now pay; Reject needs a reason the advertiser sees. After payment the campaign is scheduled and goes live on its start date, then ends automatically (migration 013). Paid campaigns you reject or cancel, and paid ones the advertiser cancels before start, appear under Payments → needs review: refund them in the Midtrans dashboard (the webhook then marks the campaign cancelled). Set the WhatsApp number and the days-to-pay window under Prices & settings. |
 | Daily | Payment exceptions | Admin → **Payments** → tick "needs review". Causes: `amount_or_currency_mismatch`, `fraud_challenge`, `payment_after_close` (money arrived for an expired/cancelled order: refund it in Midtrans or fulfil it manually), `partial_refund_amount_unknown`. Use **Reconcile with Midtrans** to re-read the status, then **Clear review flag** with a reason (audited). |
 | Every 15 min | Expire unpaid orders | `pg_cron` job (see README) or Admin → Overview → "Expire stale unpaid orders". Releases reserved credits. |
+| Every 5 min | Advertising jobs | Call the `ad-maintenance` function with header `x-cron-secret: $CRON_SECRET` (see "Advertising jobs" below), or Admin → **Ad insights** → "Run ad jobs now". Sends campaign-end reports, expires waitlist holds and offers freed slots, sends queued ad email, settles auctions. |
 | Weekly | Revenue | Admin → **Revenue**. Every figure carries its definition. Processing fees are *not* known to the app; take them from Midtrans settlement reports. |
 | Monthly | Reconcile payments | Compare Admin → Payments (status `paid` / `refunded`) with the Midtrans transaction report for the same period. Investigate any `paid` order missing from Midtrans, or the reverse. |
 | As needed | Prices | Admin → **Prices & settings**. Decoration and ad-package prices affect **new** orders only; existing orders keep immutable snapshots. The publication price minimum (Rp5.000) and the absence of a maximum are fixed product rules. |
@@ -61,6 +62,27 @@ from payment_notifications order by received_at desc limit 50;
 ## Secret rotation
 
 See SECURITY.md → Secrets. After rotating `MIDTRANS_SERVER_KEY`, the webhook rejects notifications signed with the old key. Rotate during quiet hours and reconcile pending orders afterwards.
+
+## Advertising jobs
+
+The `ad-maintenance` Edge Function runs every advertising background job and is safe to call as often as you like (each job is idempotent). Set two secrets and schedule it:
+
+```
+supabase secrets set CRON_SECRET=<random string of 32+ characters> SITE_URL=https://your-site.example
+supabase functions deploy ad-maintenance auction-bid ad-click
+```
+
+Schedule with `pg_cron` + `pg_net` (or any external scheduler) every 5 minutes:
+
+```sql
+select cron.schedule('ad-maintenance', '*/5 * * * *', $$
+  select net.http_post(url := 'https://<project>.functions.supabase.co/ad-maintenance',
+                       headers := jsonb_build_object('x-cron-secret', '<CRON_SECRET>')) $$);
+```
+
+What it does: emails an advertiser a summary when a campaign ends; expires waitlist holds and offers a freed slot to the next waiting person; queues price proposals when "suggest a price step" is on (you still approve each one); sends queued emails (waitlist offers, auction notices); and, only when auctions are on, settles ended auctions, moves unpaid winners to the next bidder (with a strike) and sends ending-soon and payment-reminder emails. Without this job nothing time-based happens: waitlist holds never expire, auctions never close.
+
+Pricing, slots and auctions are all managed under Admin → **Prices & settings**, **Ad insights**, **Slots & utilization** and **Auctions**. Every price, slot-count and auction change is written to the audit log with old and new values. Auctions ship **off**; see `docs/ADS_PHASES.md` before turning them on.
 
 ## Display advertising
 

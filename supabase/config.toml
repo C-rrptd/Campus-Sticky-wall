@@ -59,6 +59,8 @@ verify_jwt = false
 verify_jwt = false
 [functions.create-advertiser-campaign]
 verify_jwt = false
+[functions.auction-bid]
+verify_jwt = false
 [functions.redeem-referral-credit]
 verify_jwt = false
 [functions.check-promo]
@@ -68,6 +70,10 @@ verify_jwt = false
 [functions.leaderboard-data]
 verify_jwt = false
 [functions.admin-api]
+verify_jwt = false
+[functions.ad-click]
+verify_jwt = false
+[functions.ad-maintenance]
 verify_jwt = false
 
 [edge_runtime]
