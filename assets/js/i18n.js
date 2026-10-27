@@ -1,7 +1,9 @@
-// Indonesian interface option. Static template text is translated by exact-match lookup when a template
-// is cloned (see component-loader.js); text built in JavaScript (toasts, errors, admin) stays in English.
-// shortcut: covers all static templates except admin; add strings to ID as new text appears.
-import { local } from "./utils.js";
+// Indonesian interface option. Everything shown on screen is translated by exact-match lookup (ID, plus ID_EXTRA from
+// i18n-extra.js) and a few patterns for sentences with numbers/names in them (PATTERNS). Static templates are translated
+// when cloned (component-loader.js); anything built later in JavaScript (toasts, errors, admin tables) is caught by the
+// observer started with watch(). Unknown text stays English.
+// shortcut: exact-match lookup, not a full i18n framework; add strings to i18n-extra.js as new text appears.
+import { ID_EXTRA, PATTERNS } from "./i18n-extra.js";
 
 const ID = {
   "Campus Sticky Wall home": "Beranda Campus Sticky Wall", "Menu": "Menu", "Main": "Utama",
@@ -305,27 +307,70 @@ const ID = {
   "Recent referrals": "Referral terbaru",
   "Your referral credit history": "Riwayat kredit referralmu",
 };
+for (const [k, v] of Object.entries(ID_EXTRA)) ID[k] ??= v; // existing entries win
 
-export const lang = local.get("csw.lang", "en") === "id" ? "id" : "en";
+const KEY = "csw.lang"; // same storage key and JSON format as before ("id" / "en")
+function stored() {
+  try { return JSON.parse(localStorage.getItem(KEY)) === "id" ? "id" : "en"; } catch { return "en"; }
+}
+export const lang = stored();
 if (typeof document !== "undefined") document.documentElement.lang = lang;
 
 export function setLang(next) {
-  local.set("csw.lang", next === "id" ? "id" : "en");
+  try { localStorage.setItem(KEY, JSON.stringify(next === "id" ? "id" : "en")); } catch { /* storage blocked: reload keeps English */ }
   window.location.reload();
 }
 
-const tr = (s) => {
+/** Translate one string (exact match first, then patterns). Returns the input unchanged when unknown or English. */
+export function t(s) {
+  if (lang !== "id" || typeof s !== "string") return s;
+  const lead = s.match(/^\s*/)[0];
+  const trail = s.match(/\s*$/)[0];
   const key = s.trim().replace(/\s+/g, " ");
-  return ID[key] ? s.replace(s.trim(), ID[key]) : s;
-};
+  if (!key) return s;
+  if (ID[key]) return lead + ID[key] + trail;
+  for (const [re, fn] of PATTERNS) {
+    const m = key.match(re);
+    if (m) return lead + fn(...m.slice(1).map((x) => (ID[x] ?? x))) + trail;
+  }
+  return s;
+}
+
+const SKIP = "script,style,textarea,.note__body,.note__author,[data-no-translate]"; // never touch what users typed
+
+const tr = t;
 
 /** Translate a cloned template fragment in place. No-op for English. */
 export function translate(root) {
   if (lang !== "id") return root;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) if (n.nodeValue.trim()) n.nodeValue = tr(n.nodeValue);
-  for (const el of root.querySelectorAll("[placeholder],[aria-label],[title]")) {
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.nodeValue.trim() && !n.parentElement?.closest(SKIP)) n.nodeValue = tr(n.nodeValue);
+  }
+  const els = root.querySelectorAll ? root.querySelectorAll("[placeholder],[aria-label],[title]") : [];
+  for (const el of els) {
     for (const a of ["placeholder", "aria-label", "title"]) if (el.hasAttribute(a)) el.setAttribute(a, tr(el.getAttribute(a)));
   }
   return root;
+}
+
+/** Translate everything on the page now and whatever JavaScript adds later (toasts, dialogs, admin tables). */
+export function watch(root = document.body) {
+  if (lang !== "id") return;
+  const fix = (node) => {
+    if (node.nodeType === 3) {
+      if (!node.parentElement?.closest(SKIP) && node.nodeValue.trim()) { const v = tr(node.nodeValue); if (v !== node.nodeValue) node.nodeValue = v; }
+    } else if (node.nodeType === 1 && !node.matches(SKIP) && !node.closest(SKIP)) {
+      translate(node);
+      for (const a of ["placeholder", "aria-label", "title"]) if (node.hasAttribute?.(a)) node.setAttribute(a, tr(node.getAttribute(a)));
+    }
+  };
+  fix(root);
+  new MutationObserver((list) => {
+    for (const m of list) {
+      if (m.type === "childList") m.addedNodes.forEach(fix);
+      else if (m.type === "characterData") fix(m.target);
+      else if (m.type === "attributes") { const v = tr(m.target.getAttribute(m.attributeName) ?? ""); if (v !== m.target.getAttribute(m.attributeName)) m.target.setAttribute(m.attributeName, v); }
+    }
+  }).observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["placeholder", "aria-label", "title"] });
 }

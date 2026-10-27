@@ -4,29 +4,42 @@
     <h1 class="page-title">Administration</h1>
     <div class="admin-layout">
     <nav class="admin-tabs" role="tablist" aria-orientation="vertical" aria-label="Administration sections" data-ref="tabs">
-      <div class="admin-group" role="presentation">Dashboard</div>
-      <button type="button" role="tab" class="admin-tab" data-tab="overview" aria-selected="true">Overview</button>
-      <div class="admin-group" role="presentation">Community</div>
-      <button type="button" role="tab" class="admin-tab" data-tab="moderation" aria-selected="false">Moderation</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="reports" aria-selected="false">Reports</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="users" aria-selected="false">Users</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="announcements" aria-selected="false">News</button>
-      <div class="admin-group" role="presentation">Money</div>
-      <button type="button" role="tab" class="admin-tab" data-tab="orders" aria-selected="false">Payments</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="revenue" aria-selected="false">Revenue</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="promos" aria-selected="false">Promos</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="referrals" aria-selected="false">Referrals</button>
-      <div class="admin-group" role="presentation">Advertising</div>
-      <button type="button" role="tab" class="admin-tab" data-tab="campaigns" aria-selected="false">Campaigns</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="adinsights" aria-selected="false">Ad insights</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="slots" aria-selected="false">Slots &amp; utilization</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="auctions" aria-selected="false">Auctions</button>
-      <div class="admin-group" role="presentation">Setup</div>
-      <button type="button" role="tab" class="admin-tab" data-tab="catalog" aria-selected="false">Prices &amp; settings</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="locations" aria-selected="false">Locations</button>
-      <div class="admin-group" role="presentation">Logs</div>
-      <button type="button" role="tab" class="admin-tab" data-tab="audit" aria-selected="false">Audit log</button>
-      <button type="button" role="tab" class="admin-tab" data-tab="security" aria-selected="false" data-owner-only>Security log</button>
+      <!-- Each heading is a dropdown button (see openGroup in admin.js); the tabs under it show or hide. -->
+      <button type="button" class="admin-group" aria-expanded="true">Dashboard</button>
+      <div class="admin-items" role="presentation">
+        <button type="button" role="tab" class="admin-tab" data-tab="overview" aria-selected="true">Overview</button>
+      </div>
+      <button type="button" class="admin-group" aria-expanded="false">Community</button>
+      <div class="admin-items" role="presentation">
+        <button type="button" role="tab" class="admin-tab" data-tab="moderation" aria-selected="false">Check notes</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="reports" aria-selected="false">Reported notes</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="users" aria-selected="false">Accounts</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="announcements" aria-selected="false">News</button>
+      </div>
+      <button type="button" class="admin-group" aria-expanded="false">Money</button>
+      <div class="admin-items" role="presentation">
+        <button type="button" role="tab" class="admin-tab" data-tab="orders" aria-selected="false">Payments</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="revenue" aria-selected="false">Money report</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="promos" aria-selected="false">Promo codes</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="referrals" aria-selected="false">Invites</button>
+      </div>
+      <button type="button" class="admin-group" aria-expanded="false">Advertising</button>
+      <div class="admin-items" role="presentation">
+        <button type="button" role="tab" class="admin-tab" data-tab="campaigns" aria-selected="false">Ads to review</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="adinsights" aria-selected="false">Ad results</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="slots" aria-selected="false">Ad slots</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="auctions" aria-selected="false">Auctions</button>
+      </div>
+      <button type="button" class="admin-group" aria-expanded="false">Setup</button>
+      <div class="admin-items" role="presentation">
+        <button type="button" role="tab" class="admin-tab" data-tab="catalog" aria-selected="false">Prices &amp; settings</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="locations" aria-selected="false">Locations</button>
+      </div>
+      <button type="button" class="admin-group" aria-expanded="false">Logs</button>
+      <div class="admin-items" role="presentation">
+        <button type="button" role="tab" class="admin-tab" data-tab="audit" aria-selected="false">Admin activity log</button>
+        <button type="button" role="tab" class="admin-tab" data-tab="security" aria-selected="false" data-owner-only>Owner deletion log</button>
+      </div>
     </nav>
     <div class="admin-panel" data-ref="panel" aria-live="polite"></div>
     </div>
