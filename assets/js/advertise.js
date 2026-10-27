@@ -25,9 +25,12 @@ const STATUS = {
   draft: ["Draft", ""], scheduled: ["Scheduled", "ok"], active: ["Live", "ok"], expired: ["Ended", ""],
 };
 
+// Paid ads can be cancelled for a refund only until 24 hours before they start (also enforced in cancel_my_campaign).
+const CANCEL_CUTOFF_MS = 24 * 3600e3;
+
 /** Display status from the stored status + dates (the server switches stored status every 15 minutes; this is never behind). */
 function campaignStatus(c, now = Date.now()) {
-  if (c.status === "expired" && !c.starts_at) return ["Expired — not paid", "bad"];
+  if (c.status === "expired" && !c.starts_at) return ["Expired", "bad"];
   if ((c.status === "active" || c.status === "scheduled") && c.starts_at && c.ends_at) {
     if (now >= new Date(c.ends_at).getTime()) return ["Ended", ""];
     if (now < new Date(c.starts_at).getTime()) return ["Scheduled", "ok"];
@@ -298,10 +301,16 @@ export async function mountAdvertise(view, { signal, navigate }) {
     if (c.starts_at && ["active", "scheduled", "expired", "paused"].includes(c.status)) item.append(resultsChart(c));
     if (c.status === "rejected" && c.moderation_reason) item.append(el("p", { class: "campaign-item__reason" }, `Rejected: ${c.moderation_reason}`));
     if (c.status === "canceled" && c.moderation_reason) item.append(el("p", { class: "small muted" }, c.moderation_reason));
-    if (c.status === "expired" && !c.starts_at) item.append(el("p", { class: "small muted" }, "The payment window passed. Submit the ad again if you still want it."));
+    if (c.status === "expired" && !c.starts_at) item.append(el("p", { class: "small muted" }, `${c.moderation_reason || "Expired"}. Submit the ad again if you still want it.`));
     if (c.status === "awaiting_payment") item.append(el("p", { class: "small muted" }, "If you didn’t finish paying, it returns to “payment due” in about 30 minutes."));
     const buttons = [];
     if (c.status === "approved") {
+      // Payment starts the ad at the requested date (Jakarta midnight), or immediately if that has passed.
+      const start = Math.max(Date.now(), new Date(`${c.requested_start}T00:00:00+07:00`).getTime());
+      const cutoff = start - CANCEL_CUTOFF_MS;
+      item.append(el("p", { class: "small muted" }, cutoff > Date.now()
+        ? `Free cancellation with full refund until ${formatDate(new Date(cutoff).toISOString(), true)}. After that, no cancellation or refund.`
+        : "This ad would start within 24 hours, so there is no cancellation or refund after you pay."));
       const pay = el("button", { type: "button", class: "btn btn--small btn--primary" }, `Pay ${formatRupiah(String(c.price_snapshot))}`);
       pay.addEventListener("click", () => busy(pay, async () => {
         try {
@@ -314,15 +323,15 @@ export async function mountAdvertise(view, { signal, navigate }) {
       }), { signal });
       buttons.push(pay);
     }
-    const cancellable = ["pending_approval", "approved"].includes(c.status) || (c.status === "scheduled" && c.starts_at && new Date(c.starts_at) > new Date());
+    const cancellable = ["pending_approval", "approved"].includes(c.status) || (c.status === "scheduled" && c.starts_at && new Date(c.starts_at) > new Date(Date.now() + CANCEL_CUTOFF_MS));
     if (cancellable) {
       const cancel = el("button", { type: "button", class: "btn btn--small" }, "Cancel");
       cancel.addEventListener("click", () => busy(cancel, async () => {
         const paid = Boolean(c.starts_at);
-        if (!window.confirm(paid ? "Cancel this campaign? You paid for it, so a full refund is due since it hasn’t started." : "Cancel this campaign? Nothing has been charged.")) return;
+        if (!window.confirm(paid ? "Cancel this campaign? You paid for it and it starts more than 24 hours from now, so a full refund is due." : "Cancel this campaign? Nothing has been charged.")) return;
         try {
           const res = await rpc("cancel_my_campaign", { p_campaign_id: c.id });
-          toast(res?.refund_due ? "Cancelled. We’ll refund you through your original payment method." : "Campaign cancelled.", "success");
+          toast(res?.refund_due ? "Cancelled. We’ll refund you through your original payment method." : res?.refund_review ? "Cancelled. You’ve reached the refund limit, so we’ll review your refund and email you." : "Campaign cancelled.", "success");
           await loadMine();
         } catch (err) {
           toast(errorMessage(err), "error");
