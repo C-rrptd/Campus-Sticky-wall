@@ -32,7 +32,7 @@ insert into storage.objects (bucket_id, name, created_at) values
 
 select public.media_sweep_stale_uploads() as swept \gset
 select pg_temp.must(:swept = 2, 'sweep queues exactly the abandoned file and its thumbnail');
-select pg_temp.must((select array_agg(path order by path) from public.media_orphans) =
+select pg_temp.must((select array_agg(path order by path collate "C") from public.media_orphans) =
   array['cccccccc-cccc-cccc-cccc-cccccccccccc/lost-t.webp', 'cccccccc-cccc-cccc-cccc-cccccccccccc/lost.jpg'],
   'a live note keeps its thumbnail and a fresh upload is left alone');
 rollback;
