@@ -62,7 +62,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase1.sql
       - name: Phase 2 assertions (slots, waitlist holds, utilization, price proposals)
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase2.sql
-      - name: Phase 3 assertions (auctions: reserve, raise, tie-break, anti-sniping, fallback, kill switch)
+      - name: "Phase 3 assertions (auctions: reserve, raise, tie-break, anti-sniping, fallback, kill switch)"
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase3.sql
 
   code:
