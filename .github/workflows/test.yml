@@ -34,6 +34,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_part1.sql
       - name: Media cleanup assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_media_cleanup.sql
+      - name: Media thumbnail assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_media_thumbnails.sql
       - name: Paid posting v2 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_posting_v2.sql
       - name: Sticker placement assertions

@@ -33,24 +33,27 @@ select pg_temp.must(jsonb_array_length((select media from public.notes where id 
 
 -- removal queues the files and detaches them
 update public.notes set status = 'removed' where id = :'n1';
-select pg_temp.must((select count(*) from public.media_orphans) = 2, 'removed note queues both files');
+select pg_temp.must((select count(*) from public.media_orphans) = 3, 'removed note queues both files and the image thumbnail');
+select pg_temp.must(exists (select 1 from public.media_orphans where path = '00000000-0000-0000-0000-0000000000d1/a1-t.webp'), 'image thumbnail is queued');
+select pg_temp.must(not exists (select 1 from public.media_orphans where path like '%a2-t%'), 'video gets no thumbnail path');
 select pg_temp.must((select media from public.notes where id = :'n1') is null, 'removed note no longer lists media');
 -- restoring does not bring the files back and does not re-queue
 update public.notes set status = 'published' where id = :'n1';
-select pg_temp.must((select media from public.notes where id = :'n1') is null and (select count(*) from public.media_orphans) = 2, 'restore is clean');
+select pg_temp.must((select media from public.notes where id = :'n1') is null and (select count(*) from public.media_orphans) = 3, 'restore is clean');
 
 -- rejected / withdrawn
 update public.notes set status = 'rejected' where id = :'n2';
 update public.notes set status = 'withdrawn' where id = :'n3';
-select pg_temp.must((select count(*) from public.media_orphans) = 4, 'rejected and withdrawn notes queue files');
+select pg_temp.must((select count(*) from public.media_orphans) = 6, 'rejected and withdrawn notes queue files and thumbnails');
+select pg_temp.must(not exists (select 1 from public.media_orphans where path like '%c1-t%'), 'gif gets no thumbnail path');
 update public.notes set status = 'removed' where id = :'n4';   -- no media: nothing to queue
-select pg_temp.must((select count(*) from public.media_orphans) = 4, 'a note without media queues nothing');
+select pg_temp.must((select count(*) from public.media_orphans) = 6, 'a note without media queues nothing');
 
 -- owner delete of a live note queues its files
 select pg_temp.make_note('five', '[{"path":"00000000-0000-0000-0000-0000000000d1/e1.webp","kind":"image"}]') as n5 \gset
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d2', true);
 select public.owner_delete_record('note', :'n5', 'DELETE');
-select pg_temp.must((select count(*) from public.media_orphans) = 5, 'deleted note queues its file');
+select pg_temp.must((select count(*) from public.media_orphans) = 8, 'deleted note queues its file and thumbnail');
 
 -- take / forget
 select pg_temp.must(cardinality(public.media_take_orphans(3)) = 3, 'take respects the limit');

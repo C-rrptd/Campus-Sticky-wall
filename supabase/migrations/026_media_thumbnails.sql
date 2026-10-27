@@ -1,7 +1,7 @@
 -- 026: optional wall thumbnails for note images (idempotent).
 -- The first image of a note may have a companion "<name>-t.webp" in the same folder (uploaded by the browser,
 -- moved with the file by create-publication). notes.media is unchanged: the companion is derived from the path.
---  1. note_media_paths also returns the companion of every image, so removing a note queues it for deletion
+--  1. note_media_paths also returns the companion of every image except GIFs (never given a thumbnail), so removing a note queues it for deletion
 --     and burn_media_owner clears its uploader link too.
 --  2. media_sweep_stale_uploads leaves a companion alone while a note still references its image.
 --  3. Upload cap per user per hour 20 -> 25 (4 files + 1 thumbnail = 5 objects per note, as before: 5 notes/h).
@@ -15,7 +15,7 @@ language sql immutable set search_path = '' as $$
     union all
     select regexp_replace(e ->> 'path', '\.[A-Za-z0-9]+$', '-t.webp')
       from jsonb_array_elements(case when jsonb_typeof(p_media) = 'array' then p_media else '[]'::jsonb end) e
-     where e ->> 'kind' = 'image' and e ->> 'path' ~ '\.[A-Za-z0-9]+$'
+     where e ->> 'kind' = 'image' and e ->> 'path' ~ '\.[A-Za-z0-9]+$' and e ->> 'path' !~* '\.gif$'
   ) q
 $$;
 

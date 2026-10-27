@@ -117,7 +117,7 @@ export async function uploadNoteMedia(files, userId) {
       throw new ApiError("UPLOAD_FAILED", `${original.name}: videos can be at most 10 MB after compression. Trim it or use a shorter clip.`, 0);
     }
     const path = `${userId}/${crypto.randomUUID()}.${MEDIA_EXT[file.type]}`;
-    const { error } = await getClient().storage.from("note-media").upload(path, file, { contentType: file.type, cacheControl: "31536000" }) // uuid path, never overwritten: cache for a year;
+    const { error } = await getClient().storage.from("note-media").upload(path, file, { contentType: file.type, cacheControl: "31536000" }); // uuid path, never overwritten: cache for a year
     if (error) throw new ApiError("UPLOAD_FAILED", `Couldn’t upload ${original.name}. Please try again.`, 0);
     // Only the first attachment is shown on the wall, so only it gets a thumbnail. Best effort: no thumbnail is fine.
     if (out.length === 0 && file.type !== "image/gif" && !file.type.startsWith("video/")) {
