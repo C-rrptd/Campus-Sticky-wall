@@ -2,7 +2,6 @@
 // note composer with customer-defined pricing (min/cap/presets from site_config).
 // Totals shown here are ESTIMATES; the server computes the authoritative price.
 
-import { t } from "./i18n.js";
 import { decoPicker } from "./deco-picker.js";
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
@@ -496,7 +495,7 @@ export async function mountComposer(view, { signal, navigate }) {
   const updatePreview = () => {
     const data = new FormData(r.form);
     const note = {
-      body: String(data.get("body") || t("Your note will look like this.")),
+      body: String(data.get("body") || "Your note will look like this."),
       author_name: String(data.get("author_name") || "").trim() || "Anonymous",
       color: String(data.get("color") || "yellow"),
       decorations: picked(),

@@ -153,7 +153,7 @@ npx wrangler pages deploy dist --project-name campus-sticky-wall
 ```
 
 - The script accepts only `sb_publishable_…` or a legacy JWT whose role is `anon`. It refuses `sb_secret_…`, legacy `service_role` JWTs and unknown formats. It also scans `dist/` and refuses to finish if any secret-looking value is present.
-- It narrows the CSP in `dist/_headers` from `https://*.supabase.co` to your exact project URL, and drops `wss:` (realtime is not used).
+- It narrows the CSP in `dist/_headers` from `https://*.supabase.co` to your exact project URL.
 - **Git integration instead of wrangler:** in Cloudflare Pages, set the build command to `bash scripts/build-site.sh dist`, the output directory to `dist`, and the three `PUBLIC_*` values as environment variables.
 - In the Cloudflare dashboard for the domain, turn off features that inject scripts (Rocket Loader, Email Address Obfuscation, automatic Web Analytics). The CSP blocks injected scripts, and Rocket Loader breaks ES modules.
 - Cloudflare Pages redirects `components/x.html` to `components/x` (308). The app follows the redirect; this is expected.

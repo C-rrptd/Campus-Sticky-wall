@@ -65,13 +65,11 @@ open(path, "w").write(src)
 PY
   echo "config.js generated for $PUBLIC_SITE_URL"
 
-  # Tighten the CSP: allow only THIS Supabase project (not every *.supabase.co),
-  # and drop wss: (realtime is not used).
+  # Tighten the CSP: allow only THIS Supabase project (not every *.supabase.co).
   python3 - "$OUT/_headers" "$PUBLIC_SUPABASE_URL" <<'PY'
 import re, sys
 path, url = sys.argv[1], sys.argv[2].rstrip("/")
 src = open(path).read()
-src, n = re.subn(r" wss://\*\.supabase\.co", "", src)
 src, m = re.subn(r"https://\*\.supabase\.co", url, src)
 assert m == 3, "expected connect-src, img-src and media-src wildcards"
 open(path, "w").write(src)

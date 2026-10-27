@@ -7,7 +7,7 @@ import { currentUser, initAuth, isAdmin, onUserChange, signOut } from "./auth.js
 import { onRouteChange, rerender, startRouter } from "./router.js";
 import { captureReferral } from "./referrals.js";
 import { getClient, query } from "./supabase-client.js";
-import { lang, setLang, watch } from "./i18n.js";
+import { lang, setLang } from "./i18n.js";
 import { clear, el, refs, safeUrl, toast } from "./utils.js";
 
 const view = () => document.getElementById("view");
@@ -123,7 +123,6 @@ async function renderFooter() {
 }
 
 async function boot() {
-  watch(); // Indonesian mode: translates text that JavaScript adds later (no-op in English)
   installGlobalErrorHandlers();
   installDropdownClose();
   try {

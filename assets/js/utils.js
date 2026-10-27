@@ -1,5 +1,6 @@
 // Small, non-privileged helpers: safe DOM construction, money/date formatting,
 // toasts, guarded browser storage. Never insert user content with innerHTML.
+import { translate } from "./i18n.js";
 
 /** Create an element. Children may be nodes or strings (inserted as text). */
 export function el(tag, attrs = {}, ...children) {
@@ -91,7 +92,7 @@ export function timeAgo(value) {
 export function toast(message, type = "info", timeout = 5000) {
   const host = document.getElementById("toasts");
   if (!host) return;
-  const item = el("div", { class: `toast toast--${type}`, role: type === "error" ? "alert" : "status" }, message);
+  const item = translate(el("div", { class: `toast toast--${type}`, role: type === "error" ? "alert" : "status" }, message));
   host.append(item);
   setTimeout(() => item.remove(), timeout);
 }
@@ -172,6 +173,7 @@ export function openDialog({ title, body, okLabel = "OK", cancelLabel = "Cancel"
   r.ok.textContent = okLabel;
   r.cancel.textContent = cancelLabel;
   if (danger) r.ok.classList.add("btn--danger");
+  translate(frag);
   document.body.append(frag);
   const dialog = r.dialog;
   return new Promise((resolve) => {

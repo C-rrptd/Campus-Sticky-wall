@@ -1,5 +1,5 @@
 # Checks on every pull request and push: migrations apply (and re-apply) on plain
-# Postgres, the Part 1 SQL assertions pass, edge functions typecheck, and the
+# Postgres, every supabase/tests/assert_*.sql passes, edge functions typecheck, and the
 # browser JavaScript parses. Nothing here deploys anything.
 name: CI
 on:
@@ -30,40 +30,8 @@ jobs:
         run: for f in supabase/migrations/*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Re-apply 006 onward (must be idempotent)
         run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql supabase/migrations/02*_*.sql supabase/migrations/03*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
-      - name: Part 1 assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_part1.sql
-      - name: Media cleanup assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_media_cleanup.sql
-      - name: Media thumbnail assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_media_thumbnails.sql
-      - name: Paid posting v2 assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_posting_v2.sql
-      - name: Sticker placement assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_stickers.sql
-      - name: Advertising v3 assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ads_v3.sql
-      - name: Advertising fixes assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ads_fixes.sql
-      - name: Sticker rotation assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_sticker_rotation.sql
-      - name: Ad pricing assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_ad_pricing.sql
-      - name: Wall search, pin and anonymous-name assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_wall_search.sql
-      - name: Poll, quiz and Spotify assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_polls.sql
-      - name: Admin delete-account and note-by-receipt assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_admin_delete.sql
-      - name: Reschedule approved ad assertions
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_reschedule.sql
-      - name: Audit-fix assertions (pin_until, offset cap, reserved names, paid referrals)
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_audit_fixes.sql
-      - name: Phase 1 assertions (launch pricing, price lock, tracking dedupe, stats, waitlist)
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase1.sql
-      - name: Phase 2 assertions (slots, waitlist holds, utilization, price proposals)
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase2.sql
-      - name: "Phase 3 assertions (auctions: reserve, raise, tie-break, anti-sniping, fallback, kill switch)"
-        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase3.sql
+      - name: SQL assertions
+        run: for f in supabase/tests/assert_*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -t -A -f "$f" || exit 1; done
 
   code:
     runs-on: ubuntu-latest

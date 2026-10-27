@@ -1,29 +1,16 @@
 // Run with: node --test tests/
 import test from "node:test";
 import assert from "node:assert/strict";
+import { ID } from "../assets/js/i18n-id.js";
 
-globalThis.localStorage = { getItem: () => JSON.stringify("id"), setItem() {} };
-const { t } = await import("../assets/js/i18n.js");
-
-test("t: exact matches, keeping surrounding whitespace", () => {
-  assert.equal(t("Save"), "Simpan");
-  assert.equal(t("  Check notes "), "  Periksa catatan ");
-});
-
-test("t: sentences with numbers and names", () => {
-  assert.equal(t("Waiting list (3 waiting)"), "Daftar tunggu (3 menunggu)");
-  assert.equal(t("Note approved."), "Catatan disetujui.");
-  assert.equal(t("Delete note"), "Hapus catatan");
-  assert.equal(t("5 min ago"), "5 menit lalu");
-});
-
-test("t: unknown text stays as it is", () => {
-  assert.equal(t("Some text nobody translated"), "Some text nobody translated");
-});
-
-test("every admin status word has an Indonesian text", async () => {
-  const { ID_EXTRA } = await import("../assets/js/i18n-extra.js");
-  for (const k of ["Waiting for your review", "Live on the wall", "Running now", "Paid", "All money returned", "Full: every slot is sold", "Too empty: few slots sold"]) {
-    assert.ok(ID_EXTRA[k], k);
+// translate() looks text up after trimming and collapsing whitespace, so a key that is not already in that form can never match.
+test("dictionary keys are normalized and values are non-empty", () => {
+  for (const [k, v] of Object.entries(ID)) {
+    assert.equal(k, k.trim().replace(/\s+/g, " "), `key not normalized: ${JSON.stringify(k)}`);
+    assert.ok(typeof v === "string" && v.trim(), `empty translation for ${JSON.stringify(k)}`);
   }
+});
+
+test("admin console strings are present", () => {
+  for (const k of ["Overview", "Pending approval", "Save auction settings", "Administrators only"]) assert.ok(Object.hasOwn(ID, k), k);
 });

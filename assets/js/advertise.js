@@ -140,8 +140,8 @@ export async function mountAdvertise(view, { signal, navigate }) {
     r.sumDuration.textContent = p ? `${p.duration_days} days` : "—";
     r.sumTargets.textContent = String(count);
     r.sumStart.textContent = r.start.value ? fmtDay(r.start.value) : "—";
-    const total = p ? Math.round(adPrice(p.price_per_target, p.extra_location_pct, count) * slotMult) : null;
-    const list = p ? Math.round(adPrice(p.list_price_per_target, p.extra_location_pct, count) * slotMult) : null;
+    const total = p ? Math.round(Number(adPrice(p.price_per_target, p.extra_location_pct, count)) * slotMult) : null;
+    const list = p ? Math.round(Number(adPrice(p.list_price_per_target, p.extra_location_pct, count)) * slotMult) : null;
     r.sumTotal.textContent = p ? formatRupiah(total) : "—";
     const discounted = Boolean(p && p.launch && count > 0 && list > total);
     r.sumList.hidden = !discounted;
