@@ -903,7 +903,7 @@ export const ID_EXTRA = {
   "Write your note.": "Tulis catatanmu.",
   "Notes can be at most 500 characters.": "Catatan paling banyak 500 karakter.",
   "Names can be at most 40 characters.": "Nama paling banyak 40 karakter.",
-  "Passwords need at least 8 characters.": "Kata sandi minimal 8 karakter.",
+  "Passwords need at least 10 characters.": "Kata sandi minimal 10 karakter.",
   "Options must be different from each other.": "Pilihan harus berbeda satu sama lain.",
   "Mark the correct answer.": "Tandai jawaban yang benar.",
   "Mark exactly one correct answer, or allow multiple answers.": "Tandai tepat satu jawaban yang benar, atau izinkan beberapa jawaban.",

@@ -74,7 +74,6 @@ export async function signOut() {
 const MESSAGES = {
   "Invalid login credentials": "Email or password is incorrect.",
   "Email not confirmed": "Please verify your email first — check your inbox for the confirmation link.",
-  "User already registered": "An account with this email already exists. Try signing in.",
 };
 const friendly = (err) => MESSAGES[err?.message] ?? errorMessage(err);
 

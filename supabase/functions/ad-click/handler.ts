@@ -4,7 +4,7 @@
 // Counting never blocks the visitor: if it fails they still reach the advertiser.
 
 import { type Deps, type Handler } from "../_shared/auth.ts";
-import { clientIp, rpc } from "../_shared/security.ts";
+import { clientIp, rateLimit, rpc } from "../_shared/security.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HOST = /^[a-z0-9]([a-z0-9.-]{0,98}[a-z0-9])?$/i;
@@ -37,6 +37,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
 
   try {
     const ua = req.headers.get("user-agent") ?? "";
+    await rateLimit(deps.db, `ad-click:ip:${clientIp(req)}`, 60, 60); // over the limit: skip counting, still redirect
     const hash = await rpc<string>(deps.db, "visitor_hash", { p_ip: clientIp(req), p_ua: ua });
     const country = q.get("country");
     await rpc(deps.db, "record_ad_event", {

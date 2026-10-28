@@ -25,7 +25,8 @@ additional_redirect_urls = ["http://localhost:8080", "http://127.0.0.1:8080"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 enable_signup = true
-minimum_password_length = 8
+minimum_password_length = 10
+password_requirements = "lower_upper_letters_digits"
 
 [auth.email]
 enable_signup = true

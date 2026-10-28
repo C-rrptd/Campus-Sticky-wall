@@ -86,7 +86,7 @@ export function isEmail(value) {
 }
 
 export function validatePassword(value) {
-  return String(value ?? "").length >= 8 ? null : "Passwords need at least 8 characters.";
+  return String(value ?? "").length >= 10 ? null : "Passwords need at least 10 characters.";
 }
 
 /** Ad total for n locations: the base fee covers the first, each extra adds pct% of the base. Mirrors public.ad_price(). */
