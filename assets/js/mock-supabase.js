@@ -26,7 +26,11 @@
   const client = {
     auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }), getSession: async () => ({ data: { session: { user } }, error: null }), signOut: async () => ({ error: null }) },
     from: builder,
-    rpc: async () => ({ data: false, error: null }),
+    rpc: async (fn) => ({ data: ({
+      ad_catalog: tables.ad_products.map((a) => ({ ...a, list_price_per_target: a.price_per_target, discount_pct: 0, launch: false })),
+      get_locations_recent_views: [], get_ad_availability: [], list_open_auctions: [], my_auction_offers: [], join_ad_waitlist: { ok: true }, my_price_locks: { founding: false, locks: [], grace_days: 7 },
+      get_public_stats: { updated_at: new Date().toISOString(), views_total: 0, clicks_total: 0, views_30d: 0, clicks_30d: 0, locations: [] },
+    })[fn] ?? false, error: null }),
     functions: { invoke: async (name, o) => { (window.__invoked ||= []).push({ name, body: o?.body }); return { data: { price: "60000", id: "mock" }, error: null }; } },
     storage: { from: () => ({ upload: async () => ({ error: null }) }) },
   };

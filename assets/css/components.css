@@ -110,10 +110,10 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
   border-radius: 2px 2px 14px 2px;
   box-shadow: var(--shadow-note);
   transform: rotate(var(--tilt));
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.25s ease, box-shadow 0.15s ease;
   break-inside: avoid;
 }
-.note:hover { transform: rotate(0deg) translateY(-2px); }
+.note:hover { transform: rotate(var(--hover-tilt, 0deg)) translateY(-2px); z-index: 2; }
 .note--static { transform: none; min-height: auto; }
 .note--pink { background: var(--note-pink); }
 .note--blue { background: var(--note-blue); }

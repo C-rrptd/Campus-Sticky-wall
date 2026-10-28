@@ -2,6 +2,7 @@
 
 import { cloneTemplate } from "./component-loader.js";
 import { creativeUrl, rpc } from "./supabase-client.js";
+import { trackLink } from "./ad-tracking.js";
 import { buildLocationPicker, getLocationPref, promotionArgs, setLocationPref } from "./location.js";
 import { errorMessage, formatDate, refs, safeUrl, session } from "./utils.js";
 
@@ -33,7 +34,7 @@ function trackImpression(node, id) {
       observer.unobserve(entry.target);
       if (session.get(`csw.seen.${cid}`)) continue;
       session.set(`csw.seen.${cid}`, true);
-      rpc("record_campaign_event", { p_campaign_id: cid, p_kind: "impression" }).catch(() => {});
+      rpc("record_campaign_event", { p_campaign_id: cid, p_kind: "impression", ...promotionArgs(getLocationPref()) }).catch(() => {});
     }
   }, { threshold: 0.5 });
   observer.observe(node);
@@ -58,10 +59,7 @@ export function renderPromotion(p, { compact = false } = {}) {
   }
   const href = safeUrl(p.destination_url, false);
   if (href) {
-    r.link.href = href;
-    r.link.addEventListener("click", () => {
-      rpc("record_campaign_event", { p_campaign_id: p.id, p_kind: "click" }).catch(() => {});
-    });
+    trackLink(r.link, p.id); // clicks are counted by the server-side redirect (ad blockers cannot hide it)
   } else r.link.hidden = true;
   trackImpression(r.root, p.id);
   return frag;

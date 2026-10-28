@@ -56,6 +56,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_product_id: v.str(body.product_id, "Package", { min: 2, max: 60 }),
     p_requested_start: v.isoDate(body.requested_start, "Start date"),
     p_targets: targets(body.targets),
+    p_slot_type: v.oneOf(body.slot_type ?? "standard", "Slot type", ["top", "standard"] as const),
   });
   return json(req, 200, result, deps.env);
 };

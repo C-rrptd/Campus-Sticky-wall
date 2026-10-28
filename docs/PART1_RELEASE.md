@@ -43,7 +43,7 @@ Both the inviter and the invited friend get **2 free posts + 2 free decorations*
 - Known limits: attachments are not scanned or moderated before publish (moderators can hide the note); files uploaded for an order that later fails stay in storage; the bucket and its policies are not exercised by the plain-Postgres CI (no `storage` schema).
 
 ## Automated checks
-`.github/workflows/test.yml` (no deploy): applies all migrations and re-applies 006-009 on Postgres 16 with stubbed Supabase roles, runs `supabase/tests/assert_part1.sql` (about 50 assertions: roles, waivers, deletes, append-only log, referral credits, leaderboard), typechecks every edge function with Deno, and parses the browser JavaScript. Not covered: browsers, Midtrans, real Supabase Auth/RLS as the `authenticated` role.
+`.github/workflows/ci.yml` (no deploy): applies all migrations and re-applies 006-009 on Postgres 16 with stubbed Supabase roles, runs `supabase/tests/assert_part1.sql` (about 50 assertions: roles, waivers, deletes, append-only log, referral credits, leaderboard), typechecks every edge function with Deno, and parses the browser JavaScript. Not covered: browsers, Midtrans, real Supabase Auth/RLS as the `authenticated` role.
 
 ## Media follow-ups (migration 010, on top of the existing 009)
 `main` already had its own media feature (migration 009: signed-in users upload straight into their own Storage folder; `notes.media`). These changes build on it.

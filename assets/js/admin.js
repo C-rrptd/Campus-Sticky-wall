@@ -3,6 +3,7 @@
 // (Edge Function + SQL require_admin()) and written to the audit log.
 
 import { cloneTemplate } from "./component-loader.js";
+import { translate } from "./i18n.js";
 import { currentUser, isAdmin, isOwner } from "./auth.js";
 import { creativeUrl, getClient, invoke, mediaUrl, query } from "./supabase-client.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, promptReason, refs, toast } from "./utils.js";
@@ -25,7 +26,10 @@ function table(columns, rows, empty = "Nothing here.") {
 
 function button(label, onClick, cls = "btn btn--small") {
   const b = el("button", { type: "button", class: cls }, label);
-  b.addEventListener("click", () => busy(b, onClick));
+  // A failed action must say why (e.g. "This location still has a free slot"), not fall through to a generic error.
+  b.addEventListener("click", () => busy(b, async () => {
+    try { await onClick(); } catch (err) { toast(errorMessage(err), "error", 8000); }
+  }));
   return b;
 }
 
@@ -38,6 +42,15 @@ const shortId = (id) => (id ? el("code", { title: String(id) }, `${String(id).sl
 const details = (d) => (d && typeof d === "object"
   ? Object.entries(d).map(([k, v]) => `${humanize(k)}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(" · ")
   : String(d ?? ""));
+
+/** "launch −50% (list Rp…)", "🔒 locked rate Rp…", "founding #2" next to a price. Real fields only; nothing is invented. */
+function rateText(r, base) {
+  const bits = [];
+  if (r.list_price && String(r.list_price) !== String(r.price) && !r.price_locked) bits.push(`launch −${r.launch_discount_pct ?? 0}% (list ${formatRupiah(r.list_price)})`);
+  if (r.price_locked) bits.push(`🔒 locked at base ${formatRupiah(r.price_base_used ?? r.locked_base_fee)} (list ${formatRupiah(r.list_price)})`);
+  if (r.founding_rank) bits.push(`founding #${r.founding_rank}`);
+  return [base, ...bits].filter(Boolean).join(" · ");
+}
 
 function actions(...nodes) {
   return el("div", { class: "row row--tight" }, ...nodes.filter(Boolean));
@@ -133,21 +146,37 @@ function amountInput(name, value, placeholder = "") {
 }
 
 const panels = {
-  async overview(panel, reload) {
+  async overview(panel, reload, state) {
     const jakarta = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 864e5).toISOString().slice(0, 10);
     const [o, d, rev] = await Promise.all([api("overview"), api("leaderboard_diagnostics"),
       api("revenue_report", { from: `${jakarta(-6)}T00:00:00+07:00`, to: `${jakarta(1)}T00:00:00+07:00` })]);
+    const go = (tab) => { state.tab = tab; reload(); };
+    const stat = (title, items) => el("dl", { class: "stats stats--grid", "aria-label": title },
+      ...Object.entries(items).map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, String(v ?? 0)))));
+    // Things waiting for a human, each with a button that opens the right tab. Zero items = nothing to do.
+    const todo = [
+      [o.campaigns_pending_review, "ad(s) waiting for your review", "campaigns", "Review ads"],
+      [o.notes_pending_moderation, "note(s) waiting for approval", "moderation", "Review notes"],
+      [o.open_reports, "open report(s) about notes", "reports", "Open reports"],
+      [o.orders_needing_review, "payment(s) that need a check", "orders", "Check payments"],
+    ].filter(([n]) => Number(n) > 0);
     panel.replaceChildren(
-      el("dl", { class: "stats stats--grid" },
-        ...Object.entries({
-          "Revenue, last 7 days (net)": formatRupiah(rev.net_collected), "Paid orders, last 7 days": rev.paid_orders,
-          "Notes posted today": o.notes_today, "Notes posted, last 7 days": o.notes_7d,
-          "Ads waiting for review": o.campaigns_pending_review,
-          "Open reports": o.open_reports, "Notes in moderation": o.notes_pending_moderation,
-          "Orders needing review": o.orders_needing_review,
-          "Published notes": o.published_notes, "Accounts": o.users, "Qualified referrals": d.qualified_referrals,
-          "Opted-in donors": d.opted_in_donors, "Successful donations": d.successful_donations,
-        }).map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, String(v))))),
+      el("h2", {}, "Needs your attention"),
+      todo.length
+        ? el("ul", { class: "todo-list" }, ...todo.map(([n, text, tab, label]) =>
+          el("li", {}, el("span", {}, el("span", { class: "todo-n" }, String(n)), text), button(label, () => go(tab), "btn btn--small btn--primary"))))
+        : el("p", { class: "notice" }, "All clear. Nothing is waiting for you right now."),
+      el("h2", {}, "Last 7 days"),
+      stat("Last 7 days", { "Money in, after refunds": formatRupiah(rev.net_collected), "Paid orders": rev.paid_orders,
+        "Notes posted today": o.notes_today, "Notes posted this week": o.notes_7d }),
+      el("h2", {}, "Whole site"),
+      stat("Whole site", { "Notes on the wall": o.published_notes, "Accounts": o.users, "Referrals that counted": d.qualified_referrals,
+        "Donors who opted in": d.opted_in_donors, "Successful donations": d.successful_donations }),
+      el("h2", {}, "Common tasks"),
+      actions(button("Change prices & settings", () => go("catalog")), button("Post site news", () => go("announcements")),
+        button("See all payments", () => go("orders")), button("Revenue report", () => go("revenue"))),
+      el("h2", {}, "Housekeeping"),
+      el("p", { class: "small muted" }, "Unpaid orders close by themselves after their time limit. Use this if you want to close them right now."),
       actions(button("Expire stale unpaid orders", async () => {
         const res = await api("expire_stale_orders");
         toast(`${res.expired} order(s) expired.`, "success");
@@ -233,9 +262,9 @@ const panels = {
   async orders(panel, reload, state) {
     state.orderFilter ??= { kind: "", status: "", review_only: false };
     const f = state.orderFilter;
-    const kind = el("select", {}, ...["", "publication", "donation", "advertising"].map((k) => el("option", { value: k, selected: k === f.kind || null }, k || "all kinds")));
+    const kind = el("select", {}, ...["", "publication", "donation", "advertising"].map((k) => el("option", { value: k, selected: k === f.kind || null }, k ? humanize(k) : "all kinds")));
     const status = el("select", {}, ...["", "awaiting_payment", "challenge", "paid", "completed_free", "payment_waived", "failed", "canceled", "expired", "partially_refunded", "refunded", "reversed"]
-      .map((s) => el("option", { value: s, selected: s === f.status || null }, s || "all statuses")));
+      .map((s) => el("option", { value: s, selected: s === f.status || null }, s ? humanize(s) : "all statuses")));
     const review = el("input", { type: "checkbox", checked: f.review_only || null });
     const apply = button("Filter", async () => { Object.assign(f, { kind: kind.value, status: status.value, review_only: review.checked }); reload(); });
     const rows = await api("list_orders", { kind: f.kind || null, status: f.status || null, review_only: f.review_only, limit: 100 });
@@ -244,6 +273,7 @@ const panels = {
       { label: "Kind", key: "kind" },
       { label: "Status", key: "status" },
       { label: "Total", render: (r) => formatRupiah(r.total_amount) },
+      { label: "Rate", render: (r) => (r.kind === "advertising" ? rateText({ ...r, price: r.total_amount, price_base_used: r.locked_base_fee }, "") : "") },
       { label: "Refunded", render: (r) => formatRupiah(r.refunded_amount) },
       { label: "Review", render: (r) => (r.review_required ? `⚠ ${r.review_reason ?? ""}` : "") },
       { label: "Created", render: (r) => formatDate(r.created_at, true) },
@@ -294,7 +324,7 @@ const panels = {
         const link = r.destination_url && el("a", { href: r.destination_url, target: "_blank", rel: "noopener noreferrer" }, "Link ↗");
         return img || link ? el("div", { class: "stack" }, img, link) : "Text only";
       } },
-      { label: "Package", render: (r) => `${r.placement === "featured" ? "Featured" : "Random"} · ${r.duration_days ?? "?"}d · ${formatRupiah(r.price)}` },
+      { label: "Package", render: (r) => rateText(r, `${r.placement === "featured" ? "Featured" : "Random"} · ${r.duration_days ?? "?"}d · ${formatRupiah(r.price)}`) },
       { label: "Targets", render: (r) => (r.targets ?? []).join(", ") },
       { label: "Payment", render: (r) => humanize(r.payment_status) },
       { label: "Status", render: (r) => el("span", { class: `badge${r.status === "active" ? " badge--ok" : ["rejected", "canceled"].includes(r.status) ? " badge--bad" : r.status === "pending_approval" ? " badge--warn" : ""}` }, humanize(r.status)) },
@@ -347,9 +377,16 @@ const panels = {
       return b;
     };
     const cats = [...new Set(c.decorations.map((d) => d.category || "Other"))];
-    const decoGrid = el("div", { class: "stack" }, ...cats.map((cat) => el("div", {},
+    const decoList = el("div", { class: "stack" });
+    const catSel = el("select", { "aria-label": "Decoration category" },
+      el("option", { value: "" }, "All categories"), ...cats.map((cat) => el("option", { value: cat }, cat)));
+    const paintDecos = () => decoList.replaceChildren(...cats.filter((cat) => !catSel.value || cat === catSel.value).map((cat) => el("div", {},
       el("h3", { class: "small muted" }, cat),
       el("div", { class: "deco-grid" }, ...c.decorations.filter((d) => (d.category || "Other") === cat).map(decoTile)))));
+    catSel.addEventListener("change", paintDecos);
+    paintDecos();
+    const decoGrid = el("div", { class: "stack" },
+      el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Category"), catSel), decoList);
 
     const pmRows = c.payment_methods.map((m) => ({ m, min: amountInput("min", m.min_amount, "none"), max: amountInput("max", m.max_amount, "none"),
       enabled: el("input", { type: "checkbox", checked: m.enabled || null }) }));
@@ -367,38 +404,74 @@ const panels = {
       }) },
     ], pmRows);
 
-    const adRows = c.ad_products.map((a) => {
+    const cfgNow = Object.fromEntries(c.config.map((row) => [row.key, row.value]));
+    const allowedDays = Array.isArray(cfgNow.ad_allowed_durations) ? cfgNow.ad_allowed_durations : [7, 30, 60, 90];
+    const launchOn = cfgNow.launch_mode_enabled === true;
+    const launchGlobal = Number(cfgNow.launch_discount_pct ?? 50);
+    const FORMULA = "total = base + (extra locations × % × base)";
+    // Retired lengths (e.g. 14 days) stay in the database but are not listed here unless still enabled.
+    const adRows = c.ad_products.filter((a) => allowedDays.includes(a.duration_days) || a.enabled).map((a) => {
       const price = amountInput("price", a.price_per_target);
       const global = a.scope_level === "global"; // always one location, so no extra-location %
-      const pct = el("input", { type: "number", min: "0", max: "1000", step: "1", value: String(a.extra_location_pct), disabled: global || null, class: "input--small" });
-      const example = el("span", { class: "small muted" });
+      const pct = el("input", { type: "number", min: "0", max: "100", step: "1", value: String(a.extra_location_pct), disabled: global || null, class: "input--small", title: FORMULA, "aria-label": "Extra-location surcharge (%)" });
+      const launch = el("input", { type: "number", min: "0", max: "90", step: "1", value: a.launch_discount_pct ?? "", placeholder: `${launchGlobal}`, class: "input--small", "aria-label": "Launch discount override (%), empty = global" });
+      const days = el("select", { class: "input--small", "aria-label": "Duration in days" },
+        ...[...new Set([...allowedDays, a.duration_days])].sort((x, y) => x - y).map((d) => el("option", { value: String(d), selected: d === a.duration_days || null }, String(d))));
+      const example = el("span", { class: "small" });
       const paint = () => {
         const p = parseRupiah(price.value);
-        example.textContent = !p.ok ? "—" : `${global ? "" : "3 locations: "}${formatRupiah(adPrice(p.digits, Number(pct.value) || 0, global ? 1 : 3))}`;
+        const extra = global ? 0 : Number(pct.value);
+        if (!p.ok || BigInt(p.digits) < 1n || !Number.isInteger(extra) || extra < 0 || extra > 100) { example.textContent = "—"; return; }
+        const n = global ? 1 : 3;
+        let text = `${global ? "" : "3 locations: "}${formatRupiah(adPrice(p.digits, extra, n))}`;
+        if (launchOn) {
+          const d = launch.value === "" ? launchGlobal : Number(launch.value);
+          const disc = (BigInt(p.digits) * BigInt(100 - (Number.isFinite(d) ? d : 0)) + 50n) / 100n;
+          text += ` → launch ${formatRupiah(adPrice(String(disc), extra, n))}`;
+        }
+        example.textContent = text;
       };
-      price.addEventListener("input", paint);
-      pct.addEventListener("input", paint);
+      [price, pct, launch].forEach((i) => i.addEventListener("input", paint));
       paint();
-      return { a, price, pct, example,
-        days: el("input", { type: "number", min: "1", max: "365", value: String(a.duration_days), class: "input--small" }),
+      return { a, price, pct, launch, days, example, global,
         enabled: el("input", { type: "checkbox", checked: a.enabled || null }) };
     });
+    const saveAd = async (x) => {
+      const p = parseRupiah(x.price.value);
+      if (!p.ok || BigInt(p.digits) < 1n) { toast("Base fee must be more than Rp0.", "error"); return; }
+      const extra = x.global ? 100 : Number(x.pct.value);
+      if (!Number.isInteger(extra) || extra < 0 || extra > 100) { toast("Extra-location surcharge must be a whole number from 0 to 100.", "error"); return; }
+      const lp = x.launch.value === "" ? null : Number(x.launch.value);
+      if (lp !== null && (!Number.isInteger(lp) || lp < 0 || lp > 90)) { toast("Launch discount must be a whole number from 0 to 90.", "error"); return; }
+      const params = { id: x.a.id, name: x.a.name, placement: x.a.placement, scope_level: x.a.scope_level, duration_days: Number(x.days.value),
+        price: p.digits, extra_pct: extra, launch_pct: lp, enabled: x.enabled.checked, sort: x.a.sort_order };
+      // The server asks for each confirmation it needs; we show it and resend with the matching flag.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await api("upsert_ad_product", params);
+          Object.assign(x.a, { price_per_target: p.digits, extra_location_pct: extra, launch_discount_pct: lp, duration_days: params.duration_days, enabled: params.enabled });
+          toast(`Saved “${x.a.name}”. Existing campaigns and orders keep their original price; only new quotes use this.`, "success");
+          return;
+        } catch (err) {
+          const flag = { PRICE_CHANGE_CONFIRM_BIG: "confirm_big", PRICE_CHANGE_CONFIRM_ACTIVE: "confirm_active" }[err.code];
+          if (!flag) { toast(`Not saved: ${errorMessage(err)}`, "error"); return; }
+          const ok = await openDialog({ title: err.code === "PRICE_CHANGE_CONFIRM_BIG" ? "Large price change" : "Campaigns use this package",
+            body: el("p", {}, errorMessage(err)), okLabel: "Yes, save", danger: true });
+          if (!ok) return;
+          params[flag] = true;
+        }
+      }
+    };
+    const surchargeHead = el("span", {}, "Extra-location surcharge (%) ", el("span", { class: "help", tabindex: "0", title: FORMULA, "aria-label": `Formula: ${FORMULA}` }, "ⓘ"));
     const adTable = table([
       { label: "Package", render: (x) => `${x.a.name} [${x.a.placement} · ${x.a.scope_level}]` },
       { label: "Days", render: (x) => x.days },
       { label: "Base fee (Rp)", render: (x) => x.price },
-      { label: "Extra per added location (%)", render: (x) => x.pct },
-      { label: "Example", render: (x) => x.example },
-      { label: "Enabled", render: (x) => x.enabled },
-      { label: "", render: (x) => button("Save", async () => {
-        const p = parseRupiah(x.price.value);
-        if (!p.ok || p.value < 1n) { toast("Base fee must be a positive whole rupiah amount.", "error"); return; }
-        const extra = Number(x.pct.value);
-        if (!Number.isInteger(extra) || extra < 0 || extra > 1000) { toast("Extra % must be a whole number from 0 to 1000.", "error"); return; }
-        await api("upsert_ad_product", { id: x.a.id, name: x.a.name, placement: x.a.placement, scope_level: x.a.scope_level,
-          duration_days: Number(x.days.value), price: p.digits, extra_pct: extra, enabled: x.enabled.checked, sort: x.a.sort_order });
-        toast("Package saved.", "success");
-      }) },
+      { label: surchargeHead, render: (x) => x.pct },
+      { label: "Launch % (blank = global)", render: (x) => x.launch },
+      { label: "Computed (live, before Save)", render: (x) => x.example },
+      { label: "Active", render: (x) => x.enabled },
+      { label: "", render: (x) => button("Save", () => saveAd(x)) },
     ], adRows);
 
     const cfg = Object.fromEntries(c.config.map((row) => [row.key, row.value]));
@@ -412,6 +485,12 @@ const panels = {
     const ads = el("input", { type: "checkbox", checked: cfg.display_ads_enabled === true || null });
     const wa = el("input", { type: "tel", inputmode: "numeric", maxlength: "15", placeholder: "6281234567890", value: cfg.ad_whatsapp ?? "" });
     const payDays = el("input", { type: "number", min: "1", max: "60", value: String(cfg.ad_payment_window_days ?? 7), class: "input--small" });
+    const launchMode = el("input", { type: "checkbox", checked: cfg.launch_mode_enabled === true || null });
+    const launchPct = el("input", { type: "number", min: "0", max: "90", step: "1", value: String(cfg.launch_discount_pct ?? 50), class: "input--small" });
+    const foundingCount = el("input", { type: "number", min: "0", max: "1000", step: "1", value: String(cfg.founding_advertiser_count ?? 10), class: "input--small" });
+    const graceDays = el("input", { type: "number", min: "0", max: "365", step: "1", value: String(cfg.price_lock_grace_days ?? 7), class: "input--small" });
+    const durations = el("input", { value: (cfg.ad_allowed_durations ?? [7, 30, 60, 90]).join(", "), placeholder: "7, 30, 60, 90" });
+    const reportMail = el("input", { type: "checkbox", checked: cfg.ad_report_email_enabled !== false || null });
     const setConfig = async (key, value) => { await api("set_config", { key, value }); };
     const saveCfg = button("Save settings", async () => {
       let links;
@@ -429,7 +508,15 @@ const panels = {
       if (!/^(\d{8,15})?$/.test(wa.value.trim())) { toast("WhatsApp number: digits only with country code, e.g. 6281234567890.", "error"); return; }
       await setConfig("ad_whatsapp", wa.value.trim());
       await setConfig("ad_payment_window_days", Number(payDays.value));
-      toast("Settings saved.", "success");
+      const dur = durations.value.split(",").map((t) => Number(t.trim())).filter((n) => n);
+      if (!dur.length || dur.some((n) => !Number.isInteger(n) || n < 1 || n > 365)) { toast("Allowed durations: whole days separated by commas, e.g. 7, 30, 60, 90.", "error"); return; }
+      await setConfig("launch_mode_enabled", launchMode.checked);
+      await setConfig("launch_discount_pct", Number(launchPct.value));
+      await setConfig("founding_advertiser_count", Number(foundingCount.value));
+      await setConfig("price_lock_grace_days", Number(graceDays.value));
+      await setConfig("ad_allowed_durations", dur);
+      await setConfig("ad_report_email_enabled", reportMail.checked);
+      toast("Settings saved. Launch mode and price changes affect new quotes only.", "success");
       reload();
     }, "btn btn--primary");
 
@@ -439,7 +526,7 @@ const panels = {
       el("p", { class: "small muted" }, "Set limits from your Midtrans/acquirer agreement. A method is offered only when the order total fits its limits; totals are never reduced to fit."),
       pmTable,
       el("h2", {}, "Advertising packages"),
-      el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. The base fee covers the first location; each added location costs the extra % of the base fee (100% = the same price again, 50% = half). The total is frozen when an advertiser submits."),
+      el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. The base fee covers the first location; each added location costs the extra % of the base fee (100% = the same price again, 50% = half). The total is frozen when an advertiser submits, and changing a price never changes an existing campaign or order. Hover ⓘ for the formula."),
       adTable,
       el("h2", {}, "Site settings"),
       el("div", { class: "stack narrow" },
@@ -451,8 +538,349 @@ const panels = {
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Official social links (JSON)"), socials),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Ads: WhatsApp number for custom packages (digits, country code; empty hides the button)"), wa),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Ads: days to pay after approval"), payDays),
+        el("h3", {}, "Launch pricing and price lock"),
+        el("label", { class: "check" }, launchMode, el("span", {}, "Launch mode: show “Founding advertiser rate” (struck-through list price) for new quotes. Existing campaigns and orders never change.")),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Launch discount % off the base fee (a package can override it)"), launchPct),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Founding advertisers: how many first paying advertisers get a locked rate"), foundingCount),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Price lock: renew within this many days of expiry to keep the rate"), graceDays),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Allowed campaign lengths in days (comma separated)"), durations),
+        el("label", { class: "check" }, reportMail, el("span", {}, "Email advertisers a summary when their campaign ends")),
         el("label", { class: "check" }, ads, el("span", {}, "Enable third-party display ad slots (requires provider setup; see OPERATIONS.md)")),
         saveCfg));
+  },
+
+  /** Ad insights: per spot and location views/visitors/clicks/CTR/fill, the CPM-based suggested price, waitlist demand. */
+  async adinsights(panel, reload, state) {
+    state.insightDays ??= 30;
+    const [res, wl, cat] = await Promise.all([api("pricing_analytics", { days: state.insightDays }), api("waitlist_counts"), api("list_catalog")]);
+    const days = el("select", { "aria-label": "Window" }, ...[7, 30].map((d) => el("option", { value: String(d), selected: d === state.insightDays || null }, `Last ${d} days`)));
+    days.addEventListener("change", () => { state.insightDays = Number(days.value); reload(); });
+    const cpm = amountInput("cpm", res.target_cpm ? String(res.target_cpm) : "", "e.g. 15000");
+    const saveCpm = button("Save target CPM", async () => {
+      const v = cpm.value.trim() === "" ? { ok: true, digits: "0" } : parseRupiah(cpm.value);
+      if (!v.ok) { toast("Enter whole rupiah per 1,000 views.", "error"); return; }
+      await api("set_config", { key: "target_cpm", value: Number(v.digits) });
+      toast("Target CPM saved.", "success");
+      reload();
+    });
+    const spotName = (s) => (s === "featured" ? "Featured" : "Random");
+    const rows = res.rows.map((r) => r);
+    const price = (n) => (n == null ? "—" : formatRupiah(String(Math.round(Number(n)))));
+    const suggest = (r) => {
+      if (!r.enough) return el("span", { class: "muted" }, `Not enough data (${r.days_of_data}/${res.min_days_required} days)`);
+      if (!res.target_cpm) return el("span", { class: "muted" }, "Set a target CPM");
+      return el("span", {}, price(r.suggested_weekly_price));
+    };
+    const warn = (r) => (r.price_warning
+      ? el("span", { class: "badge badge--warn" }, r.price_warning === "above" ? "Current price >30% above suggestion" : "Current price >30% below suggestion") : "");
+    const wlRows = wl.rows;
+    panel.replaceChildren(
+      el("p", { class: "small muted" }, "Real numbers only. A spot needs 14 days of data before a price is suggested. Suggested weekly price = average weekly views × target CPM ÷ 1,000. Fill rate counts sold slot-days ÷ available slot-days (Featured spots; Random rotation has no fixed slots)."),
+      actions(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Window"), days),
+        el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Target price per 1,000 views (Rp)"), cpm), saveCpm,
+        button("Run ad jobs now", async () => {
+          const out = await api("run_ad_jobs");
+          toast(`Ad jobs ran: ${JSON.stringify(out)}`, "success");
+        })),
+      table([
+        { label: "Spot", render: (r) => spotName(r.spot) },
+        { label: "Location", key: "label" },
+        { label: "Views", key: "impressions" },
+        { label: "Unique visitors", key: "unique_visitors" },
+        { label: "Clicks", key: "clicks" },
+        { label: "CTR", render: (r) => (r.ctr_pct == null ? "—" : `${r.ctr_pct}%`) },
+        { label: "Fill rate", render: (r) => (r.fill_rate_pct == null ? "n/a" : `${r.fill_rate_pct}%`) },
+        { label: "Current weekly price (1 location)", render: (r) => price(r.current_weekly_price) },
+        { label: "Suggested weekly price", render: suggest },
+        { label: "Check", render: warn },
+      ], rows, "No ad data yet. New platform: launch pricing applies."),
+      el("h2", {}, `Waitlist (${wl.total_waiting} waiting)`),
+      table([
+        { label: "Spot", render: (r) => spotName(r.spot) },
+        { label: "Reach", key: "scope_level" },
+        { label: "Location", render: (r) => r.label ?? "any" },
+        { label: "Days wanted", key: "desired_duration" },
+        { label: "Waiting", key: "waiting" },
+      ], wlRows, "Nobody is on the waitlist yet."));
+  },
+
+  /** Slots & utilization: per-location slot settings, fill/status metrics, waitlist price proposals, price history. */
+  async slots(panel, reload, state) {
+    const c = getClient();
+    const [util, cfgs, props, cat, countries, regions, cities, campuses] = await Promise.all([
+      api("utilization"), api("list_slot_configs"), api("list_price_proposals"), api("list_catalog"),
+      query(c.from("countries").select("code,name").order("name")), query(c.from("regions").select("id,name").order("name")),
+      query(c.from("cities").select("id,name").order("name")), query(c.from("campuses").select("id,name,short_name").order("name")),
+    ]);
+    const cfg = Object.fromEntries(cat.config.map((row) => [row.key, row.value]));
+    const cv = (k, d) => cfg[k] ?? d;
+    const num = (value, attrs = {}) => el("input", { type: "number", value: String(value), ...attrs });
+    const under = num(cv("slot_underfilled_pct", 50), { min: "1", max: "99" });
+    const sold = num(cv("slot_soldout_pct", 85), { min: "2", max: "100" });
+    const hold = num(cv("waitlist_hold_hours", 24), { min: "1", max: "168" });
+    const stepOn = el("input", { type: "checkbox", checked: cv("ad_auto_price_step_enabled", false) || null });
+    const step = num(cv("ad_auto_price_step_pct", 20), { min: "0", max: "30" });
+    const saveSet = button("Save settings", async () => {
+      await api("set_config", { key: "slot_underfilled_pct", value: Number(under.value) });
+      await api("set_config", { key: "slot_soldout_pct", value: Number(sold.value) });
+      await api("set_config", { key: "waitlist_hold_hours", value: Number(hold.value) });
+      await api("set_config", { key: "ad_auto_price_step_pct", value: Number(step.value) });
+      await api("set_config", { key: "ad_auto_price_step_enabled", value: stepOn.checked });
+      toast("Saved.", "success");
+      reload();
+    });
+    const badge = (st) => el("span", { class: `badge ${st === "sold_out" ? "badge--warn" : ""}` },
+      { sold_out: "Sold out", healthy: "Healthy", underfilled: "Underfilled", no_data: "Not enough data" }[st] ?? st);
+    const pct = (n) => (n == null ? "—" : `${n}%`);
+
+    // location picker for the slot editor
+    const locs = [["global:*", "Everywhere"], ...countries.map((x) => [`country:${x.code}`, `Country: ${x.name}`]),
+      ...regions.map((x) => [`region:${x.id}`, `Region: ${x.name}`]), ...cities.map((x) => [`city:${x.id}`, `City: ${x.name}`]),
+      ...campuses.map((x) => [`campus:${x.id}`, `Campus: ${x.short_name ?? x.name}`])];
+    const pick = el("select", { "aria-label": "Location" }, ...locs.map(([v, l]) => el("option", { value: v }, l)));
+    const eSlots = num(cfgs.default_slots, { min: "1", max: "10" });
+    const eTop = num(0, { min: "0", max: "10" });
+    const eTopM = num(1.5, { min: "1", max: "5", step: "0.1" });
+    const eStdM = num(1, { min: "0.5", max: "5", step: "0.1" });
+    const eRot = el("select", {}, el("option", { value: "equal_share" }, "Equal share (rotation)"), el("option", { value: "fixed_position" }, "Fixed position"));
+    const fill = (key) => {
+      const row = cfgs.rows.find((x) => x.key === key);
+      const k = row?.cfg ?? { slots: cfgs.default_slots, top_slots: 0, top_multiplier: 1.5, standard_multiplier: 1, rotation_mode: "equal_share" };
+      eSlots.value = k.slots; eTop.value = k.top_slots; eTopM.value = k.top_multiplier; eStdM.value = k.standard_multiplier; eRot.value = k.rotation_mode;
+      pick.value = key;
+    };
+    pick.addEventListener("change", () => fill(pick.value));
+    const saveSlots = button("Save slots", async () => {
+      const res = await api("set_slot_config", { key: pick.value, slots: Number(eSlots.value), top_slots: Number(eTop.value),
+        top_multiplier: Number(eTopM.value), standard_multiplier: Number(eStdM.value), rotation_mode: eRot.value });
+      toast(res.blocks_new_sales ? "Saved. Running campaigns are untouched; new sales are blocked until space frees up." : "Saved.", "success", 7000);
+      reload();
+    });
+
+    // price history for one package
+    const histBox = el("div", {});
+    const histSel = el("select", { "aria-label": "Package" }, ...cat.ad_products.filter((x) => x.placement === "featured").map((x) => el("option", { value: x.id }, x.name)));
+    const showHist = async () => {
+      const rows = await api("price_history", { id: histSel.value });
+      histBox.replaceChildren(table([
+        { label: "When", render: (r) => formatDate(r.changed_at) },
+        { label: "Base fee", render: (r) => (r.old_base == null || r.new_base == null || r.old_base === r.new_base) ? "unchanged" : `${formatRupiah(r.old_base)} → ${formatRupiah(r.new_base)}` },
+        { label: "Fill 30d before", render: (r) => pct(r.fill_before_30d) },
+        { label: "Fill 30d after", render: (r) => pct(r.fill_after_30d) },
+      ], rows, "No price changes yet."));
+    };
+    histSel.addEventListener("change", showHist);
+
+    panel.replaceChildren(
+      el("p", { class: "small muted" }, "Recommendations only: nothing here changes a price or a slot by itself. Fill rate = sold slot-days ÷ available slot-days at the current slot count. Reducing slots never ends a running campaign; it only blocks new sales."),
+      el("h2", {}, "Utilization"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Slots", key: "slots" },
+        { label: "Fill 7d", render: (r) => pct(r.fill_7) },
+        { label: "Fill 30d", render: (r) => pct(r.fill_30) },
+        { label: "Fill 90d", render: (r) => pct(r.fill_90) },
+        { label: "Avg days to sell out", render: (r) => (r.avg_days_to_sell_out == null ? "—" : r.avg_days_to_sell_out) },
+        { label: "Waitlist", key: "waitlist" },
+        { label: "Status", render: (r) => badge(r.status) },
+        { label: "Recommendation", render: (r) => r.recommendation ?? "" },
+      ], util.rows, util.enough_data ? "No featured locations yet. New platform: launch pricing applies." : "Not enough data yet (14 days of featured sales are needed)."),
+      el("h2", {}, "Settings"),
+      el("div", { class: "form-grid" },
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Underfilled below (% fill, 30 days)"), under),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Sold out above (% fill, 30 days)"), sold),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Waitlist hold (hours)"), hold),
+        el("label", { class: "check" }, stepOn, el("span", {}, "Suggest a price step for locations that sold out (you approve each one; never automatic)")),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Price step % (max 30)"), step), saveSet),
+      el("h2", {}, "Slots per location"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Slots", render: (r) => r.cfg.slots },
+        { label: "Top slots", render: (r) => r.cfg.top_slots },
+        { label: "Top ×", render: (r) => r.cfg.top_multiplier },
+        { label: "Standard ×", render: (r) => r.cfg.standard_multiplier },
+        { label: "Rotation", render: (r) => (r.cfg.rotation_mode === "equal_share" ? "Equal share" : "Fixed position") },
+        { label: "Running now (peak 30d)", key: "in_use_peak_30d" },
+        { label: "", render: (r) => button("Edit", () => { fill(r.key); pick.scrollIntoView({ block: "center" }); }, "btn btn--small") },
+      ], cfgs.rows, `All locations use the default of ${cfgs.default_slots} slots until you change one.`),
+      el("div", { class: "form-grid" },
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Location"), pick),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Slots (1–10)"), eSlots),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Of which top slots"), eTop),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Top price multiplier"), eTopM),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Standard price multiplier"), eStdM),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Rotation"), eRot), saveSlots),
+      el("h2", {}, "Price proposals"),
+      actions(button("Check for proposals now", async () => {
+        const out = await api("generate_price_proposals");
+        toast(`${out.created} new proposal(s).`, "success");
+        reload();
+      })),
+      table([
+        { label: "Package", key: "product_name" },
+        { label: "Change", render: (r) => `${formatRupiah(r.old_base)} → ${formatRupiah(r.new_base)} (+${r.step_pct}%)` },
+        { label: "Why", key: "reason" },
+        { label: "Status", key: "status" },
+        { label: "", render: (r) => (r.status !== "pending" ? "" : actions(
+          button("Approve", async () => {
+            const ok = await openDialog({ title: "Apply this price?", body: el("p", {}, "It applies to NEW submissions only. Existing campaigns and orders keep the price they were sold at."), okLabel: "Approve" });
+            if (!ok) return;
+            await api("decide_price_proposal", { id: r.id, approve: true });
+            toast("Price updated for new quotes.", "success");
+            reload();
+          }),
+          button("Reject", async () => { await api("decide_price_proposal", { id: r.id, approve: false }); reload(); }, "btn btn--small btn--danger"))) },
+      ], props, "No proposals."),
+      el("h2", {}, "Price history"),
+      actions(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Package"), histSel)),
+      histBox);
+    fill(locs[0][0]);
+    if (histSel.value) showHist();
+  },
+
+  /** Auctions: OFF by default. Global switch + kill switch, per-location flags with a readiness check, open/cancel, bid log. */
+  async auctions(panel, reload) {
+    const [o, cat] = await Promise.all([api("auction_overview"), api("list_catalog")]);
+    const cfg = Object.fromEntries(cat.config.map((row) => [row.key, row.value]));
+    const num = (k, d, attrs = {}) => el("input", { type: "number", value: String(cfg[k] ?? d), ...attrs });
+    const hours = num("auction_hours", 72, { min: "1", max: "168" });
+    const incr = num("auction_min_increment", 10000, { min: "1000", step: "1000" });
+    const payH = num("auction_pay_hours", 24, { min: "1", max: "168" });
+    const strikes = num("auction_max_strikes", 3, { min: "1", max: "10" });
+    const fillPct = num("auction_min_fill_pct", 85, { min: "1", max: "100" });
+    const fillWeeks = num("auction_fill_weeks", 4, { min: "1", max: "12" });
+    const wlMult = num("auction_waitlist_multiple", 2, { min: "1", max: "20" });
+    const saveCfg = button("Save auction settings", async () => {
+      for (const [k, i] of [["auction_hours", hours], ["auction_min_increment", incr], ["auction_pay_hours", payH], ["auction_max_strikes", strikes],
+        ["auction_min_fill_pct", fillPct], ["auction_fill_weeks", fillWeeks], ["auction_waitlist_multiple", wlMult]]) await api("set_config", { key: k, value: Number(i.value) });
+      toast("Saved.", "success");
+      reload();
+    });
+
+    const toggleGlobal = button(o.enabled ? "Turn auctions off" : "Turn auctions on…", async () => {
+      if (o.enabled) { await api("auction_set_enabled", { enabled: false }); reload(); return; }
+      const input = el("input", { name: "confirm", autocomplete: "off" });
+      const data = await openDialog({ title: "Turn auctions on?", okLabel: "Turn on", danger: true,
+        body: el("div", { class: "stack" }, el("p", {}, "Auctions only run on locations you enable below, and only for the next period of a sold-out slot. Type ENABLE AUCTIONS to continue."), input) });
+      if (!data) return;
+      await api("auction_set_enabled", { enabled: true, confirm: String(data.get("confirm") ?? "") });
+      toast("Auctions are on.", "success");
+      reload();
+    }, o.enabled ? "btn btn--small" : "btn btn--small btn--primary");
+    const kill = button("Kill switch", async () => {
+      const reason = await promptReason("Kill switch: turn auctions off and cancel every open auction?", { required: true, danger: true, okLabel: "Cancel all auctions" });
+      if (!reason) return;
+      const res = await api("auction_kill_switch", { reason });
+      toast(`Auctions off. ${res.canceled} open auction(s) canceled. Fixed prices continue.`, "success", 8000);
+      reload();
+    }, "btn btn--small btn--danger");
+
+    const readiness = (r) => {
+      const x = r.readiness;
+      return el("span", { class: x.ready ? "" : "muted" }, `${x.weeks_ok}/${x.weeks_required} weeks above ${x.fill_threshold}% · waitlist ${x.waitlist}/${x.waitlist_needed}`);
+    };
+    const locationFlag = (r) => (r.enabled
+      ? button("Disable", async () => { await api("auction_set_location", { key: r.key, enabled: false }); reload(); }, "btn btn--small")
+      : button("Enable", async () => {
+        let override = null;
+        if (!r.readiness.ready) {
+          override = await promptReason("This location is not ready for auctions. Enable anyway?", { required: true, okLabel: "Override and enable", danger: true });
+          if (!override) return;
+        }
+        await api("auction_set_location", { key: r.key, enabled: true, override_reason: override });
+        reload();
+      }, "btn btn--small"));
+
+    const locSel = el("select", { "aria-label": "Location" }, ...o.locations.filter((l) => l.enabled).map((l) => el("option", { value: l.key }, l.label)));
+    const prodSel = el("select", { "aria-label": "Package" });
+    // The server only accepts a package whose reach matches the location (campus package for a campus, and so on).
+    const fillProducts = () => {
+      const level = String(locSel.value).split(":")[0];
+      const ok = cat.ad_products.filter((x) => x.placement === "featured" && x.enabled && x.scope_level === level);
+      prodSel.replaceChildren(...(ok.length ? ok : []).map((x) => el("option", { value: x.id }, x.name)));
+    };
+    locSel.addEventListener("change", fillProducts);
+    fillProducts();
+    const open = button("Start auction", async () => {
+      if (!locSel.value) { toast("Enable auctions for a location first (table above).", "error"); return; }
+      if (!prodSel.value) { toast("No enabled Featured package matches this location's reach.", "error"); return; }
+      const res = await api("auction_open", { key: locSel.value, product_id: prodSel.value });
+      toast(`Auction started. Reserve ${formatRupiah(res.reserve)}; slot starts ${res.period_start}.`, "success", 8000);
+      reload();
+    });
+
+    const bidLog = async (a) => {
+      const d = await api("auction_bids", { id: a.id });
+      const rows = d.bids.map((b) => el("tr", {},
+        el("td", {}, formatDate(b.created_at, true)), el("td", {}, b.email ?? b.bidder_id), el("td", {}, formatRupiah(b.amount)),
+        el("td", {}, `${b.status}${b.buy_now ? " (buy now)" : ""}${b.cancel_reason ? `: ${b.cancel_reason}` : ""}`), el("td", {}, b.ip),
+        el("td", {}, b.status === "valid" && a.status === "open" ? button("Cancel bid", async () => {
+          const reason = await promptReason("Cancel this bid?", { required: true, danger: true, okLabel: "Cancel bid" });
+          if (!reason) return;
+          await api("auction_cancel_bid", { id: b.id, reason });
+          toast("Bid canceled.", "success");
+          reload();
+        }, "btn btn--small btn--danger") : "")));
+      await openDialog({ title: `Bid log · ${a.label}`, okLabel: "Close",
+        body: el("div", { class: "stack" },
+          d.flags.length ? el("p", { class: "notice" }, `Flags: ${d.flags.map((f) => `${f.kind} (${f.details.bidders?.length ?? 0} accounts on one network)`).join("; ")}`) : "",
+          el("table", { class: "table" }, el("thead", {}, el("tr", {}, ...["Time", "Bidder", "Amount", "Status", "Network", ""].map((h) => el("th", {}, h)))), el("tbody", {}, ...rows)),
+          d.offers.length ? el("p", { class: "small" }, `Offers: ${d.offers.map((x) => `${x.bidder} ${formatRupiah(x.amount)} (${x.status})`).join("; ")}`) : "") });
+    };
+
+    panel.replaceChildren(
+      el("p", { class: o.enabled ? "notice" : "notice notice--warn" }, o.enabled ? "Auctions are ON globally." : "Auctions are OFF. Nothing here affects fixed-price sales while they are off."),
+      actions(toggleGlobal, kill),
+      el("p", { class: "small muted" }, "Rules: next period of a full slot only · reserve = current fixed price · buy now = 1.5× reserve · highest valid bid wins, earliest bid breaks ties · anti-sniping +5 min (max 6) · no money is taken at bid time (Midtrans has no authorization hold here): the winner gets a payment window, unpaid goes to the next bidder and earns a strike."),
+      el("h2", {}, "Settings"),
+      el("div", { class: "form-grid" },
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Auction length (hours)"), hours),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Minimum raise (Rp)"), incr),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Winner payment window (hours)"), payH),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Strikes before bidding is blocked"), strikes),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Readiness: fill above (%)"), fillPct),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Readiness: consecutive weeks"), fillWeeks),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Readiness: waitlist ≥ this × slots"), wlMult), saveCfg),
+      el("h2", {}, "Auction readiness"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Readiness", render: readiness },
+        { label: "Ready", render: (r) => (r.readiness.ready ? "Yes" : "No") },
+        { label: "Auctions", render: (r) => (r.enabled ? "On" : "Off") },
+        { label: "", render: locationFlag },
+      ], o.locations, "No featured locations yet."),
+      el("h2", {}, "Start an auction"),
+      actions(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Location"), locSel),
+        el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Package"), prodSel), open),
+      el("h2", {}, "Auctions"),
+      table([
+        { label: "Location", key: "label" },
+        { label: "Status", render: (a) => ({ open: "Open for bids", awaiting_payment: "Winner must pay", settled: "Sold", no_winner: "No winner", canceled: "Canceled" }[a.status] ?? humanize(a.status)) },
+        { label: "Slot starts", key: "period_start" },
+        { label: "Reserve", render: (a) => formatRupiah(a.reserve) },
+        { label: "High bid", render: (a) => (a.high ? formatRupiah(a.high) : "—") },
+        { label: "Bids", key: "bids" },
+        { label: "Ends", render: (a) => `${formatDate(a.ends_at, true)}${a.extensions ? ` (+${a.extensions})` : ""}` },
+        { label: "Flags", key: "flags" },
+        { label: "", render: (a) => actions(button("Bid log", () => bidLog(a), "btn btn--small"),
+          ["open", "awaiting_payment"].includes(a.status) ? button("Cancel", async () => {
+            const reason = await promptReason("Cancel this auction?", { required: true, danger: true, okLabel: "Cancel auction" });
+            if (!reason) return;
+            await api("auction_cancel", { id: a.id, reason });
+            reload();
+          }, "btn btn--small btn--danger") : "") },
+      ], o.auctions, "No auctions yet."),
+      el("h2", {}, "Accounts with unpaid-win strikes"),
+      table([
+        { label: "Account", render: (x) => x.email ?? x.user_id },
+        { label: "Strikes", key: "strikes" },
+        { label: "", render: (x) => button("Clear", async () => {
+          const reason = await promptReason("Clear this account's strikes?", { required: true, okLabel: "Clear" });
+          if (!reason) return;
+          await api("auction_clear_strikes", { user_id: x.user_id, reason });
+          reload();
+        }, "btn btn--small") },
+      ], o.strikes, "No strikes."));
   },
 
   async locations(panel, reload, state) {
@@ -650,6 +1078,68 @@ const panels = {
   },
 };
 
+// Per-tab help shown above each panel: what the tab is for, and what to do in it.
+// `sub` describes each section heading (h2) inside the tab; it is added only where the panel has no text of its own.
+const GUIDE = {
+  overview: { what: "Your starting page: what needs doing now, and how the site is doing.",
+    steps: ["Start with “Needs your attention”. Each line has a button that opens the right tab.", "When it says “All clear”, nothing is waiting for you.", "Last 7 days and Whole site are just for reading. Nothing on them changes anything.", "Use Common tasks for the jobs you will do most. The left menu has everything else."],
+    sub: { "Needs your attention": "Work that only you can do. Clear these first.", "Last 7 days": "Recent money and activity.", "Whole site": "Totals since the site started.", "Common tasks": "Shortcuts to the tabs you will use most.", "Housekeeping": "Optional cleanup." } },
+  moderation: { what: "Every sticky note on the wall. Approve, reject or remove notes.",
+    steps: ["Status filter starts on Pending moderation: notes waiting for a decision (only filled when Note moderation is set to hold for approval).", "Read the note and open its media links. Approve to publish, Reject to refuse it.", "Use Remove on a published note that breaks the rules. Restore brings a removed note back.", "A reason is optional but write one: it goes into the Audit log."] },
+  reports: { what: "Notes that visitors reported. Only open reports are listed.",
+    steps: ["Read the reason, details and the note text.", "Note breaks the rules: Remove note (also closes the report).", "Report is valid but needs no removal: Resolve. Report is wrong or spam: Dismiss."] },
+  users: { what: "All accounts. Find a person, suspend them, or delete the account.",
+    steps: ["Search by name or email.", "Suspend blocks the account and its sign-in. A reason is required. Unsuspend reverses it.", "Admin accounts have no buttons here. Delete account is permanent: use it only when truly needed."] },
+  announcements: { what: "Site news shown to visitors. Pinned news stays on top of the wall.",
+    steps: ["Fill Title and Text, tick “Pin on the wall” if needed, then Save draft. Use Preview to check it first.", "A draft is not visible. Press Publish in the list to make it live.", "Unpublish moves it back to draft. Archive hides it for good. Edit loads it back into the form."],
+    sub: { "Write news": "Form for a new item, or for the item you pressed Edit on.", "Recent news": "All news items and their status. Publish, unpublish, archive or edit here." } },
+  orders: { what: "Every payment: sticky posts, donations and advertising orders.",
+    steps: ["Filter by kind and status. Tick “needs review” to see only orders the system flagged.", "Details shows the full record. Reconcile with Midtrans asks the payment provider for the true status: use it when a customer says they paid but the order did not update.", "Waive payment publishes an unpaid sticky post for free (reason required, recorded as waived).", "Clear review flag after you checked a flagged order.", "Customer sends a receipt ID? Paste it in the lookup box at the top to find that note."] },
+  revenue: { what: "Money report for a date range, in Jakarta time.",
+    steps: ["Pick From and To. “To” is not included, so use the next day to include a whole last day.", "Press Run report.", "Hover a figure name or read Definitions below to see how it is counted. Net collected is money in minus refunds."] },
+  promos: { what: "Discount codes for sticky posts.",
+    steps: ["Enter a code (4–24 letters/digits), type (% or Rp), and value. 100% makes the post free.", "Set Max uses, Uses per person and an expiry date if wanted. Press Create code.", "Disable a code to stop it. Enable brings it back. Codes cannot be deleted from here.", "The discount only cuts the minimum price. Anything paid above it is a tip."] },
+  referrals: { what: "Who invited whom, and the credits earned.",
+    steps: ["Check Status and reject reason to see if a referral counted.", "Credits are used to pay for posts. Revoke referral credits takes back unused credits from fraud or abuse (reason required). Credits already spent stay spent.", "“Credit (old)” and “Revoke credit” are for the old credit system."] },
+  campaigns: { what: "Advertiser campaigns. Review, approve and control every ad.",
+    steps: ["Status filter starts on Pending approval. Read the ad, check the creative image and the link.", "Approve a good ad. The advertiser then has a set number of days to pay (see Prices & settings). Reject a bad one and give a reason.", "Pending review + paid: approve to schedule it.", "Pause stops a running ad. Resume restarts it. Cancel ends it for good.", "Stats column is views / clicks."] },
+  adinsights: { what: "Performance per ad spot and location, plus a price suggestion.",
+    steps: ["Choose the window (7 or 30 days).", "Set Target price per 1,000 views, then Save.", "Read Views, Clicks, CTR and Fill rate. A suggested price shows only after 14 days of data.", "Waitlist shows advertisers waiting for a full location: demand to raise prices or add slots.", "Nothing here changes prices by itself."],
+    sub: { "Waitlist": "Advertisers waiting for a spot, by location and days wanted." } },
+  slots: { what: "How many ad slots each location has, how full they are, and price proposals.",
+    steps: ["Read Utilization: Fill 7d/30d/90d and status show which locations are underfilled or sold out.", "Set the thresholds and waitlist hold in Settings.", "Change a location’s slots, top slots, price multipliers and rotation in Slots per location. Fewer slots never ends a running ad.", "Review Price proposals (a sold-out location may suggest a price rise). Approve or reject each one: nothing is automatic.", "Price history shows past changes and fill before and after."],
+    sub: { "Utilization": "How full each location is over 7, 30 and 90 days, with a recommendation.", "Settings": "Where “underfilled” and “sold out” start, how long a waitlist spot is held, and the optional price-step suggestion.", "Slots per location": "Slot count, top slots and price multipliers per location. Press Edit to load one into the form.", "Price proposals": "Suggested price rises for sold-out locations. Approve or reject each.", "Price history": "Past base-fee changes for a Featured package, with fill before and after." } },
+  auctions: { what: "Auctions for the next period of a sold-out Featured slot. Off by default.",
+    steps: ["Set the rules in Settings, then Save auction settings.", "Check Auction readiness. A location is ready when it was full for enough weeks and has enough waitlist.", "Turn auctions on (type ENABLE AUCTIONS), then Enable them per location. Enabling an unready location needs a reason.", "Pick location and package, then Start auction.", "Watch Auctions: Bid log shows every bid, Cancel stops one auction.", "Kill switch turns auctions off and cancels all open auctions. Fixed prices keep working.", "Clear strikes for a bidder who won and did not pay, when appropriate."],
+    sub: { "Settings": "Length, minimum raise, payment time, strike limit and readiness rules.", "Auction readiness": "Which locations may run auctions, and whether they meet the rules.", "Start an auction": "Open a new auction. Only locations with auctions enabled appear.", "Auctions": "All auctions with status, bids and end time.", "Accounts with unpaid-win strikes": "Bidders who won and did not pay. At the strike limit they cannot bid." } },
+  catalog: { what: "Everything that sets what customers pay, plus general site settings.",
+    steps: ["Decorations: click one to change its name, price or visibility.", "Payment methods: set limits from your Midtrans agreement.", "Advertising packages: change base fee, extra-location %, and enable or disable packages. Old orders keep their old price.", "Site settings: change values, then press the save button at the bottom."],
+    sub: { "Decorations": "Stickers and decorations people add to notes. Click one to edit.", "Site settings": "Moderation mode, donation limits, order expiry, contact details, ad payment days, launch pricing and allowed campaign lengths." } },
+  locations: { what: "The places ads and notes can target: countries, regions, cities and campuses.",
+    steps: ["Add from the top down: country, then region, then city, then campus.", "Each form picks its parent, then a name. Press Add.", "Disable hides a place from pickers. Campaigns that targeted it stop matching it."],
+    sub: { "Countries": "Top level. Needs a 2-letter ISO code.", "Regions": "Provinces or states inside a country.", "Cities": "Cities inside a region.", "Campuses": "Individual campuses inside a city." } },
+  audit: { what: "Record of every admin action: who, what, on which item, and why.",
+    steps: ["Use it to check who changed something.", "Newest first, last 200 entries.", "The Reason column is what the admin typed, so ask admins to write real reasons."] },
+  security: { what: "Owner only. Permanent record of deletions made by the Owner.",
+    steps: ["Read-only. Nothing here can be deleted.", "Use it to confirm what was permanently deleted, when, and which item."] },
+};
+
+/** Adds the guide above a freshly built panel and a one-line description under each known section heading. */
+function addGuide(tab, panel, state) {
+  const g = GUIDE[tab];
+  if (!g) return;
+  for (const h of panel.querySelectorAll("h2")) {
+    const key = Object.keys(g.sub ?? {}).find((k) => h.textContent.startsWith(k));
+    const next = h.nextElementSibling;
+    if (key && !(next?.matches("p.small.muted"))) h.after(el("p", { class: "small muted" }, g.sub[key]));
+  }
+  const d = el("details", { class: "notice admin-guide" }, el("summary", {}, "What this does & how to use it"),
+    el("p", {}, g.what), el("ol", {}, ...g.steps.map((s) => el("li", {}, s))));
+  d.open = state.guideOpen !== false;
+  d.addEventListener("toggle", () => { state.guideOpen = d.open; });
+  panel.prepend(d);
+}
+
 export async function mount(view, { signal }) {
   const user = currentUser();
   if (!user || !(await isAdmin())) {
@@ -657,7 +1147,7 @@ export async function mount(view, { signal }) {
     const r = refs(frag);
     r.title.textContent = "Administrators only";
     r.message.textContent = user ? "Your account does not have administrator access." : "Sign in with an administrator account.";
-    view.append(frag);
+    view.append(translate(frag));
     return;
   }
   view.append(cloneTemplate("tpl-admin"));
@@ -669,10 +1159,13 @@ export async function mount(view, { signal }) {
   const show = async () => {
     const id = ++req;
     r.tabs.querySelectorAll("[data-tab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === state.tab)));
+    r.tabs.querySelector(`[data-tab="${state.tab}"]`)?.closest("details")?.setAttribute("open", "");
     r.panel.replaceChildren(el("p", { class: "muted" }, "Loading…"));
     try {
       const panel = el("div");
       await panels[state.tab](panel, show, state);
+      addGuide(state.tab, panel, state);
+      translate(panel);
       if (id === req && !signal.aborted) r.panel.replaceChildren(panel);
     } catch (err) {
       if (id === req) r.panel.replaceChildren(el("p", { class: "wall-error", role: "alert" }, errorMessage(err)));

@@ -36,8 +36,8 @@ insert into public.user_roles (user_id, role) values ('00000000-0000-0000-0000-0
 
 select id as campus from public.campuses where enabled limit 1 \gset
 -- ---- packages ---------------------------------------------------------------
-select pg_temp.must((select count(distinct duration_days) from public.ad_products where placement = 'promotions_feed' and enabled) >= 3, '7/14/30 day random packages');
-select pg_temp.must((select count(distinct duration_days) from public.ad_products where placement = 'featured' and enabled) >= 3, '7/14/30 day featured packages');
+select pg_temp.must((select count(distinct duration_days) from public.ad_products where placement = 'promotions_feed' and enabled) >= 2, '7/30 day random packages (14-day tier retired in 032)');
+select pg_temp.must((select count(distinct duration_days) from public.ad_products where placement = 'featured' and enabled) >= 2, '7/30 day featured packages (14-day tier retired in 032)');
 
 -- ---- submit: link + image optional, price frozen, waits for approval ------------
 select pg_temp.submit('00000000-0000-0000-0000-0000000000d1', 'feed-campus-7d', 0) as c1 \gset
@@ -81,7 +81,7 @@ select pg_temp.must((select status from public.campaigns where id = :'c1') = 'ex
 
 -- ---- scheduled (future start), then cancel -> refund review ---------------------------
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000d2');
-select pg_temp.submit('00000000-0000-0000-0000-0000000000d1', 'featured-campus-14d', 5) as c2 \gset
+select pg_temp.submit('00000000-0000-0000-0000-0000000000d1', 'featured-campus-30d', 5) as c2 \gset
 select public.admin_review_campaign(:'c2', 'approve', null);
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000d1');
 select public.create_ad_order('00000000-0000-0000-0000-0000000000d1', :'c2', repeat('b', 64));

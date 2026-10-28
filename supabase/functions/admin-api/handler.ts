@@ -11,6 +11,7 @@ import { HttpError, json, rateLimit, readJson, rpc } from "../_shared/security.t
 import * as v from "../_shared/validation.ts";
 import { purgeMediaOrphans } from "../_shared/media.ts";
 import { sendEmail } from "../_shared/email.ts";
+import { runAdJobs } from "../_shared/ad_jobs.ts";
 
 type P = Record<string, unknown>;
 const int = (x: unknown, d: number, max: number) =>
@@ -66,7 +67,45 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_enabled: v.bool(p.enabled, "enabled", true),
     p_sort: int(p.sort, 0, 1000),
     p_extra_pct: int(p.extra_pct, 100, 1000),
+    p_launch_pct: p.launch_pct === null || p.launch_pct === undefined || p.launch_pct === "" ? null : int(p.launch_pct, 0, 90),
+    p_confirm_active: v.bool(p.confirm_active, "confirm_active", false),
+    p_confirm_big: v.bool(p.confirm_big, "confirm_big", false),
   })],
+  ad_product_impact: ["admin_ad_product_impact", (p) => ({ p_id: v.str(p.id, "id", { min: 2, max: 60 }) })],
+  pricing_analytics: ["admin_pricing_analytics", (p) => ({ p_days: int(p.days, 30, 30) === 7 ? 7 : 30 })],
+  waitlist_counts: ["admin_waitlist_counts", () => ({})],
+  list_slot_configs: ["admin_list_slot_configs", () => ({})],
+  set_slot_config: ["admin_set_slot_config", (p) => ({
+    p_key: v.str(p.key, "key", { min: 3, max: 60 }),
+    p_slots: int(p.slots, 3, 10),
+    p_top_slots: int(p.top_slots, 0, 10),
+    p_top_multiplier: Number(p.top_multiplier ?? 1.5),
+    p_standard_multiplier: Number(p.standard_multiplier ?? 1),
+    p_rotation_mode: v.oneOf(p.rotation_mode, "rotation_mode", ["equal_share", "fixed_position"] as const),
+  })],
+  utilization: ["admin_utilization", () => ({})],
+  list_price_proposals: ["admin_list_price_proposals", () => ({})],
+  generate_price_proposals: ["admin_generate_price_proposals", () => ({})],
+  decide_price_proposal: ["admin_decide_price_proposal", (p) => ({
+    p_id: v.uuid(p.id, "id"), p_approve: v.bool(p.approve, "approve", false),
+  })],
+  price_history: ["admin_price_history", (p) => ({ p_product: v.str(p.id, "id", { min: 2, max: 60 }) })],
+  auction_overview: ["admin_auction_overview", () => ({})],
+  auction_set_enabled: ["admin_set_auctions_enabled", (p) => ({
+    p_enabled: v.bool(p.enabled, "enabled", false), p_confirm: optStr(p.confirm, "confirm", 40),
+  })],
+  auction_set_location: ["admin_set_auction_location", (p) => ({
+    p_key: v.str(p.key, "key", { min: 3, max: 60 }), p_enabled: v.bool(p.enabled, "enabled", false),
+    p_override_reason: optStr(p.override_reason, "override_reason", 500),
+  })],
+  auction_open: ["admin_open_auction", (p) => ({
+    p_key: v.str(p.key, "key", { min: 3, max: 60 }), p_product: v.str(p.product_id, "product_id", { min: 2, max: 60 }),
+  })],
+  auction_cancel: ["admin_cancel_auction", (p) => ({ p_id: v.uuid(p.id, "id"), p_reason: v.str(p.reason, "Reason", { min: 5, max: 500, multiline: true }) })],
+  auction_cancel_bid: ["admin_cancel_bid", (p) => ({ p_bid: v.uuid(p.id, "id"), p_reason: v.str(p.reason, "Reason", { min: 5, max: 500, multiline: true }) })],
+  auction_kill_switch: ["admin_auction_kill_switch", (p) => ({ p_reason: v.str(p.reason, "Reason", { min: 5, max: 500, multiline: true }) })],
+  auction_bids: ["admin_auction_bids", (p) => ({ p_auction: v.uuid(p.id, "id") })],
+  auction_clear_strikes: ["admin_clear_strikes", (p) => ({ p_user: v.uuid(p.user_id, "user_id"), p_reason: v.str(p.reason, "Reason", { min: 5, max: 500, multiline: true }) })],
   set_config: ["admin_set_config", (p) => ({ p_key: v.str(p.key, "key", { max: 60 }), p_value: p.value ?? null })],
   list_orders: ["admin_list_orders", (p) => ({
     p_kind: optStr(p.kind, "kind", 20), p_status: optStr(p.status, "status", 30),
@@ -205,6 +244,11 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     const fallback = parseNotification({ ...status, signature_key: "n/a" });
     const data = await rpc(deps.db, "apply_payment_notification", statusToRpcArgs(status, fallback));
     return json(req, 200, { data }, deps.env);
+  }
+
+  if (action === "run_ad_jobs") {
+    await assertAdmin(userDb, user);
+    return json(req, 200, { data: await runAdJobs(deps) }, deps.env);
   }
 
   if (action === "expire_stale_orders") {

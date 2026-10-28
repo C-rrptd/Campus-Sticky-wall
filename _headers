@@ -2,7 +2,7 @@
 # connect-src/img-src allow any *.supabase.co project; narrow them to your
 # project URL (https://<ref>.supabase.co) for production.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://*.supabase.co; media-src 'self' https://*.supabase.co; frame-src https://open.spotify.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://*.supabase.co; media-src 'self' https://*.supabase.co; frame-src https://open.spotify.com; connect-src 'self' https://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

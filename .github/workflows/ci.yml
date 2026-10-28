@@ -1,0 +1,51 @@
+# Checks on every pull request and push: migrations apply (and re-apply) on plain
+# Postgres, every supabase/tests/assert_*.sql passes, edge functions typecheck, and the
+# browser JavaScript parses. Nothing here deploys anything.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  sql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub Supabase roles and auth schema
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/tests/stub_auth.sql
+      - name: Apply migrations
+        run: for f in supabase/migrations/*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: Re-apply 006 onward (must be idempotent)
+        run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql supabase/migrations/02*_*.sql supabase/migrations/03*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: SQL assertions
+        run: for f in supabase/tests/assert_*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -t -A -f "$f" || exit 1; done
+
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+        with: { deno-version: v2.x }
+      - name: Typecheck edge functions and scripts
+        run: deno check supabase/functions/*/index.ts scripts/bootstrap-admin.ts
+      - name: Unit tests (Deno)
+        run: deno test supabase/functions/
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Parse browser JavaScript
+        run: for f in assets/js/*.js; do node --check "$f"; done; node --check sw.js; node --check "functions/n/[id].js"
+      - name: Unit tests (Node)
+        run: node --test tests/*.test.mjs

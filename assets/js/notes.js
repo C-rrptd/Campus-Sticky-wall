@@ -16,7 +16,7 @@ const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
 function tilt(id) {
   let h = 0;
   for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) | 0;
-  return ((Math.abs(h) % 7) - 3) * 0.6; // -1.8deg .. 1.8deg
+  return (Math.abs(h) % 7) - 3; // -3deg .. 3deg
 }
 
 const clampPct = (n) => Math.min(96, Math.max(4, Math.round(n * 100) / 100));
@@ -85,6 +85,8 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   const color = COLORS.has(note.color) ? note.color : "yellow";
   r.root.classList.add(`note--${color}`);
   r.root.style.setProperty("--tilt", `${tilt(note.id ?? note.body)}deg`);
+  // New random twist on every hover: 3..8deg, either direction. CSS applies it via --hover-tilt.
+  r.root.addEventListener("pointerenter", () => r.root.style.setProperty("--hover-tilt", `${(3 + Math.random() * 5) * (Math.random() < 0.5 ? -1 : 1)}deg`));
   // Stickers are placed copies: `stickers` (one entry per copy), or `placements` keyed by id on older data.
   const older = note.placements && typeof note.placements === "object" ? note.placements : {};
   const stickers = (Array.isArray(note.stickers) ? note.stickers : Object.entries(older).map(([id, p]) => ({ id, ...p })))

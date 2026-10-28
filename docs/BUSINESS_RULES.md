@@ -68,7 +68,7 @@ Rows from suspended accounts are hidden. Periods are all time, or the current we
 - Every target must match the package's scope level, enforced by a CHECK constraint per level. Unknown or disabled locations are rejected.
 - **Live** means status `active`, order `paid`, and now within `[starts_at, ends_at)`. Approval sets `starts_at = max(now, requested start)` and `ends_at = starts_at + duration`.
 - **Matching** (`get_promotions`): the viewer's selection is resolved upwards (campus → city → region → country). A campaign matches if any target is global, or equals the resolved country, region, city or campus. Results are grouped per campaign (no duplicates) and sorted most specific first. Campus-targeted campaigns are shown only to that campus audience. A missing or invalid selection yields global campaigns only.
-- Impressions (once per browser session per campaign, at 50% visible) and clicks are client-reported and approximate.
+- Impressions and clicks: since migration 032 these are counted on the server (one impression per visitor per ad per hour, bots and admins excluded, clicks through the `ad-click` function). See `docs/ADS_PHASES.md`. Older campaigns keep their earlier client-reported totals.
 
 ## 7. Donations
 

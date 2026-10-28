@@ -71,7 +71,7 @@ Never commit `.env` (it is gitignored). If a secret is ever committed, **rotate 
 - A restrictive `Permissions-Policy`.
 - `X-Frame-Options: DENY`.
 
-`scripts/build-site.sh` narrows `connect-src`/`img-src` to the exact Supabase project URL and removes `wss:`. The Midtrans redirect is a top-level navigation, validated against the `app.midtrans.com` / `app.sandbox.midtrans.com` hosts, so it needs no CSP allowance. `upgrade-insecure-requests` is deliberately omitted: every subresource is same-origin or an explicit `https://` origin, and the directive breaks local `wrangler pages dev` previews. The headers were checked in Cloudflare's local Pages runtime, but not yet on a real deployment.
+`scripts/build-site.sh` narrows `connect-src`/`img-src` to the exact Supabase project URL. The Midtrans redirect is a top-level navigation, validated against the `app.midtrans.com` / `app.sandbox.midtrans.com` hosts, so it needs no CSP allowance. `upgrade-insecure-requests` is deliberately omitted: every subresource is same-origin or an explicit `https://` origin, and the directive breaks local `wrangler pages dev` previews. The headers were checked in Cloudflare's local Pages runtime, but not yet on a real deployment.
 
 ### Keeping secret keys out of the browser
 

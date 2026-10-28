@@ -12,3 +12,24 @@
 .chart--clicks rect{fill:#16a34a}
 .chart__axis{font-size:9px;fill:var(--muted)}
 .campaign-item__chart summary{cursor:pointer}
+
+/* Phase 1: launch pricing, stats, tooltips */
+.price-was { text-decoration: line-through; color: var(--muted, #666); margin-inline-end: var(--space-2, .5rem); font-weight: 400; }
+.badge--founding { background: #fff4c2; color: #5b4300; border: 1px solid #e3c04a; }
+.adv-trust { font-size: .9rem; margin-top: var(--space-2, .5rem); }
+.help { cursor: help; border-bottom: 1px dotted currentColor; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-3, .75rem); margin: 0 0 var(--space-4, 1rem); }
+.stats-grid dt { font-size: .85rem; color: var(--muted, #666); }
+.stats-grid dd { margin: 0; font-size: 1.6rem; font-weight: 800; }
+.lock-note { margin: 0 0 var(--space-3, .75rem); }
+.waitlist-form > * + * { margin-top: var(--space-3, .75rem); }
+
+/* Phase 2: slot availability under the price summary */
+.adv-avail { margin: var(--space-2, .5rem) 0 0; padding-left: 1.1rem; }
+
+/* Phase 3: auction cards (only rendered while auctions are on and one is open) */
+.auction { margin-top: var(--space-2, .5rem); }
+.auction h3 { margin: 0 0 .25rem; font-size: 1rem; }
+.auction input[type=number] { max-width: 9rem; }
+.auction .row { flex-wrap: wrap; }
+.auction select { max-width: 100%; }
