@@ -13,10 +13,13 @@ import { busy, copyText, el, errorMessage, formatRupiah, local, openDialog, refs
 
 const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
 
+// New salt on every page load, so each note gets a different resting tilt after a reload (stable while the page stays open).
+const TILT_SALT = String(Math.random());
+
 function tilt(id) {
   let h = 0;
-  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) | 0;
-  return (Math.abs(h) % 7) - 3; // -3deg .. 3deg
+  for (const ch of TILT_SALT + String(id)) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return ((Math.abs(h) % 801) - 400) / 100; // -4deg .. 4deg
 }
 
 const clampPct = (n) => Math.min(96, Math.max(4, Math.round(n * 100) / 100));
@@ -85,8 +88,13 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   const color = COLORS.has(note.color) ? note.color : "yellow";
   r.root.classList.add(`note--${color}`);
   r.root.style.setProperty("--tilt", `${tilt(note.id ?? note.body)}deg`);
-  // New random twist on every hover: 3..8deg, either direction. CSS applies it via --hover-tilt.
-  r.root.addEventListener("pointerenter", () => r.root.style.setProperty("--hover-tilt", `${(3 + Math.random() * 5) * (Math.random() < 0.5 ? -1 : 1)}deg`));
+  // New random twist on every hover: -8..8deg, at least 4deg away from the resting tilt so it always visibly moves.
+  const base = tilt(note.id ?? note.body);
+  r.root.addEventListener("pointerenter", () => {
+    let t;
+    do t = Math.random() * 16 - 8; while (Math.abs(t - base) < 4);
+    r.root.style.setProperty("--hover-tilt", `${t}deg`);
+  });
   // Stickers are placed copies: `stickers` (one entry per copy), or `placements` keyed by id on older data.
   const older = note.placements && typeof note.placements === "object" ? note.placements : {};
   const stickers = (Array.isArray(note.stickers) ? note.stickers : Object.entries(older).map(([id, p]) => ({ id, ...p })))
