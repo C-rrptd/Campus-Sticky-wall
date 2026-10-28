@@ -637,23 +637,33 @@ const panels = {
     const locs = [["global:*", "Everywhere"], ...countries.map((x) => [`country:${x.code}`, `Country: ${x.name}`]),
       ...regions.map((x) => [`region:${x.id}`, `Region: ${x.name}`]), ...cities.map((x) => [`city:${x.id}`, `City: ${x.name}`]),
       ...campuses.map((x) => [`campus:${x.id}`, `Campus: ${x.short_name ?? x.name}`])];
-    const pick = el("select", { "aria-label": "Location" }, ...locs.map(([v, l]) => el("option", { value: v }, l)));
-    const eSlots = num(cfgs.default_slots, { min: "1", max: "10" });
-    const eTop = num(0, { min: "0", max: "10" });
-    const eTopM = num(1.5, { min: "1", max: "5", step: "0.1" });
-    const eStdM = num(1, { min: "0.5", max: "5", step: "0.1" });
-    const eRot = el("select", {}, el("option", { value: "equal_share" }, "Equal share (rotation)"), el("option", { value: "fixed_position" }, "Fixed position"));
-    const fill = (key) => {
-      const row = cfgs.rows.find((x) => x.key === key);
-      const k = row?.cfg ?? { slots: cfgs.default_slots, top_slots: 0, top_multiplier: 1.5, standard_multiplier: 1, rotation_mode: "equal_share" };
-      eSlots.value = k.slots; eTop.value = k.top_slots; eTopM.value = k.top_multiplier; eStdM.value = k.standard_multiplier; eRot.value = k.rotation_mode;
-      pick.value = key;
-    };
-    pick.addEventListener("change", () => fill(pick.value));
-    const saveSlots = button("Save slots", async () => {
-      const res = await api("set_slot_config", { key: pick.value, slots: Number(eSlots.value), top_slots: Number(eTop.value),
-        top_multiplier: Number(eTopM.value), standard_multiplier: Number(eStdM.value), rotation_mode: eRot.value });
-      toast(res.blocks_new_sales ? "Saved. Running campaigns are untouched; new sales are blocked until space frees up." : "Saved.", "success", 7000);
+    // One editable row per location (every location that exists, so new ones appear on their own), one Save for all.
+    const dflt = { slots: cfgs.default_slots, top_slots: 0, top_multiplier: 1.5, standard_multiplier: 1, rotation_mode: "equal_share" };
+    const byKey = new Map(cfgs.rows.map((x) => [x.key, x]));
+    const slotRows = [...locs.map(([key, label]) => ({ key, label: byKey.get(key)?.label ?? label })),
+      ...cfgs.rows.filter((x) => !locs.some(([k]) => k === x.key)).map((x) => ({ key: x.key, label: x.label }))]
+      .map((r) => {
+        const cfg = byKey.get(r.key)?.cfg ?? dflt;
+        const f = {
+          slots: num(cfg.slots, { min: "1", max: "10" }), top: num(cfg.top_slots, { min: "0", max: "10" }),
+          topM: num(cfg.top_multiplier, { min: "1", max: "5", step: "0.1" }), stdM: num(cfg.standard_multiplier, { min: "0.5", max: "5", step: "0.1" }),
+          rot: el("select", {}, el("option", { value: "equal_share" }, "Equal share (rotation)"), el("option", { value: "fixed_position" }, "Fixed position")),
+        };
+        f.rot.value = cfg.rotation_mode;
+        const read = () => ({ slots: Number(f.slots.value), top_slots: Number(f.top.value), top_multiplier: Number(f.topM.value),
+          standard_multiplier: Number(f.stdM.value), rotation_mode: f.rot.value });
+        return { ...r, f, read, orig: JSON.stringify(read()), peak: byKey.get(r.key)?.in_use_peak_30d ?? 0 };
+      });
+    const saveSlots = button("Save all", async () => {
+      const changed = slotRows.filter((r) => JSON.stringify(r.read()) !== r.orig);
+      if (!changed.length) return toast("No changes.", "success");
+      const failed = []; let blocked = false;
+      for (const r of changed) {
+        try { const res = await api("set_slot_config", { key: r.key, ...r.read() }); blocked ||= !!res.blocks_new_sales; r.orig = JSON.stringify(r.read()); }
+        catch (e) { failed.push(`${r.label}: ${e?.message ?? "failed"}`); }
+      }
+      if (failed.length) toast(`Saved ${changed.length - failed.length}, failed ${failed.length}. ${failed.join("; ")}`, "error", 9000);
+      else toast(blocked ? "Saved. Running campaigns are untouched; new sales are blocked where a location is full." : "Saved.", "success", 7000);
       reload();
     });
 
@@ -695,21 +705,14 @@ const panels = {
       el("h2", {}, "Slots per location"),
       table([
         { label: "Location", key: "label" },
-        { label: "Slots", render: (r) => r.cfg.slots },
-        { label: "Top slots", render: (r) => r.cfg.top_slots },
-        { label: "Top ×", render: (r) => r.cfg.top_multiplier },
-        { label: "Standard ×", render: (r) => r.cfg.standard_multiplier },
-        { label: "Rotation", render: (r) => (r.cfg.rotation_mode === "equal_share" ? "Equal share" : "Fixed position") },
-        { label: "Running now (peak 30d)", key: "in_use_peak_30d" },
-        { label: "", render: (r) => button("Edit", () => { fill(r.key); pick.scrollIntoView({ block: "center" }); }, "btn btn--small") },
-      ], cfgs.rows, `All locations use the default of ${cfgs.default_slots} slots until you change one.`),
-      el("div", { class: "form-grid" },
-        el("label", { class: "field" }, el("span", { class: "field__label" }, "Location"), pick),
-        el("label", { class: "field" }, el("span", { class: "field__label" }, "Slots (1–10)"), eSlots),
-        el("label", { class: "field" }, el("span", { class: "field__label" }, "Of which top slots"), eTop),
-        el("label", { class: "field" }, el("span", { class: "field__label" }, "Top price multiplier"), eTopM),
-        el("label", { class: "field" }, el("span", { class: "field__label" }, "Standard price multiplier"), eStdM),
-        el("label", { class: "field" }, el("span", { class: "field__label" }, "Rotation"), eRot), saveSlots),
+        { label: "Slots (1–10)", render: (r) => r.f.slots },
+        { label: "Top slots", render: (r) => r.f.top },
+        { label: "Top ×", render: (r) => r.f.topM },
+        { label: "Standard ×", render: (r) => r.f.stdM },
+        { label: "Rotation", render: (r) => r.f.rot },
+        { label: "Running now (peak 30d)", render: (r) => String(r.peak) },
+      ], slotRows, `All locations use the default of ${cfgs.default_slots} slots until you change one.`),
+      actions(saveSlots),
       el("h2", {}, "Price proposals"),
       actions(button("Check for proposals now", async () => {
         const out = await api("generate_price_proposals");
@@ -1108,7 +1111,7 @@ const GUIDE = {
     sub: { "Waitlist": "Advertisers waiting for a spot, by location and days wanted." } },
   slots: { what: "How many ad slots each location has, how full they are, and price proposals.",
     steps: ["Read Utilization: Fill 7d/30d/90d and status show which locations are underfilled or sold out.", "Set the thresholds and waitlist hold in Settings.", "Change a location’s slots, top slots, price multipliers and rotation in Slots per location. Fewer slots never ends a running ad.", "Review Price proposals (a sold-out location may suggest a price rise). Approve or reject each one: nothing is automatic.", "Price history shows past changes and fill before and after."],
-    sub: { "Utilization": "How full each location is over 7, 30 and 90 days, with a recommendation.", "Settings": "Where “underfilled” and “sold out” start, how long a waitlist spot is held, and the optional price-step suggestion.", "Slots per location": "Slot count, top slots and price multipliers per location. Press Edit to load one into the form.", "Price proposals": "Suggested price rises for sold-out locations. Approve or reject each.", "Price history": "Past base-fee changes for a Featured package, with fill before and after." } },
+    sub: { "Utilization": "How full each location is over 7, 30 and 90 days, with a recommendation.", "Settings": "Where “underfilled” and “sold out” start, how long a waitlist spot is held, and the optional price-step suggestion.", "Slots per location": "Slot count, top slots and price multipliers per location. Edit any row, then press Save all.", "Price proposals": "Suggested price rises for sold-out locations. Approve or reject each.", "Price history": "Past base-fee changes for a Featured package, with fill before and after." } },
   auctions: { what: "Auctions for the next period of a sold-out Featured slot. Off by default.",
     steps: ["Set the rules in Settings, then Save auction settings.", "Check Auction readiness. A location is ready when it was full for enough weeks and has enough waitlist.", "Turn auctions on (type ENABLE AUCTIONS), then Enable them per location. Enabling an unready location needs a reason.", "Pick location and package, then Start auction.", "Watch Auctions: Bid log shows every bid, Cancel stops one auction.", "Kill switch turns auctions off and cancels all open auctions. Fixed prices keep working.", "Clear strikes for a bidder who won and did not pay, when appropriate."],
     sub: { "Settings": "Length, minimum raise, payment time, strike limit and readiness rules.", "Auction readiness": "Which locations may run auctions, and whether they meet the rules.", "Start an auction": "Open a new auction. Only locations with auctions enabled appear.", "Auctions": "All auctions with status, bids and end time.", "Accounts with unpaid-win strikes": "Bidders who won and did not pay. At the strike limit they cannot bid." } },
