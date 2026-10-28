@@ -737,7 +737,6 @@ const panels = {
       el("h2", {}, "Price history"),
       actions(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Package"), histSel)),
       histBox);
-    fill(locs[0][0]);
     if (histSel.value) showHist();
   },
 
