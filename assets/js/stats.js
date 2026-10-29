@@ -31,6 +31,6 @@ export async function mount(view, { signal }) {
     }
   };
   await load();
-  const timer = setInterval(load, 60000);
+  const timer = setInterval(() => { if (!document.hidden) load(); }, 60000);
   signal.addEventListener("abort", () => clearInterval(timer));
 }

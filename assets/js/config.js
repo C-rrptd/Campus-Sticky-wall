@@ -9,7 +9,7 @@
 export const config = Object.freeze({
   supabaseUrl: "https://knpdfledhawndelifvqy.supabase.co",
   supabasePublishableKey: "sb_publishable_2XS-29fFMJ8z6p8FQRHcvg_39C8oMtO",
-  siteUrl: "https://campus-sticky-wall.pages.dev",
+  siteUrl: "https://campusstickywall.app",
   creativeBucket: "campaign-creatives",
 });
 
