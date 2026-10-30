@@ -1,8 +1,8 @@
 -- Username login for email accounts: a unique, case-insensitive username on profiles.
 -- Login resolves username -> email only inside the username-login Edge Function (service_role); the browser never sees emails.
 
-alter table public.profiles add column username text check (username ~ '^[A-Za-z0-9_.-]{3,30}$');
-create unique index profiles_username_key on public.profiles (lower(username));
+alter table public.profiles add column if not exists username text check (username ~ '^[A-Za-z0-9_.-]{3,30}$');
+create unique index if not exists profiles_username_key on public.profiles (lower(username));
 grant update (username) on public.profiles to authenticated;
 
 create or replace function public.handle_new_user() returns trigger
