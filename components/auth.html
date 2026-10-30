@@ -19,6 +19,7 @@
         <h1 class="page-title page-title--small">Create your account</h1>
         <p class="muted small">Accounts can vote, bookmark and earn referral credits. Posting a note never requires an account.</p>
         <label class="field"><span class="field__label">Display name</span><input name="display_name" maxlength="40" minlength="2" required autocomplete="nickname"></label>
+        <label class="field"><span class="field__label">Username (for signing in)</span><input name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_.\-]+" autocapitalize="none" spellcheck="false" autocomplete="off" required></label>
         <label class="field"><span class="field__label">Email</span><input name="email" type="email" autocomplete="email" required></label>
         <label class="field"><span class="field__label">Password (min. 10 characters)</span><input name="password" type="password" minlength="10" autocomplete="new-password" required></label>
         <label class="field"><span class="field__label">Referral code (optional)</span><input name="referral_code" maxlength="8" data-ref="refCode" autocapitalize="characters" placeholder="ABCD2345"></label>

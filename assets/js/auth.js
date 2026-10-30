@@ -3,9 +3,9 @@
 // database and Edge Functions.
 
 import { config } from "./config.js";
-import { getClient, query } from "./supabase-client.js";
+import { getClient, invoke, query, rpc } from "./supabase-client.js";
 import { pendingReferralCode } from "./referrals.js";
-import { isEmail, isUsername, loginLabel, loginToEmail, validatePassword } from "./validation.js";
+import { isEmail, isUsername, loginLabel, validatePassword } from "./validation.js";
 import { cloneTemplate } from "./component-loader.js";
 import { busy, errorMessage, refs, toast } from "./utils.js";
 
@@ -114,7 +114,15 @@ export async function mountAuthView(view, { params, signal }) {
       r.error.textContent = "";
       const login = String(data.get("email")).trim();
       if (!isEmail(login) && !isUsername(login)) { r.error.textContent = "Email or password is incorrect."; return; }
-      const { error } = await client.auth.signInWithPassword({ email: loginToEmail(login), password: String(data.get("password")) });
+      const password = String(data.get("password"));
+      let error;
+      if (isEmail(login)) ({ error } = await client.auth.signInWithPassword({ email: login, password }));
+      else {
+        try {
+          const session = await invoke("username-login", { username: login, password });
+          ({ error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }));
+        } catch (err) { error = err; }
+      }
       if (error) { r.error.textContent = friendly(error); return; }
       toast("Welcome back!", "success");
       window.location.hash = params.get("next") && /^\/[a-z/-]*$/.test(params.get("next")) ? `#${params.get("next")}` : "#/";
@@ -129,15 +137,18 @@ export async function mountAuthView(view, { params, signal }) {
     const referral = String(data.get("referral_code") ?? "").trim().toUpperCase();
     const pwError = validatePassword(data.get("password"));
     if (displayName.length < 2 || displayName.length > 40) { r.error.textContent = "Display name must be 2–40 characters."; return; }
+    const username = String(data.get("username")).trim();
+    if (!isUsername(username)) { r.error.textContent = "Username must be 3–30 characters: letters, digits, _ . -"; return; }
     if (!isEmail(email)) { r.error.textContent = "Enter a valid email address."; return; }
     if (pwError) { r.error.textContent = pwError; return; }
     if (referral && !/^[A-Z2-9]{8}$/.test(referral)) { r.error.textContent = "Referral codes have 8 letters/digits."; return; }
     busy(r.register.querySelector("button[type=submit]"), async () => {
       r.error.textContent = "";
+      if (!(await rpc("username_available", { p_username: username }))) { r.error.textContent = "That username is taken."; return; }
       const { data: res, error } = await client.auth.signUp({
         email,
         password: String(data.get("password")),
-        options: { emailRedirectTo: config.siteUrl, data: { display_name: displayName, referral_code: referral || undefined } },
+        options: { emailRedirectTo: config.siteUrl, data: { display_name: displayName, username, referral_code: referral || undefined } },
       });
       if (error) { r.error.textContent = friendly(error); return; }
       if (res.session) {

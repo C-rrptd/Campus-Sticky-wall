@@ -6,7 +6,7 @@ import { currentUser } from "./auth.js";
 import { getClient, query, rpc } from "./supabase-client.js";
 import { renderNote } from "./notes.js";
 import { buildLocationPicker, setLocationPref } from "./location.js";
-import { isAllowedSocialUrl, isHttpsUrl, loginLabel } from "./validation.js";
+import { isAllowedSocialUrl, isHttpsUrl, isUsername, loginLabel } from "./validation.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, refs, toast } from "./utils.js";
 
 const NOTE_STATUS = {
@@ -74,7 +74,7 @@ export async function mountProfile(view, { signal }) {
   let profile;
   try {
     [profile] = await query(client.from("profiles")
-      .select("display_name,avatar_url,social_links,donor_recognition,country_code,region_id,city_id,campus_id,suspended_at").eq("id", user.id));
+      .select("display_name,username,avatar_url,social_links,donor_recognition,country_code,region_id,city_id,campus_id,suspended_at").eq("id", user.id));
   } catch (err) {
     r.error.textContent = errorMessage(err);
     return;
@@ -83,6 +83,7 @@ export async function mountProfile(view, { signal }) {
   if (profile.suspended_at) r.error.textContent = "This account is suspended; profile changes are disabled.";
 
   form.display_name.value = profile.display_name;
+  form.username.value = profile.username ?? "";
   const paintHead = () => {
     const n = form.display_name.value.trim();
     r.headName.textContent = n || "Your name";
@@ -113,6 +114,8 @@ export async function mountProfile(view, { signal }) {
       r.error.textContent = "";
       const name = form.display_name.value.trim();
       if (name.length < 2 || name.length > 40) { r.error.textContent = "Display name must be 2–40 characters."; return; }
+      const username = form.username.value.trim();
+      if (username && !isUsername(username)) { r.error.textContent = "Username must be 3–30 characters: letters, digits, _ . -"; return; }
       const avatar = form.avatar_url.value.trim();
       if (avatar && !isHttpsUrl(avatar)) { r.error.textContent = "Avatar must be an https link."; return; }
       const social_links = {};
@@ -125,13 +128,13 @@ export async function mountProfile(view, { signal }) {
       }
       try {
         await query(client.from("profiles").update({
-          display_name: name, avatar_url: avatar || null, social_links, donor_recognition: form.donor_recognition.checked,
+          display_name: name, username: username || null, avatar_url: avatar || null, social_links, donor_recognition: form.donor_recognition.checked,
         }).eq("id", user.id));
         await setLocationPref(location);
         await client.auth.updateUser({ data: { display_name: name } });
         toast("Profile saved.", "success");
       } catch (err) {
-        r.error.textContent = errorMessage(err);
+        r.error.textContent = err?.code === "DUPLICATE" ? "That username is taken." : errorMessage(err);
       }
     });
   }, { signal });
