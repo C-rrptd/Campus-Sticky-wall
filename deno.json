@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "check": "deno check supabase/functions/*/index.ts scripts/bootstrap-admin.ts",
+    "check": "deno check supabase/functions/*/index.ts scripts/bootstrap-admin.ts scripts/create-username-user.ts",
     "lint": "deno lint"
   },
   "lint": {

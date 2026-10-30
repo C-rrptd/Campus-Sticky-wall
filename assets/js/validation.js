@@ -85,6 +85,26 @@ export function isEmail(value) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value ?? "").trim());
 }
 
+// Username accounts have no real mailbox: Supabase Auth still needs an email, so the username maps to a fixed
+// placeholder address. Nothing is ever sent there. Accounts are created by scripts/create-username-user.ts.
+export const USERNAME_DOMAIN = "users.csw.invalid";
+
+export function isUsername(value) {
+  return /^[a-z0-9_.-]{3,30}$/i.test(String(value ?? "").trim());
+}
+
+/** "alice" -> "alice@users.csw.invalid"; anything containing "@" is returned unchanged (trimmed). */
+export function loginToEmail(value) {
+  const v = String(value ?? "").trim();
+  return v.includes("@") ? v : `${v.toLowerCase()}@${USERNAME_DOMAIN}`;
+}
+
+/** What to show for a signed-in user: the username for placeholder addresses, else the email. */
+export function loginLabel(email) {
+  const e = String(email ?? "");
+  return e.toLowerCase().endsWith(`@${USERNAME_DOMAIN}`) ? e.slice(0, -USERNAME_DOMAIN.length - 1) : e;
+}
+
 export function validatePassword(value) {
   return String(value ?? "").length >= 10 ? null : "Passwords need at least 10 characters.";
 }

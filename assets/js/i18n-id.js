@@ -122,6 +122,7 @@ export const ID = {
   "Create account": "Buat akun",
   "Welcome back": "Selamat datang kembali",
   "Email": "Email",
+  "Email or username": "Email atau nama pengguna",
   "Password": "Kata sandi",
   "Forgot your password?": "Lupa kata sandi?",
   "Create your account": "Buat akunmu",

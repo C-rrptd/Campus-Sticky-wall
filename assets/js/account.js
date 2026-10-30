@@ -6,7 +6,7 @@ import { currentUser } from "./auth.js";
 import { getClient, query, rpc } from "./supabase-client.js";
 import { renderNote } from "./notes.js";
 import { buildLocationPicker, setLocationPref } from "./location.js";
-import { isAllowedSocialUrl, isHttpsUrl } from "./validation.js";
+import { isAllowedSocialUrl, isHttpsUrl, loginLabel } from "./validation.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, refs, toast } from "./utils.js";
 
 const NOTE_STATUS = {
@@ -28,7 +28,7 @@ export async function mount(view, { signal }) {
   if (!user) return signInRequired(view);
   view.append(cloneTemplate("tpl-account"));
   const r = refs(view);
-  r.name.textContent = user.user_metadata?.display_name || user.email;
+  r.name.textContent = user.user_metadata?.display_name || loginLabel(user.email);
 
   const tasks = [
     (async () => {
@@ -89,7 +89,7 @@ export async function mountProfile(view, { signal }) {
     r.avatar.textContent = Array.from(n)[0] ?? "?";
   };
   paintHead();
-  r.headEmail.textContent = user.email ?? "";
+  r.headEmail.textContent = loginLabel(user.email);
   form.display_name.addEventListener("input", paintHead, { signal });
   form.avatar_url.value = profile.avatar_url ?? "";
   form.donor_recognition.checked = profile.donor_recognition;

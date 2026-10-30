@@ -5,7 +5,7 @@
 import { config } from "./config.js";
 import { getClient, query } from "./supabase-client.js";
 import { pendingReferralCode } from "./referrals.js";
-import { isEmail, validatePassword } from "./validation.js";
+import { isEmail, isUsername, loginLabel, loginToEmail, validatePassword } from "./validation.js";
 import { cloneTemplate } from "./component-loader.js";
 import { busy, errorMessage, refs, toast } from "./utils.js";
 
@@ -95,7 +95,7 @@ export async function mountAuthView(view, { params, signal }) {
   const mode = params.get("mode");
   if (mode === "update" && state.user) show("update");
   else if (state.user) {
-    notice(`You are signed in as ${state.user.email}.`);
+    notice(`You are signed in as ${loginLabel(state.user.email)}.`);
     Object.values(forms).forEach((f) => { f.hidden = true; });
   } else show(mode === "register" || pendingReferralCode() ? "register" : "login");
 
@@ -112,7 +112,9 @@ export async function mountAuthView(view, { params, signal }) {
     const data = new FormData(r.login);
     busy(r.login.querySelector("button[type=submit]"), async () => {
       r.error.textContent = "";
-      const { error } = await client.auth.signInWithPassword({ email: String(data.get("email")).trim(), password: String(data.get("password")) });
+      const login = String(data.get("email")).trim();
+      if (!isEmail(login) && !isUsername(login)) { r.error.textContent = "Email or password is incorrect."; return; }
+      const { error } = await client.auth.signInWithPassword({ email: loginToEmail(login), password: String(data.get("password")) });
       if (error) { r.error.textContent = friendly(error); return; }
       toast("Welcome back!", "success");
       window.location.hash = params.get("next") && /^\/[a-z/-]*$/.test(params.get("next")) ? `#${params.get("next")}` : "#/";
