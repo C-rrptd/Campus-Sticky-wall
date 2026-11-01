@@ -6,3 +6,6 @@ pages_build_output_dir = "./dist"
 PUBLIC_SITE_URL = "https://campusstickywall.app"
 PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2XS-29fFMJ8z6p8FQRHcvg_39C8oMtO"
 PUBLIC_SUPABASE_URL = "https://knpdfledhawndelifvqy.supabase.co"
+
+[functions.midtrans-webhook]
+verify_jwt = false
