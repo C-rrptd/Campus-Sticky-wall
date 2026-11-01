@@ -138,3 +138,11 @@ Deno.test("validation: media paths, Spotify refs, strings", async () => {
   await throwsHttp(() => v.str("a\u0000b", "Name", { max: 10 }), 400);
   await throwsHttp(() => v.str("x".repeat(11), "Name", { max: 10 }), 400);
 });
+
+Deno.test("buildSnapBody: empty channel list omits enabled_payments", () => {
+  const b = JSON.parse(buildSnapBody({
+    orderRef: "CSW-P-TEST", grossAmount: "2500", enabledPayments: [], finishUrl: "https://example.test/#/checkout",
+    items: [{ id: "a", name: "Note", price: "2500", quantity: 1 }],
+  }));
+  eq("enabled_payments" in b, false, "key omitted");
+});

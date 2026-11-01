@@ -86,7 +86,8 @@ export function buildSnapBody(input: {
       price: raw(it.price),
       quantity: it.quantity,
     })),
-    enabled_payments: input.enabledPayments,
+    // Empty = omit: Snap then offers whatever the merchant dashboard has active.
+    ...(input.enabledPayments.length ? { enabled_payments: input.enabledPayments } : {}),
     callbacks: { finish: input.finishUrl },
     // Unpaid posts are deleted after 30 minutes, so the Snap session must not outlive them.
     ...(input.expiryMinutes ? { expiry: { unit: "minutes", duration: input.expiryMinutes } } : {}),

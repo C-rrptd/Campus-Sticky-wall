@@ -47,18 +47,28 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
 
   try {
-    const snapBody = buildSnapBody({
-      orderRef: ref,
-      grossAmount: lock.total_amount!,
-      items: lock.items!,
-      enabledPayments: lock.enabled_payments!,
-      // Midtrans appends order_id/status_code/transaction_status. The hash route
-      // works whether those land in the query (app.js reads order_id) or after
-      // the fragment (the router still sees order=...).
-      finishUrl: `${siteUrl.replace(/\/$/, "")}/#/checkout?order=${encodeURIComponent(ref)}&returned=1`,
-      expiryMinutes: 30, // matches record_payment_session (+5 min grace) and the 30-minute unpaid-post rule
-    });
-    const session = await createSnapTransaction(cfg, snapBody, deps.fetch);
+    const build = (enabledPayments: string[]) =>
+      buildSnapBody({
+        orderRef: ref,
+        grossAmount: lock.total_amount!,
+        items: lock.items!,
+        enabledPayments,
+        // Midtrans appends order_id/status_code/transaction_status. The hash route
+        // works whether those land in the query (app.js reads order_id) or after
+        // the fragment (the router still sees order=...).
+        finishUrl: `${siteUrl.replace(/\/$/, "")}/#/checkout?order=${encodeURIComponent(ref)}&returned=1`,
+        expiryMinutes: 30, // matches record_payment_session (+5 min grace) and the 30-minute unpaid-post rule
+      });
+    let session;
+    try {
+      session = await createSnapTransaction(cfg, build(lock.enabled_payments!), deps.fetch);
+    } catch (err) {
+      if (!(err instanceof HttpError) || err.code !== "PAYMENT_PROVIDER_REJECTED") throw err;
+      // shortcut: a channel we list may not be active on the merchant account (Midtrans 402), which fails the whole
+      // request. Retry once with the dashboard's own channels; amount and items are unchanged. Upgrade: prune per channel.
+      console.warn("Snap rejected enabled_payments; retrying with dashboard channels", err.message);
+      session = await createSnapTransaction(cfg, build([]), deps.fetch);
+    }
     await rpc(deps.db, "record_payment_session", {
       p_order_ref: ref,
       p_token: session.token,
