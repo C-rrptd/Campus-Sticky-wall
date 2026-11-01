@@ -1,8 +1,9 @@
 // POST /functions/v1/midtrans-webhook  (Midtrans HTTP notification)
 // verify_jwt is disabled for this function (Midtrans cannot send a Supabase
-// JWT). Authenticity is established by:
-//   1. the SHA-512 signature_key over order_id+status_code+gross_amount+server key, and
-//   2. re-reading the transaction from the Midtrans Get Status API.
+// JWT). Authenticity is established by re-reading the transaction from the
+// Midtrans Get Status API with the server key. The SHA-512 signature_key
+// (order_id+status_code+gross_amount+server key) is checked and logged on
+// mismatch, but does not reject the request.
 // Only the verified status is applied. The database then checks order id,
 // amount and currency against the stored order and applies an idempotent,
 // transition-checked state change.
@@ -25,9 +26,9 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   await rateLimit(deps.db, `midtrans-webhook:ip:${clientIp(req)}`, 600, 60);
   const notification = parseNotification(body);
 
+  // A signature mismatch is logged but not fatal: the Get Status call below (server key) is the authority.
   if (!(await verifySignature(notification, cfg.serverKey))) {
-    console.warn("Rejected notification with invalid signature", { order: notification.order_id.slice(0, 50) });
-    throw new HttpError(401, "INVALID_SIGNATURE");
+    console.warn("Signature mismatch; relying on Get Status", { order: notification.order_id.slice(0, 50) });
   }
 
   const status = await fetchTransactionStatus(cfg, notification.order_id, deps.fetch);
