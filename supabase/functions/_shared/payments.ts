@@ -122,10 +122,12 @@ export async function createSnapTransaction(
   if (!res.ok || typeof data.token !== "string" || typeof data.redirect_url !== "string") {
     const messages = Array.isArray(data.error_messages) ? data.error_messages.join("; ").slice(0, 300) : "";
     console.error("Midtrans Snap error", res.status, messages);
+    // Sandbox only: show Midtrans's own reason (e.g. 402 channel not activated). Production keeps it generic.
+    const detail = !cfg.production && messages ? ` [Midtrans sandbox ${res.status}: ${messages}]` : "";
     throw new HttpError(
       502,
       "PAYMENT_PROVIDER_REJECTED",
-      "The payment provider could not start checkout for this order. The amount was not changed; please try again or contact us.",
+      "The payment provider could not start checkout for this order. The amount was not changed; please try again or contact us." + detail,
     );
   }
   if (!String(data.redirect_url).startsWith("https://")) throw new HttpError(502, "PAYMENT_PROVIDER_REJECTED");
