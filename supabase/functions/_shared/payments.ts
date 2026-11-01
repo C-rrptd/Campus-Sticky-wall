@@ -121,7 +121,12 @@ export async function createSnapTransaction(
     throw new HttpError(502, "PAYMENT_PROVIDER_AUTH", "Payments are temporarily unavailable.");
   }
   if (!res.ok || typeof data.token !== "string" || typeof data.redirect_url !== "string") {
-    const messages = Array.isArray(data.error_messages) ? data.error_messages.join("; ").slice(0, 300) : "";
+    // Midtrans answers in several shapes: error_messages[], status_message, or a non-JSON (e.g. proxy) page.
+    const messages = (Array.isArray(data.error_messages)
+      ? data.error_messages.join("; ")
+      : typeof data.status_message === "string"
+      ? data.status_message
+      : text.replace(/\s+/g, " ")).slice(0, 300);
     console.error("Midtrans Snap error", res.status, messages);
     // Sandbox only: show Midtrans's own reason (e.g. 402 channel not activated). Production keeps it generic.
     const detail = !cfg.production && messages ? ` [Midtrans sandbox ${res.status}: ${messages}]` : "";
