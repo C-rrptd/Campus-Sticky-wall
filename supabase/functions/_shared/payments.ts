@@ -31,6 +31,9 @@ export function midtransConfig(env: (k: string) => string | undefined): Midtrans
   };
 }
 
+// Deno's default User-Agent may be blocked by Midtrans's edge (403 {"error":"Access denied"}); send our own.
+const UA = "CampusStickyWall/1.0 (+https://campusstickywall.app)";
+
 export function basicAuth(serverKey: string): string {
   return "Basic " + btoa(`${serverKey}:`);
 }
@@ -104,7 +107,7 @@ export async function createSnapTransaction(
   try {
     res = await fetchFn(cfg.snapUrl, {
       method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: basicAuth(cfg.serverKey) },
+      headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: basicAuth(cfg.serverKey), "User-Agent": UA },
       body,
       signal: AbortSignal.timeout(15000),
     });
@@ -183,7 +186,7 @@ export async function fetchTransactionStatus(
   try {
     res = await fetchFn(`${cfg.apiBase}/v2/${encodeURIComponent(orderId)}/status`, {
       method: "GET",
-      headers: { Accept: "application/json", Authorization: basicAuth(cfg.serverKey) },
+      headers: { Accept: "application/json", Authorization: basicAuth(cfg.serverKey), "User-Agent": UA },
       signal: AbortSignal.timeout(15000),
     });
   } catch {
