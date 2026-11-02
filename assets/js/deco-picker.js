@@ -1,6 +1,7 @@
 // Dropdown whose options show the decoration preview (a native <select> cannot).
 // ARIA: button + listbox, arrow keys / Home / End / Enter / Escape, closes on outside click.
 import { el } from "./utils.js";
+import { paintArt } from "./supabase-client.js";
 
 let uid = 0;
 
@@ -9,7 +10,7 @@ export function decoPicker({ options, placeholder, label, signal, onChange }) {
   const id = `picker${++uid}`;
   const rows = [{ value: "", name: placeholder }, ...options];
   let value = "", active = 0, open = false;
-  const swatch = (o) => (o.value ? el("span", { class: `deco-swatch deco-${o.value}`, "aria-hidden": "true" }) : null);
+  const swatch = (o) => (o.value ? paintArt(el("span", { class: `deco-swatch deco-${o.value}`, "aria-hidden": "true" }), o.value) : null);
   const text = (o) => el("span", {}, o.name, o.price ? el("small", {}, o.price) : null);
 
   const btn = el("button", { type: "button", class: "picker__btn", "aria-haspopup": "listbox", "aria-expanded": "false", "aria-label": label, "aria-controls": `${id}-list` });

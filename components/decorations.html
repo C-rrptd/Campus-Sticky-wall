@@ -1,0 +1,62 @@
+<!-- Community decorations: requirements, how-to tutorial, upload form, my uploads. -->
+<template id="tpl-decorations">
+  <section class="decorations-view">
+    <h1 class="page-title">Upload a decoration <span class="muted small">(admins only)</span></h1>
+    <nav class="subnav" aria-label="Account">
+      <a href="#/account">Dashboard</a>
+      <a href="#/profile">Profile</a>
+      <a href="#/referrals">Referrals</a>
+      <a href="#/advertise">My campaigns</a>
+    </nav>
+    <div class="grid-2">
+      <div class="card stack">
+        <h2>Requirements</h2>
+        <p class="muted small">Only admins can upload. A decoration goes live in the catalog as soon as you send it, so check each point first.</p>
+        <ul class="deco-guide">
+          <li><strong>File:</strong> PNG only, 512 KB or smaller.</li>
+          <li><strong>Size:</strong> a square, between 128 × 128 and 512 × 512 pixels. 512 × 512 is best.</li>
+          <li><strong>Background:</strong> transparent. A white or coloured box around the picture is rejected, because it covers the note.</li>
+          <li><strong>Margin:</strong> keep about 8% empty space on every side so nothing is cut off.</li>
+          <li><strong>Colours:</strong> it must stay readable on yellow, pink, blue, green, orange and purple notes. A thin white outline helps.</li>
+          <li><strong>Yours to share:</strong> draw it yourself or use art you are allowed to share. No logos, brands, cartoon characters, or photos of people.</li>
+          <li><strong>Safe for campus:</strong> no nudity, hate, violence, drugs, links, phone numbers, QR codes or ads.</li>
+        </ul>
+        <p class="small">Your sticker appears in the <strong>Community</strong> group when people write a note. You set its price below (0 = free) and can change or hide it later in Admin → Catalog.</p>
+      </div>
+      <div class="card stack">
+        <h2>How to make one</h2>
+        <ol class="deco-guide">
+          <li>Open a free editor such as <strong>Photopea</strong> (photopea.com, in your browser), Krita, GIMP or Canva.</li>
+          <li>Make a new image of <strong>512 × 512 px</strong> with a <strong>transparent</strong> background. In Photopea: File → New → Background: Transparent.</li>
+          <li>Draw or place your artwork in the middle. Leave a small empty margin around it.</li>
+          <li>Have a photo or a drawing with a background? Cut the background out with the magic wand or “Remove background” tool until the checkerboard shows through.</li>
+          <li>Add a thin white outline (Layer style → Stroke, 6–10 px) so it shows on dark and bright notes.</li>
+          <li>Export as <strong>PNG</strong>: Photopea → File → Export as → PNG. In Canva: Share → Download → PNG → tick “Transparent background” (needs Canva Pro).</li>
+          <li>Check the file is under 512 KB. If not, export at 256 × 256 or reduce the number of colours.</li>
+          <li>Upload it below. The checklist tells you right away if something is wrong.</li>
+        </ol>
+      </div>
+      <form class="card card--wide stack" data-ref="form" novalidate>
+        <h2>Upload</h2>
+        <label class="field"><span class="field__label">Name (2–50 characters)</span><input name="name" minlength="2" maxlength="50" required></label>
+        <label class="field"><span class="field__label">Price in Rp (0 = free)</span><input name="price" inputmode="numeric" value="0" required></label>
+        <label class="field"><span class="field__label">PNG file</span><input name="file" type="file" accept="image/png" required></label>
+        <div class="profile__grid">
+          <div class="deco-preview-box" data-ref="preview" role="img" aria-label="Preview on a yellow note"></div>
+          <ul class="deco-checks" data-ref="checks" aria-live="polite"></ul>
+        </div>
+        <p class="field__error" data-ref="error" role="alert"></p>
+        <button class="btn btn--primary" type="submit" data-ref="send" disabled>Add to catalog</button>
+      </form>
+      <div class="card card--wide">
+        <h2>My uploads</h2>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Picture</th><th>Name</th><th>Status</th><th></th></tr></thead>
+            <tbody data-ref="mine"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>

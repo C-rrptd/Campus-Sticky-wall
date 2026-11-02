@@ -45,6 +45,13 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_enabled: v.bool(p.enabled, "enabled", true),
     p_sort: int(p.sort, 0, 1000),
   })],
+  review_decoration: ["admin_review_decoration", (p) => ({
+    p_id: v.str(p.id, "id", { min: 14, max: 14 }),
+    p_approve: v.bool(p.approve, "approve", false),
+    p_name: optStr(p.name, "name", 50),
+    p_price: optAmount(p.price),
+    p_reason: reason(p.reason),
+  })],
   upsert_payment_method: ["admin_upsert_payment_method", (p) => ({
     p_code: v.str(p.code, "code", { min: 2, max: 40 }),
     p_label: v.str(p.label, "label", { max: 80 }),

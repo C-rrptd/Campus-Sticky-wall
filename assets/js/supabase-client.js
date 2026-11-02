@@ -101,6 +101,19 @@ export function mediaUrl(path) {
   return `${config.supabaseUrl}/storage/v1/object/public/note-media/${path}`;
 }
 
+/** Community decorations are ids "u-<12 hex>" whose image sits at decoration-art/<id>.png. */
+export const isUserDeco = (id) => /^u-[0-9a-f]{12}$/.test(id ?? "");
+export const decoArtUrl = (id) => (isUserDeco(id) ? `${config.supabaseUrl}/storage/v1/object/public/decoration-art/${id}.png` : null);
+
+/** Give a swatch or sticker element its picture when `id` is a community decoration; other ids are CSS-only. */
+export function paintArt(node, id) {
+  const url = decoArtUrl(id);
+  if (!url) return node;
+  node.classList.add("deco-art");
+  node.style.setProperty("--deco-img", `url("${url}")`);
+  return node;
+}
+
 /** Upload files into the signed-in user's folder; resolves to [{path, kind}]. */
 export async function uploadNoteMedia(files, userId) {
   const out = [];

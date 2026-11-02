@@ -26,6 +26,15 @@
         <button class="btn btn--primary" type="submit">Create account</button>
       </form>
 
+      <form class="stack" data-ref="otpForm" novalidate hidden>
+        <h1 class="page-title page-title--small">Enter your code</h1>
+        <p class="muted small" data-ref="otpHelp"></p>
+        <label class="field"><span class="field__label">6-digit code</span><input name="token" class="otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></label>
+        <button class="btn btn--primary" type="submit">Verify and finish</button>
+        <button class="link-button" type="button" data-ref="resend">Send a new code</button>
+        <button class="link-button" type="button" data-ref="otpBack">Use a different email</button>
+      </form>
+
       <form class="stack" data-ref="forgotForm" novalidate hidden>
         <h1 class="page-title page-title--small">Reset your password</h1>
         <label class="field"><span class="field__label">Email</span><input name="email" type="email" autocomplete="email" required></label>

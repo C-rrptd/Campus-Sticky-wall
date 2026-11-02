@@ -5,7 +5,7 @@
 import { decoPicker } from "./deco-picker.js";
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
-import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, query, rpc, thumbPath, uploadNoteMedia } from "./supabase-client.js";
+import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, paintArt, query, rpc, thumbPath, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
@@ -105,7 +105,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   }
   for (const t of stickers) {
     // A real element placed by percentages, so the author can drag it.
-    const sticker = el("span", { class: `sticker deco-${t.id}`, "aria-hidden": "true" });
+    const sticker = paintArt(el("span", { class: `sticker deco-${t.id}`, "aria-hidden": "true" }), t.id);
     sticker.style.left = `${clampPct(Number(t.x))}%`;
     sticker.style.top = `${clampPct(Number(t.y))}%`;
     const rot = Number.isFinite(Number(t.rot)) ? Number(t.rot) : 0;
@@ -475,7 +475,7 @@ export async function mountComposer(view, { signal, navigate }) {
     r.stickerList.replaceChildren(...[...counts].map(([id, n]) => {
       const d = state.decorations.find((x) => x.id === id);
       return el("li", { class: "sticker-row" },
-        el("span", { class: `deco-swatch deco-${id}`, "aria-hidden": "true" }),
+        paintArt(el("span", { class: `deco-swatch deco-${id}`, "aria-hidden": "true" }), id),
         el("span", { class: "sticker-row__name" }, d.name, el("small", {}, ` ${priceLabel(d)} each`)),
         el("span", { class: "stepper" },
           button(id, "less", "−", `Remove one ${d.name}`, () => removeDecoration([...state.stickers].reverse().find((t) => t.id === id).key)),

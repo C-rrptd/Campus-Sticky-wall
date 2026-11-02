@@ -5,7 +5,7 @@
 import { config } from "./config.js";
 import { getClient, invoke, query, rpc } from "./supabase-client.js";
 import { pendingReferralCode } from "./referrals.js";
-import { isEmail, isUsername, loginLabel, validatePassword } from "./validation.js";
+import { isEmail, isOtp, isUsername, loginLabel, validatePassword } from "./validation.js";
 import { cloneTemplate } from "./component-loader.js";
 import { busy, errorMessage, refs, toast } from "./utils.js";
 
@@ -73,7 +73,8 @@ export async function signOut() {
 
 const MESSAGES = {
   "Invalid login credentials": "Email or password is incorrect.",
-  "Email not confirmed": "Please verify your email first — check your inbox for the confirmation link.",
+  "Email not confirmed": "Please verify your email first — enter the 6-digit code we sent you.",
+  "Token has expired or is invalid": "That code is wrong or has expired. Only the newest code works — older codes stop working when you ask for a new one.",
 };
 const friendly = (err) => MESSAGES[err?.message] ?? errorMessage(err);
 
@@ -81,7 +82,10 @@ export async function mountAuthView(view, { params, signal }) {
   view.append(cloneTemplate("tpl-auth"));
   const r = refs(view);
   const client = getClient();
-  const forms = { login: r.login, register: r.register, forgot: r.forgotForm, update: r.updateForm };
+  const forms = { login: r.login, register: r.register, otp: r.otpForm, forgot: r.forgotForm, update: r.updateForm };
+  let otpEmail = ""; // the address the sign-up code was sent to
+  let cooldown = null;
+  signal.addEventListener("abort", () => clearInterval(cooldown));
 
   const show = (mode) => {
     Object.entries(forms).forEach(([key, form]) => { form.hidden = key !== mode; });
@@ -91,6 +95,28 @@ export async function mountAuthView(view, { params, signal }) {
     r.notice.hidden = true;
   };
   const notice = (text) => { r.notice.textContent = text; r.notice.hidden = false; };
+
+  // Supabase keeps ONE signup code per user: sending a new one replaces the old, so earlier codes stop working.
+  const COOLDOWN_S = 60; // same as max_frequency in supabase/config.toml
+  const startCooldown = () => {
+    let left = COOLDOWN_S;
+    clearInterval(cooldown);
+    r.resend.disabled = true;
+    const tick = () => {
+      r.resend.textContent = left > 0 ? `Send a new code (${left}s)` : "Send a new code";
+      if (left-- <= 0) { clearInterval(cooldown); r.resend.disabled = false; }
+    };
+    tick();
+    cooldown = setInterval(tick, 1000);
+  };
+  const showOtp = (email, text) => {
+    otpEmail = email;
+    show("otp");
+    r.otpHelp.textContent = `We sent a 6-digit code to ${email}. It expires in 10 minutes. If you ask for a new code, the old one stops working.`;
+    if (text) notice(text);
+    startCooldown();
+    r.otpForm.token.focus();
+  };
 
   const mode = params.get("mode");
   if (mode === "update" && state.user) show("update");
@@ -123,6 +149,10 @@ export async function mountAuthView(view, { params, signal }) {
           ({ error } = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }));
         } catch (err) { error = err; }
       }
+      if (error?.message === "Email not confirmed" && isEmail(login)) {
+        const { error: sendError } = await client.auth.resend({ type: "signup", email: login });
+        if (!sendError) { showOtp(login, "Your email is not verified yet. We sent you a new code."); return; }
+      }
       if (error) { r.error.textContent = friendly(error); return; }
       toast("Welcome back!", "success");
       window.location.hash = params.get("next") && /^\/[a-z/-]*$/.test(params.get("next")) ? `#${params.get("next")}` : "#/";
@@ -148,16 +178,37 @@ export async function mountAuthView(view, { params, signal }) {
       const { data: res, error } = await client.auth.signUp({
         email,
         password: String(data.get("password")),
-        options: { emailRedirectTo: config.siteUrl, data: { display_name: displayName, username, referral_code: referral || undefined } },
+        options: { data: { display_name: displayName, username, referral_code: referral || undefined } },
       });
       if (error) { r.error.textContent = friendly(error); return; }
       if (res.session) {
         toast("Account created!", "success");
         window.location.hash = "#/";
       } else {
-        Object.values(forms).forEach((f) => { f.hidden = true; });
-        notice(`Almost done! We sent a confirmation link to ${email}. Open it on this device to activate your account${referral ? " and unlock your referral credit" : ""}.`);
+        showOtp(email, `Almost done! Enter the code to activate your account${referral ? " and unlock your referral credit" : ""}.`);
       }
+    });
+  }, { signal });
+
+  r.otpBack.addEventListener("click", () => show("register"), { signal });
+  r.resend.addEventListener("click", async () => {
+    r.resend.disabled = true; // not busy(): that would re-enable the button and break the cooldown
+    r.error.textContent = "";
+    const { error } = await client.auth.resend({ type: "signup", email: otpEmail });
+    if (error) { r.error.textContent = friendly(error); r.resend.disabled = false; return; }
+    notice("A new code is on its way. The previous code no longer works.");
+    startCooldown();
+  }, { signal });
+  r.otpForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const token = String(new FormData(r.otpForm).get("token")).trim();
+    if (!isOtp(token)) { r.error.textContent = "Enter the 6-digit code."; return; }
+    busy(r.otpForm.querySelector("button[type=submit]"), async () => {
+      r.error.textContent = "";
+      const { data: res, error } = await client.auth.verifyOtp({ email: otpEmail, token, type: "signup" });
+      if (error || !res?.session) { r.error.textContent = friendly(error ?? new Error("Token has expired or is invalid")); return; }
+      toast("Account created!", "success");
+      window.location.hash = "#/";
     });
   }, { signal });
 

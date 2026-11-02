@@ -5,7 +5,7 @@
 import { cloneTemplate } from "./component-loader.js";
 import { translate } from "./i18n.js";
 import { currentUser, isAdmin, isOwner } from "./auth.js";
-import { creativeUrl, getClient, invoke, mediaUrl, query } from "./supabase-client.js";
+import { creativeUrl, getClient, invoke, mediaUrl, paintArt, query } from "./supabase-client.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, promptReason, refs, toast } from "./utils.js";
 import { adPrice, parseRupiah } from "./validation.js";
 
@@ -351,7 +351,7 @@ const panels = {
       const price = amountInput("price", d.price);
       const enabled = el("input", { type: "checkbox", checked: d.enabled || null });
       const body = el("div", { class: "stack" },
-        el("div", { class: "deco-preview" }, el("span", { class: `deco-swatch deco-${d.id}`, "aria-hidden": "true" })),
+        el("div", { class: "deco-preview" }, paintArt(el("span", { class: `deco-swatch deco-${d.id}`, "aria-hidden": "true" }), d.id)),
         el("p", { class: "small muted" }, `${d.id}${d.category ? ` · ${d.category}` : ""}`),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Name"), name),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Price (Rp)"), price),
@@ -366,7 +366,7 @@ const panels = {
     };
     const decoTile = (d) => {
       const b = el("button", { type: "button", class: "deco-tile" },
-        el("span", { class: `deco-swatch deco-${d.id}`, "aria-hidden": "true" }), el("span", { class: "deco-tile__name" }), el("small"));
+        paintArt(el("span", { class: `deco-swatch deco-${d.id}`, "aria-hidden": "true" }), d.id), el("span", { class: "deco-tile__name" }), el("small"));
       const paint = () => {
         b.classList.toggle("is-off", !d.enabled);
         b.children[1].textContent = d.name;
@@ -387,6 +387,31 @@ const panels = {
     paintDecos();
     const decoGrid = el("div", { class: "stack" },
       el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Category"), catSel), decoList);
+
+    // Community uploads waiting for review. Approving adds the sticker to the catalog; rejecting deletes the image.
+    const pending = await query(getClient().from("decoration_submissions").select("id,name,created_at").eq("status", "pending").order("created_at"));
+    const review = pending.length === 0 ? el("p", { class: "muted small" }, "No community uploads waiting.") : el("div", { class: "stack" }, ...pending.map((s) => {
+      const price = amountInput("price", "0");
+      const row = el("div", { class: "field field--inline" },
+        paintArt(el("span", { class: `deco-swatch deco-${s.id}`, "aria-hidden": "true" }), s.id),
+        el("span", {}, `${s.name} · ${formatDate(s.created_at)}`), price,
+        button("Approve", async () => {
+          const p = parseRupiah(price.value || "0");
+          if (!p.ok) { toast(p.error, "error"); return; }
+          await api("review_decoration", { id: s.id, approve: true, price: p.digits });
+          toast("Approved. It is in the catalog now.", "success");
+          reload();
+        }, "btn btn--small btn--primary"),
+        button("Reject", async () => {
+          const why = await promptReason(`Reject “${s.name}”?`, { required: true, okLabel: "Reject", danger: true });
+          if (!why) return;
+          await api("review_decoration", { id: s.id, approve: false, reason: why });
+          await getClient().storage.from("decoration-art").remove([`${s.id}.png`]); // best effort: a failed delete leaves a file nobody links to
+          toast("Rejected and image deleted.", "success");
+          reload();
+        }));
+      return row;
+    }));
 
     const pmRows = c.payment_methods.map((m) => ({ m, min: amountInput("min", m.min_amount, "none"), max: amountInput("max", m.max_amount, "none"),
       enabled: el("input", { type: "checkbox", checked: m.enabled || null }) }));
@@ -521,6 +546,7 @@ const panels = {
     }, "btn btn--primary");
 
     panel.replaceChildren(policy,
+      el("h2", {}, "Community uploads"), el("p", { class: "small" }, el("a", { class: "btn btn--small", href: "#/decorations" }, "Upload a new decoration")), review,
       el("h2", {}, "Decorations"), decoGrid,
       el("h2", {}, "Payment methods"),
       el("p", { class: "small muted" }, "Set limits from your Midtrans/acquirer agreement. A method is offered only when the order total fits its limits; totals are never reduced to fit."),

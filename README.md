@@ -86,6 +86,7 @@ Put the printed local API URL and publishable/anon key into `assets/js/config.js
 2. **Apply the migrations**: `supabase db push`. This runs `001` → `005` in order.
 3. **Configure Auth** (Dashboard → Authentication):
    - Turn on email confirmations. Referral credits are issued only after an account verifies its email.
+   - Sign-up uses a 6-digit code, not a link: in Authentication → Emails → "Confirm signup", paste `supabase/templates/confirmation.html` (it must contain `{{ .Token }}` and no `{{ .ConfirmationURL }}`), and set the email OTP length to 6 and expiry to 600 s. `supabase db push` and function deploys do not change these dashboard settings.
    - Set **Site URL** to your deployed URL, and add it to **Redirect URLs**. The app uses the PKCE flow, so links come back as `?code=…` and the app exchanges the code itself.
    - Set the minimum password length to 8 or more, and keep the auth rate limits turned on.
 4. **Storage**: migration 005 creates the public `campaign-creatives` bucket. Limits are 1 MB and png/jpeg/webp only. Uploads are allowed only into the uploader's own folder. Check that the bucket and its policies exist after `db push`.

@@ -31,7 +31,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
   const session = await res.json().catch(() => ({}));
   if (!res.ok || !session.access_token) {
-    if (session?.error_code === "email_not_confirmed") throw new HttpError(401, "EMAIL_NOT_CONFIRMED", "Please verify your email first — check your inbox for the confirmation link.");
+    if (session?.error_code === "email_not_confirmed") throw new HttpError(401, "EMAIL_NOT_CONFIRMED", "Please verify your email first — sign in with your email address to get a new 6-digit code.");
     throw new HttpError(401, "INVALID_LOGIN", "Username or password is incorrect.");
   }
   const out = json(req, 200, { access_token: session.access_token, refresh_token: session.refresh_token }, deps.env);

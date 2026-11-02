@@ -105,6 +105,11 @@ export function loginLabel(email) {
   return e.toLowerCase().endsWith(`@${USERNAME_DOMAIN}`) ? e.slice(0, -USERNAME_DOMAIN.length - 1) : e;
 }
 
+/** The sign-up email code: exactly 6 digits (matches otp_length in supabase/config.toml). */
+export function isOtp(value) {
+  return /^\d{6}$/.test(String(value ?? "").trim());
+}
+
 export function validatePassword(value) {
   return String(value ?? "").length >= 10 ? null : "Passwords need at least 10 characters.";
 }
@@ -143,4 +148,19 @@ export function buildPoll(kind, multi, rows) {
     if (!poll.multi && poll.correct.length !== 1) return { error: "Mark exactly one correct answer, or allow multiple answers." };
   }
   return { poll };
+}
+
+export const DECO_MAX_BYTES = 512 * 1024;
+export const DECO_MIN_PX = 128;
+export const DECO_MAX_PX = 512;
+
+/** Checklist for a picked file: [{ ok, text }]. `info` = { type, size, width, height, cornersClear }. Pure, so it is unit-tested. */
+export function decoChecks({ type, size, width, height, cornersClear }) {
+  return [
+    { ok: type === "image/png", text: "It is a PNG file" },
+    { ok: size > 0 && size <= DECO_MAX_BYTES, text: `Size is 512 KB or less (yours: ${Math.ceil(size / 1024)} KB)` },
+    { ok: width === height, text: `It is a square (yours: ${width} × ${height})` },
+    { ok: width >= DECO_MIN_PX && width <= DECO_MAX_PX, text: "Each side is 128–512 pixels" },
+    { ok: cornersClear === true, text: "The background is transparent" },
+  ];
 }

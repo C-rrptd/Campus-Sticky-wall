@@ -19,6 +19,7 @@ const routes = {
   "/account": { title: "Account", components: ["account", "note-card"], module: () => import("./account.js") },
   "/profile": { title: "Profile", components: ["profile"], module: () => import("./account.js"), entry: "mountProfile" },
   "/referrals": { title: "Referrals", components: ["referrals"], module: () => import("./referrals.js") },
+  "/decorations": { title: "Upload a decoration", components: ["decorations"], module: () => import("./decorations.js") },
   "/checkout": { title: "Checkout", components: ["checkout", "note-card"], module: () => import("./checkout.js") },
   "/receipt": { title: "Receipt", components: ["checkout", "note-card"], module: () => import("./checkout.js") },
   "/donate": { title: "Support us", components: ["donations"], module: () => import("./donations.js") },
