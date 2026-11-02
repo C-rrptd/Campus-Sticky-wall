@@ -38,7 +38,7 @@ insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000a1', 'a1@t.id', now()),
   ('00000000-0000-0000-0000-0000000000a2', 'a2@t.id', now()),
   ('00000000-0000-0000-0000-0000000000a3', 'a3@t.id', now());
-update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000a0';
+update public.profiles set role = 'owner' where id = '00000000-0000-0000-0000-0000000000a0';
 select id as campus from public.campuses where enabled limit 1 \gset
 
 -- ---- 1.2 14-day tier is soft-disabled, rows kept ------------------------------------------------------------

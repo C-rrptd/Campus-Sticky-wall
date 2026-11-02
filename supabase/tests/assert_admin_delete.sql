@@ -35,8 +35,11 @@ do $$ begin assert (select count(*) from public.notes where body = 'guest note')
 select pg_temp.expect_err(format('select public.admin_delete_note_by_receipt(%L,%L)', :'o2', 'DELETE'), 'NOT_FOUND');
 
 -- admin: delete account; cannot delete admin/owner/self
-select pg_temp.expect_err($$select public.admin_delete_user('00000000-0000-0000-0000-0000000000a1','DELETE')$$, 'FORBIDDEN');
-select pg_temp.expect_err($$select public.admin_delete_user('00000000-0000-0000-0000-0000000000a2','DELETE')$$, 'CANNOT_DELETE_SELF');
+-- deleting accounts is owner-only (042): an admin is refused, then the owner (a1) runs the rest
+select pg_temp.expect_err($$select public.admin_delete_user('00000000-0000-0000-0000-0000000000a3','DELETE')$$, 'FORBIDDEN');
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000a1');
+select pg_temp.expect_err($$select public.admin_delete_user('00000000-0000-0000-0000-0000000000a2','DELETE')$$, 'FORBIDDEN');
+select pg_temp.expect_err($$select public.admin_delete_user('00000000-0000-0000-0000-0000000000a1','DELETE')$$, 'CANNOT_DELETE_SELF');
 select public.admin_delete_user('00000000-0000-0000-0000-0000000000a3', 'DELETE');
 do $$ begin
   assert not exists (select 1 from auth.users where id = '00000000-0000-0000-0000-0000000000a3'), 'user gone';
