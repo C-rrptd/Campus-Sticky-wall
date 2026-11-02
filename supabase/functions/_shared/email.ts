@@ -17,6 +17,7 @@ export async function sendEmail(
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify({ from, to: [to], subject, text }),
+      signal: AbortSignal.timeout(10000), // a slow mail API must not hold the request; the catch below returns false
     });
     if (!res.ok) console.error("Email send failed", res.status);
     return res.ok;

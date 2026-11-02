@@ -8,7 +8,7 @@ import { renderPinned } from "./announcements.js";
 import { loadFeatured, renderPromotion } from "./promotions.js";
 import { buildLocationPicker, getLocationPref, promotionArgs, setLocationPref } from "./location.js";
 import { getClient, query } from "./supabase-client.js";
-import { errorMessage, local, refs } from "./utils.js";
+import { el, errorMessage, local, refs } from "./utils.js";
 
 const PAGE = 24;
 const SPONSOR_EVERY = 8;
@@ -72,9 +72,13 @@ export async function mount(view, { signal }, { campus = null } = {}) {
     r.grid.setAttribute("aria-busy", "true");
     r.error.hidden = true;
     r.more.hidden = true;
+    if (reset && r.grid.childElementCount === 0) r.grid.append(...Array.from({ length: 6 }, () => el("div", { class: "note-skeleton", "aria-hidden": "true" })));
     try {
-      if (fresh) await Promise.all([loadSponsored(), loadFeatured(r.featured, state.loc, signal)]);
-      const notes = await rpc("get_wall", { p_sort: state.sort, p_campus: state.loc.campus || null, p_limit: PAGE, p_offset: state.offset, p_q: state.q || null, p_color: state.color || null });
+      // Notes and ads load together (loadSponsored/loadFeatured never reject), so the notes do not wait on the ads.
+      const [notes] = await Promise.all([
+        rpc("get_wall", { p_sort: state.sort, p_campus: state.loc.campus || null, p_limit: PAGE, p_offset: state.offset, p_q: state.q || null, p_color: state.color || null }),
+        fresh && Promise.all([loadSponsored(), loadFeatured(r.featured, state.loc, signal)]),
+      ]);
       if (id !== state.requestId || signal.aborted) return; // stale response
       if (reset) r.grid.replaceChildren();
       notes.forEach((note, i) => {
@@ -98,7 +102,10 @@ export async function mount(view, { signal }, { campus = null } = {}) {
       r.error.textContent = `Couldn’t load notes: ${errorMessage(err)}`;
       r.error.hidden = false;
     } finally {
-      if (id === state.requestId) r.grid.setAttribute("aria-busy", "false");
+      if (id === state.requestId) {
+        r.grid.setAttribute("aria-busy", "false");
+        r.grid.querySelectorAll(".note-skeleton").forEach((n) => n.remove());
+      }
     }
   }
 

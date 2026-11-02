@@ -23,7 +23,8 @@ export function loadComponent(name) {
   if (loaded.has(name)) return loaded.get(name);
   const promise = (async () => {
     const url = new URL(`../../components/${name}.html`, import.meta.url);
-    const res = await fetch(url, { credentials: "same-origin", cache: "no-cache" });
+    url.search = new URL(import.meta.url).search; // build stamps ?v=<hash> on every module URL, so fragments cache per deploy
+    const res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) throw new Error(`Component "${name}" failed to load (${res.status}).`);
     const html = await res.text();
     if (/<script\b/i.test(html) || /[\s/"']on[a-z]+\s*=/i.test(html)) {

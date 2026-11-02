@@ -386,15 +386,19 @@ async function toggleBookmark(note, r) {
   if (!user) return;
   await busy(r.bookmark, async () => {
     const was = Boolean(note.bookmarked);
+    const paint = (on) => {
+      note.bookmarked = on;
+      setPressed(r.bookmark, on);
+      r.bookmark.textContent = on ? "★" : "☆";
+    };
+    paint(!was);
     try {
       const table = getClient().from("bookmarks");
       if (was) await query(table.delete().eq("note_id", note.id).eq("user_id", user.id));
       else await query(table.insert({ note_id: note.id, user_id: user.id }));
-      note.bookmarked = !was;
-      setPressed(r.bookmark, note.bookmarked);
-      r.bookmark.textContent = note.bookmarked ? "★" : "☆";
     } catch (err) {
-      if (err.code === "DUPLICATE") return;
+      if (err.code === "DUPLICATE") return; // already bookmarked elsewhere: the new state is right
+      paint(was);
       toast(errorMessage(err), "error");
     }
   });
