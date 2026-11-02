@@ -10,19 +10,19 @@
   X-Frame-Options: DENY
   Cross-Origin-Opener-Policy: same-origin
 
-/components/*
-  Cache-Control: no-cache
-
 /sw.js
   Cache-Control: no-cache
 
+# Every local JS/CSS/fragment URL carries ?v=<hash> after scripts/build-site.sh, so a new deploy is a new URL.
 # Cloudflare joins header values when several rules match, so these are separate paths, not /assets/*.
-# Our own files are revalidated on every load (JS modules import each other without ?v=).
+/components/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /assets/js/*
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=31536000, immutable
 
 /assets/css/*
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=31536000, immutable
 
 /assets/images/*
   Cache-Control: public, max-age=86400

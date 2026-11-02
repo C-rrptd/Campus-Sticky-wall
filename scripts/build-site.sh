@@ -74,6 +74,15 @@ src, m = re.subn(r"https://\*\.supabase\.co", url, src)
 assert m == 3, "expected connect-src, img-src and media-src wildcards"
 open(path, "w").write(src)
 PY
+  # Warm the connection to Supabase while the page's own files load.
+  python3 - "$OUT/index.html" "$PUBLIC_SUPABASE_URL" <<'PY'
+import sys
+path, url = sys.argv[1], sys.argv[2].rstrip("/")
+src = open(path).read()
+tag = '<link rel="icon"'
+assert tag in src
+open(path, "w").write(src.replace(tag, f'<link rel="preconnect" href="{url}" crossorigin>\n  {tag}', 1))
+PY
 fi
 
 # Minify our own JS and CSS (esbuild, pinned; no bundling, so modules and imports stay as they are). Optional: if npx or the
@@ -88,6 +97,25 @@ if command -v npx >/dev/null 2>&1; then
 else
   echo "warning: npx not found, shipping unminified files" >&2
 fi
+
+# Cache-busting: one hash of the shipped files goes on every local JS/CSS/fragment URL, so _headers can cache them for a year.
+# Vendored files already carry their version in the name and are left alone.
+python3 - "$OUT" <<'PY'
+import hashlib, pathlib, re, sys
+out = pathlib.Path(sys.argv[1])
+files = sorted(p for d in ("assets/js", "assets/css", "components") for p in (out / d).glob("*.*"))
+h = hashlib.sha256(b"".join(p.read_bytes() for p in files)).hexdigest()[:10]
+spec = re.compile(r"""(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(["'])(\.{1,2}/[^"']+\.js)\2""")
+def stamp(m):
+    return m[0] if "/vendor/" in m[3] else f"{m[1]}{m[2]}{m[3]}?v={h}{m[2]}"
+for p in (out / "assets/js").glob("*.js"):
+    p.write_text(spec.sub(stamp, p.read_text()))
+page = out / "index.html"
+page.write_text(re.sub(r'((?:src|href)="assets/(?:js|css)/[^"?]+\.(?:js|css))(?:\?v=\w+)?"', rf'\1?v={h}"', page.read_text()))
+sw = out / "sw.js"
+sw.write_text(sw.read_text().replace('"csw-v1"', f'"csw-{h}"'))
+print("assets stamped ?v=" + h)
+PY
 
 # Nothing secret may ship to browsers.
 if grep -rEq 'sb_secret_[A-Za-z0-9_-]{8,}|SB-Mid-server-[A-Za-z0-9_-]{8,}|Mid-server-[A-Za-z0-9_-]{16,}|"role" *: *"service_role"' "$OUT"; then

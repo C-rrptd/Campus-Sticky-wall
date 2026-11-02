@@ -259,7 +259,7 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .file-preview figcaption { overflow-wrap: anywhere; padding-top: 2px; }
 .file-preview__remove { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(31, 41, 55, 0.85); color: #fff; font-size: 1.1rem; line-height: 1; cursor: pointer; }
 .note__media--thumb { flex-direction: column; gap: var(--space-1); padding: var(--space-1); }
-.note__thumb { display: block; width: 100%; max-height: 140px; object-fit: cover; border-radius: 4px; background: var(--paper-dark); }
+.note__thumb { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 140px; object-fit: cover; border-radius: 4px; background: var(--paper-dark); }
 .note__media-label { font-size: 0.8rem; }
 
 /* Advertise ---------------------------------------------------------------------------- */
