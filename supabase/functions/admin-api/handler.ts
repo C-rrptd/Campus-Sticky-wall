@@ -196,9 +196,9 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
   }],
 };
 
-/** Throws 403 unless the caller is an admin (admin_check runs require_admin() in SQL). */
-async function assertAdmin(userDb: Db, _user: AuthUser) {
-  await rpc(userDb, "admin_check", {});
+/** Throws 403 unless the caller is an owner (owner_check runs require_owner() in SQL). */
+async function assertOwner(userDb: Db, _user: AuthUser) {
+  await rpc(userDb, "owner_check", {});
 }
 
 // Actions after which queued media files are deleted from Storage.
@@ -244,7 +244,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
 
   if (action === "reconcile_order") {
-    await assertAdmin(userDb, user);
+    await assertOwner(userDb, user);
     const ref = v.orderRef(params.order_ref);
     const cfg = midtransConfig(deps.env);
     if (!cfg) throw new HttpError(503, "PAYMENTS_NOT_CONFIGURED");
@@ -258,12 +258,12 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   }
 
   if (action === "run_ad_jobs") {
-    await assertAdmin(userDb, user);
+    await assertOwner(userDb, user);
     return json(req, 200, { data: await runAdJobs(deps) }, deps.env);
   }
 
   if (action === "expire_stale_orders") {
-    await assertAdmin(userDb, user);
+    await assertOwner(userDb, user);
     const data = await rpc(deps.db, "expire_stale_orders", {});
     return json(req, 200, { data: { expired: data } }, deps.env);
   }
