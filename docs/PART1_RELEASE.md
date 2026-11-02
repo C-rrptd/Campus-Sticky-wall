@@ -4,7 +4,7 @@ Everything else below was run against Postgres 16 with a stubbed `auth` schema; 
 
 ## Deploy order
 1. Review migrations `006`-`009`. The deploy workflow runs `supabase db push` on merge to `main`, so merging deploys them. Open a pull request first: the new `Test` workflow applies and re-applies them on plain Postgres and runs the assertions.
-2. Grant yourself Owner: `ADMIN_EMAIL=you@example.com deno run --allow-env --allow-net scripts/bootstrap-admin.ts --owner` (add `--dry-run` first), or SQL: `insert into public.user_roles (user_id, role, granted_by) select id, 'owner', 'sql' from auth.users where email = 'you@example.com' on conflict do nothing;`
+2. Grant yourself Owner: `ADMIN_EMAIL=you@example.com deno run --allow-env --allow-net scripts/bootstrap-admin.ts --owner` (add `--dry-run` first), or SQL: `update public.profiles set role = 'owner' where id = (select id from auth.users where email = 'you@example.com');`
 3. Deploy functions (`admin-api` changed) and the static site (`decorations.css` is new).
 4. Sign out and in again to see the Owner controls.
 

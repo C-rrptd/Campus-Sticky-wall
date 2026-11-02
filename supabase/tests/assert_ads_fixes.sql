@@ -32,7 +32,7 @@ end $$;
 insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000d1', 'adv@t.id', now()),
   ('00000000-0000-0000-0000-0000000000d2', 'admin@t.id', now());
-insert into public.user_roles (user_id, role) values ('00000000-0000-0000-0000-0000000000d2', 'admin');
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000d2';
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000d2');
 
 select c.id as campus, c.city_id as city from public.campuses c where c.enabled limit 1 \gset

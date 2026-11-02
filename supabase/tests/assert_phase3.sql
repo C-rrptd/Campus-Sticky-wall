@@ -70,7 +70,7 @@ insert into auth.users (id, email, email_confirmed_at) values
   (pg_temp.uid(1), 'a1@t.id', now()), (pg_temp.uid(2), 'a2@t.id', now()), (pg_temp.uid(3), 'a3@t.id', now()),
   (pg_temp.uid(177), 'b1@t.id', now()), (pg_temp.uid(178), 'b2@t.id', now()), (pg_temp.uid(179), 'b3@t.id', now()),
   (pg_temp.uid(180), 'b4@t.id', now()), (pg_temp.uid(181), 'unverified@t.id', null);
-insert into public.user_roles (user_id, role) values (pg_temp.uid(160), 'admin');
+update public.profiles set role = 'admin' where id = pg_temp.uid(160);
 select pg_temp.uid(160) as admin, pg_temp.uid(1) as a1, pg_temp.uid(2) as a2, pg_temp.uid(3) as a3,
        pg_temp.uid(177) as b1, pg_temp.uid(178) as b2, pg_temp.uid(179) as b3, pg_temp.uid(180) as b4, pg_temp.uid(181) as unv \gset
 

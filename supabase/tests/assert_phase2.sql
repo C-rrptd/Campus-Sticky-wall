@@ -50,7 +50,7 @@ insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000a3', 'a3@t.id', now()),
   ('00000000-0000-0000-0000-0000000000a4', 'a4@t.id', now()),
   ('00000000-0000-0000-0000-0000000000a5', 'a5@t.id', now());
-insert into public.user_roles (user_id, role) values ('00000000-0000-0000-0000-0000000000a0', 'admin');
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000a0';
 
 -- ---- 2.1 defaults + sold out at submit + sold out at order time ---------------------------------------------
 select pg_temp.must(pg_temp.avail(0) = 3, 'default 3 free slots');

@@ -15,8 +15,8 @@ end $$;
 insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000a1', 'owner@t.id', now()), ('00000000-0000-0000-0000-0000000000a2', 'admin@t.id', now()),
   ('00000000-0000-0000-0000-0000000000a3', 'user@t.id', now()), ('00000000-0000-0000-0000-0000000000a4', 'other@t.id', now());
-insert into public.user_roles (user_id, role) values
-  ('00000000-0000-0000-0000-0000000000a1', 'owner'), ('00000000-0000-0000-0000-0000000000a2', 'admin');
+update public.profiles set role = 'owner' where id = '00000000-0000-0000-0000-0000000000a1';
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000a2';
 select (public.create_publication_order('00000000-0000-0000-0000-0000000000a3','U','member note','yellow',null,true,'5000','{}'::text[],false,repeat('a',64)))->>'order_ref' as o1 \gset
 select (public.create_publication_order(null,'G','guest note','pink',null,true,'5000','{}'::text[],false,repeat('b',64)))->>'order_ref' as o2 \gset
 

@@ -175,9 +175,9 @@ SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SECRET_KEY=sb_secret_... ADMIN_E
 
 To do the same with SQL instead, run this in the dashboard SQL editor:
 
-`insert into public.user_roles (user_id, role, granted_by) select id, 'admin', 'sql' from auth.users where email = 'you@example.com';`
+`update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'you@example.com');`
 
-Admin status lives only in `public.user_roles`. No client role can write to it.
+Roles (`member` by default, `admin`, `owner`) live in `public.profiles.role`. No client can write it; the owner changes roles from the Users tab of the admin console.
 
 ---
 

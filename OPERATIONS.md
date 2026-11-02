@@ -43,7 +43,7 @@ from payment_notifications order by received_at desc limit 50;
 | "No enabled payment method can process this total" | Payment-method limits in Admin → Prices & settings. This is intended behaviour for totals above every configured limit. |
 | Users cannot sign up or sign in | Supabase Auth logs; Site URL and redirect URLs; SMTP settings (Supabase's default mailer is rate-limited, so configure your own SMTP for production). |
 | CSP errors in the console | `_headers` `connect-src`/`img-src` must include your Supabase URL. |
-| Function returns 403 for an admin | Is the user in `user_roles`? Sign out and in again. |
+| Function returns 403 for an admin | Is `profiles.role` set to `admin` or `owner` for the user? Sign out and in again. |
 
 ## Migrations
 

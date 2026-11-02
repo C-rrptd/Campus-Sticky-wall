@@ -48,9 +48,10 @@ export async function isAdmin() {
   if (!state.user) return false;
   if (state.adminChecked === state.user.id) return state.isAdmin;
   try {
-    const rows = await query(getClient().from("user_roles").select("role").eq("user_id", state.user.id));
-    state.isAdmin = rows.some((r) => r.role === "admin" || r.role === "owner");
-    state.isOwner = rows.some((r) => r.role === "owner");
+    const rows = await query(getClient().from("profiles").select("role").eq("id", state.user.id));
+    const role = rows[0]?.role;
+    state.isAdmin = role === "admin" || role === "owner";
+    state.isOwner = role === "owner";
   } catch {
     state.isAdmin = false;
     state.isOwner = false;

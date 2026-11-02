@@ -36,6 +36,10 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_reason: reason(p.reason),
   })],
   list_users: ["admin_list_users", (p) => ({ p_search: optStr(p.search, "search", 100), p_limit: int(p.limit, 50, 200), p_offset: int(p.offset, 0, 100000) })],
+  // Owner-only (SQL re-checks require_owner()); an Admin's call is rejected with 403.
+  set_user_role: ["admin_set_user_role", (p) => ({
+    p_user_id: v.uuid(p.user_id, "user_id"), p_role: v.oneOf(p.role, "role", ["member", "admin", "owner"] as const),
+  })],
   list_catalog: ["admin_list_catalog", () => ({})],
   upsert_decoration: ["admin_upsert_decoration", (p) => ({
     p_id: v.str(p.id, "id", { min: 2, max: 40 }),

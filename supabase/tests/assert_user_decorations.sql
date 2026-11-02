@@ -7,7 +7,7 @@ create function pg_temp.must(ok boolean, msg text) returns void language plpgsql
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-4000-8000-0000000000c1', 'maker@real.test', '{"display_name":"Maker"}'),
   ('00000000-0000-4000-8000-0000000000c2', 'boss@real.test',  '{"display_name":"Boss"}');
-insert into public.user_roles (user_id, role) values ('00000000-0000-4000-8000-0000000000c2', 'admin');
+update public.profiles set role = 'admin' where id = '00000000-0000-4000-8000-0000000000c2';
 
 -- a normal user cannot upload
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c1', true);

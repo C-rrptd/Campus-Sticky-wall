@@ -35,8 +35,8 @@ insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000a2', 'admin@t.id', now()),
   ('00000000-0000-0000-0000-0000000000a3', 'user@t.id', now()),
   ('00000000-0000-0000-0000-0000000000b1', 'ref@t.id', now());
-insert into public.user_roles (user_id, role) values
-  ('00000000-0000-0000-0000-0000000000a1', 'owner'), ('00000000-0000-0000-0000-0000000000a2', 'admin');
+update public.profiles set role = 'owner' where id = '00000000-0000-0000-0000-0000000000a1';
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000a2';
 select code as rcode from public.referral_codes where user_id = '00000000-0000-0000-0000-0000000000b1' \gset
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000b2', 'inv@t.id', now(), jsonb_build_object('referral_code', :'rcode'));

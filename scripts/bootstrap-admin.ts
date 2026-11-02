@@ -5,11 +5,11 @@
 //   ADMIN_EMAIL=you@example.com \
 //   deno run --allow-env --allow-net scripts/bootstrap-admin.ts [--dry-run] [--revoke] [--owner]
 //
-// Grants the `admin` role (public.user_roles) to an EXISTING, email-verified
+// Sets `profiles.role` to `admin` (or `owner`) for an EXISTING, email-verified
 // account. It does not create users, does not touch user metadata, and fails
-// safely when configuration or the account is missing. Admin status lives in a
-// table no client can write, so this script (or the SQL editor) is the only way
-// to grant it.
+// safely when configuration or the account is missing. Clients cannot write
+// profiles.role, so this script, the SQL editor, or the owner's Users tab in the
+// admin console is the only way to set it.
 
 import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 
@@ -49,12 +49,12 @@ if (dryRun) {
 }
 
 if (revoke) {
-  const { error } = await admin.from("user_roles").delete().eq("user_id", user.id).eq("role", role);
+  const { error } = await admin.from("profiles").update({ role: "member" }).eq("id", user.id).eq("role", role);
   if (error) fail(`revoke failed: ${error.message}`);
   console.log(`${role} role revoked from ${email}.`);
 } else {
-  const { error } = await admin.from("user_roles")
-    .upsert({ user_id: user.id, role, granted_by: "bootstrap-admin" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+  const { data, error } = await admin.from("profiles").update({ role }).eq("id", user.id).select("id");
   if (error) fail(`grant failed: ${error.message}`);
+  if (!data?.length) fail(`${email} has no profile row yet.`);
   console.log(`${role} role granted to ${email} (${user.id}). Sign out and back in to see the Admin menu.`);
 }

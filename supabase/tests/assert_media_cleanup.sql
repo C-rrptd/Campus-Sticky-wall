@@ -9,7 +9,7 @@ select pg_temp.must(not has_table_privilege('authenticated', 'public.media_orpha
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000d1', 'u@t.id', now()), ('00000000-0000-0000-0000-0000000000d2', 'o@t.id', now());
-insert into public.user_roles (user_id, role) values ('00000000-0000-0000-0000-0000000000d2', 'owner');
+update public.profiles set role = 'owner' where id = '00000000-0000-0000-0000-0000000000d2';
 
 create function pg_temp.make_note(tag text, media jsonb) returns uuid language plpgsql as $$
 declare ref text; nid uuid;

@@ -56,6 +56,21 @@ function actions(...nodes) {
   return el("div", { class: "row row--tight" }, ...nodes.filter(Boolean));
 }
 
+/** Owner-only role dropdown. Everyone else (and the owner's own row) sees plain text; SQL re-checks require_owner(). */
+function roleCell(state, r, reload) {
+  if (!state.owner || r.id === currentUser()?.id) return humanize(r.role);
+  const sel = el("select", { "aria-label": `Role for ${r.display_name}` },
+    ...["member", "admin", "owner"].map((x) => el("option", { value: x, selected: x === r.role || null }, humanize(x))));
+  sel.addEventListener("change", async () => {
+    const ok = await openDialog({ title: `Change ${r.display_name} from ${r.role} to ${sel.value}?`, okLabel: "Change role", danger: sel.value !== "member" });
+    try {
+      if (ok) { await api("set_user_role", { user_id: r.id, role: sel.value }); toast("Role updated.", "success"); }
+    } catch (err) { toast(errorMessage(err), "error", 8000); }
+    reload(); // also resets the dropdown when the change was cancelled or rejected
+  });
+  return sel;
+}
+
 /** Owner-only permanent delete. Admins get no button; the server rejects them anyway. */
 function ownerDelete(state, kind, id, what, reload) {
   if (!state.owner) return null;
@@ -247,7 +262,7 @@ const panels = {
       { label: "Email", key: "email" },
       { label: "Verified", render: (r) => (r.email_verified ? "yes" : "no") },
       { label: "Notes", key: "published_notes" },
-      { label: "Admin", render: (r) => (r.is_admin ? "yes" : "") },
+      { label: "Role", render: (r) => roleCell(state, r, reload) },
       { label: "Status", render: (r) => (r.suspended_at ? `suspended (${r.suspension_reason ?? ""})` : "active") },
       { label: "Actions", render: (r) => r.is_admin ? "" : actions(button(r.suspended_at ? "Unsuspend" : "Suspend", async () => {
         const reason = await promptReason(r.suspended_at ? "Unsuspend this account?" : "Suspend this account?", { required: !r.suspended_at, danger: !r.suspended_at });
