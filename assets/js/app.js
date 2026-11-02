@@ -1,10 +1,10 @@
 // Application entry point: configuration check, URL callbacks (PKCE auth,
 // referral links, Midtrans return), session restore, shell, router.
 
-import { configProblems } from "./config.js";
+import { config, configProblems } from "./config.js";
 import { cloneTemplate, loadComponents } from "./component-loader.js";
 import { currentUser, initAuth, isAdmin, onUserChange, signOut } from "./auth.js";
-import { onRouteChange, rerender, startRouter } from "./router.js";
+import { onRouteChange, parseHash, rerender, startRouter } from "./router.js";
 import { captureReferral } from "./referrals.js";
 import { getClient, query } from "./supabase-client.js";
 import { lang, setLang } from "./i18n.js";
@@ -98,7 +98,7 @@ async function renderHeader() {
       else a.removeAttribute("aria-current");
     });
   });
-  await update();
+  update(); // the admin-role lookup is a DB call; it must not delay the first paint of the wall
 }
 
 async function renderFooter() {
@@ -143,6 +143,14 @@ async function boot() {
     return;
   }
 
+  // Warm the connection and the wall's code/templates while the session restores (components are cached per name).
+  const origin = new URL(config.supabaseUrl).origin;
+  document.head.append(Object.assign(document.createElement("link"), { rel: "preconnect", href: origin }));
+  if (["/", "/campus"].includes(parseHash().path)) {
+    loadComponents(["wall", "note-card", "promotion-card", "announcements"]).catch(() => {});
+    import("./wall.js").catch(() => {});
+  }
+
   captureReferral();
   handleUrlCallbacks();
   try {
@@ -152,7 +160,7 @@ async function boot() {
     toast("Could not restore your session. You can still browse.", "error");
   }
   cleanAuthParams();
-  await renderHeader();
+  renderHeader();
   renderFooter();
   startRouter(view());
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); // installable app + offline fallback

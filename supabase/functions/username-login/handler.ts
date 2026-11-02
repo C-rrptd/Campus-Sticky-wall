@@ -18,11 +18,17 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   // Script-made accounts (no profile username) sign in with the placeholder address.
   const email = (await rpc<string | null>(deps.db, "login_email", { p_username: username })) ?? `${username.toLowerCase()}@users.csw.invalid`;
   const key = publishableKey(deps.env);
-  const res = await deps.fetch(`${deps.env("SUPABASE_URL")}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { apikey: key ?? "", "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  let res: Response;
+  try {
+    res = await deps.fetch(`${deps.env("SUPABASE_URL")}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: { apikey: key ?? "", "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    throw new HttpError(503, "UNAVAILABLE", "Sign-in is slow right now. Please try again.");
+  }
   const session = await res.json().catch(() => ({}));
   if (!res.ok || !session.access_token) {
     if (session?.error_code === "email_not_confirmed") throw new HttpError(401, "EMAIL_NOT_CONFIRMED", "Please verify your email first — check your inbox for the confirmation link.");

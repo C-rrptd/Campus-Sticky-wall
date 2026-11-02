@@ -144,13 +144,24 @@ export async function busy(button, fn) {
   }
 }
 
+/** Copies text and toasts. Returns true on success. Falls back to execCommand where the async clipboard API is missing or blocked. */
 export async function copyText(text) {
+  let ok = false;
   try {
     await navigator.clipboard.writeText(text);
-    toast("Copied to clipboard", "success", 2500);
+    ok = true;
   } catch {
-    toast("Copy failed — select the text and copy it manually.", "error");
+    const ta = el("textarea", { readonly: "", "aria-hidden": "true" });
+    Object.assign(ta.style, { position: "fixed", top: "0", left: "0", opacity: "0" }); // CSSOM, not a style attribute: CSP style-src 'self'
+    ta.value = text;
+    document.body.append(ta);
+    ta.select();
+    try { ok = document.execCommand("copy"); } catch { /* ok stays false */ }
+    ta.remove();
   }
+  if (ok) toast("Copied to clipboard", "success", 2500);
+  else toast("Copy failed — select the text and copy it manually.", "error");
+  return ok;
 }
 
 /** Human message for an ApiError or unknown error. */

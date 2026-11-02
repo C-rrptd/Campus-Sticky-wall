@@ -18,6 +18,9 @@
 .announcement__body { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* Composer */
+.note-skeleton { height: 190px; border-radius: 4px; background: var(--paper-dark); animation: note-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes note-pulse { from { opacity: 0.5; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .note-skeleton { animation: none; } }
 .composer__layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: var(--space-5); align-items: start; }
 .composer__form { padding: var(--space-5); }
 .composer__form > * + * { margin-top: var(--space-4); }

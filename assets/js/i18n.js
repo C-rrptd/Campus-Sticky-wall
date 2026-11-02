@@ -7,7 +7,10 @@ const KEY = "csw.lang"; // same key and JSON format as utils.js `local`
 export const lang = (() => { try { return JSON.parse(localStorage.getItem(KEY)) === "id" ? "id" : "en"; } catch { return "en"; } })();
 if (typeof document !== "undefined") document.documentElement.lang = lang;
 
-const ID = lang === "id" ? (await import("./i18n-id.js")).ID : {};
+// i18n-extra.js holds the admin/advertise/checkout strings and the sentence patterns; its entries lose to i18n-id.js.
+const [main, extra] = lang === "id" ? await Promise.all([import("./i18n-id.js"), import("./i18n-extra.js")]) : [];
+const ID = main ? { ...extra.ID_EXTRA, ...main.ID } : {};
+const PATTERNS = extra?.PATTERNS ?? [];
 
 export function setLang(next) {
   try { localStorage.setItem(KEY, JSON.stringify(next === "id" ? "id" : "en")); } catch { /* storage blocked: the switch cannot persist */ }
@@ -16,7 +19,12 @@ export function setLang(next) {
 
 const tr = (s) => {
   const key = s.trim().replace(/\s+/g, " ");
-  return Object.hasOwn(ID, key) ? s.replace(s.trim(), () => ID[key]) : s;
+  if (Object.hasOwn(ID, key)) return s.replace(s.trim(), () => ID[key]);
+  for (const [re, fn] of PATTERNS) {
+    const m = re.exec(key);
+    if (m) return s.replace(s.trim(), () => fn(...m.slice(1)));
+  }
+  return s;
 };
 
 /** Translate a cloned template fragment or built panel in place. No-op for English. */

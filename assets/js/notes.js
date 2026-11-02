@@ -189,13 +189,13 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
 /** /n/<id> is served by functions/n/[id].js with a WhatsApp/Instagram preview, then opens #/note. */
 async function shareNote(note) {
   const url = `${window.location.origin}/n/${note.id}`;
+  // Native sheet only on touch devices: desktop share sheets (Windows/macOS) are flaky or silent, a copied link always works.
   try {
-    if (navigator.share) { await navigator.share({ title: "Campus Sticky Wall", text: truncateBody(note.body ?? ""), url }); return; }
+    if (navigator.share && navigator.maxTouchPoints > 0) { await navigator.share({ title: "Campus Sticky Wall", text: truncateBody(note.body ?? ""), url }); return; }
   } catch (err) {
     if (err?.name === "AbortError") return;
   }
   await copyText(url);
-  toast("Link copied.", "success");
 }
 
 /** #/note?id=<uuid>: one published note, opened from a share link. */
@@ -386,15 +386,19 @@ async function toggleBookmark(note, r) {
   if (!user) return;
   await busy(r.bookmark, async () => {
     const was = Boolean(note.bookmarked);
+    const paint = (on) => {
+      note.bookmarked = on;
+      setPressed(r.bookmark, on);
+      r.bookmark.textContent = on ? "★" : "☆";
+    };
+    paint(!was);
     try {
       const table = getClient().from("bookmarks");
       if (was) await query(table.delete().eq("note_id", note.id).eq("user_id", user.id));
       else await query(table.insert({ note_id: note.id, user_id: user.id }));
-      note.bookmarked = !was;
-      setPressed(r.bookmark, note.bookmarked);
-      r.bookmark.textContent = note.bookmarked ? "★" : "☆";
     } catch (err) {
-      if (err.code === "DUPLICATE") return;
+      if (err.code === "DUPLICATE") return; // already bookmarked elsewhere: the new state is right
+      paint(was);
       toast(errorMessage(err), "error");
     }
   });
