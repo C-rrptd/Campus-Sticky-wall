@@ -32,7 +32,7 @@ jobs:
           version: latest
 
       - name: Apply database migrations
-        run: supabase db push --db-url "$SUPABASE_DB_URL"
+        run: supabase db push --yes --db-url "$SUPABASE_DB_URL"
 
       - name: Deploy Edge Functions
         run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
