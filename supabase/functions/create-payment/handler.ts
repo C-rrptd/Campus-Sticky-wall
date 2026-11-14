@@ -1,10 +1,10 @@
 // POST /functions/v1/create-payment  { order_ref, access_token? }
-// Creates (or reuses) the Midtrans Snap transaction for an existing unpaid
+// Creates (or reuses) the DOKU Checkout session for an existing unpaid
 // order. The amount, items and allowed payment channels all come from the
 // database record; nothing price-related is read from the request.
 
 import { type Deps, type Handler, optionalUser } from "../_shared/auth.ts";
-import { buildSnapBody, createSnapTransaction, midtransConfig, type SnapItem } from "../_shared/payments.ts";
+import { buildCheckoutBody, createCheckout, dokuConfig, type OrderItem } from "../_shared/payments.ts";
 import { clientIp, HttpError, json, rateLimit, readJson, rpc, sha256Hex } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
 
@@ -15,7 +15,7 @@ interface LockResult {
   redirect_url?: string;
   total_amount?: string;
   enabled_payments?: string[];
-  items?: SnapItem[];
+  items?: OrderItem[];
 }
 
 export const handler: Handler = async (req: Request, deps: Deps) => {
@@ -28,7 +28,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   await rateLimit(deps.db, `create-payment:ip:${clientIp(req)}`, 30, 600);
   await rateLimit(deps.db, `create-payment:order:${ref}`, 5, 600); // double-click / retry storms on one order
 
-  const cfg = midtransConfig(deps.env);
+  const cfg = dokuConfig(deps.env);
   if (!cfg) {
     throw new HttpError(503, "PAYMENTS_NOT_CONFIGURED", "Online payments are not configured yet. Your order was saved; please try again later.");
   }
@@ -48,26 +48,24 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
 
   try {
     const build = (enabledPayments: string[]) =>
-      buildSnapBody({
+      buildCheckoutBody({
         orderRef: ref,
         grossAmount: lock.total_amount!,
         items: lock.items!,
         enabledPayments,
-        // Midtrans appends order_id/status_code/transaction_status. The hash route
-        // works whether those land in the query (app.js reads order_id) or after
-        // the fragment (the router still sees order=...).
+        // The hash route carries the order ref itself, so no query parameters are needed from DOKU.
         finishUrl: `${siteUrl.replace(/\/$/, "")}/#/checkout?order=${encodeURIComponent(ref)}&returned=1`,
         expiryMinutes: 30, // matches record_payment_session (+5 min grace) and the 30-minute unpaid-post rule
       });
     let session;
     try {
-      session = await createSnapTransaction(cfg, build(lock.enabled_payments!), deps.fetch);
+      session = await createCheckout(cfg, build(lock.enabled_payments!), deps.fetch);
     } catch (err) {
       if (!(err instanceof HttpError) || err.code !== "PAYMENT_PROVIDER_REJECTED") throw err;
-      // shortcut: a channel we list may not be active on the merchant account (Midtrans 402), which fails the whole
-      // request. Retry once with the dashboard's own channels; amount and items are unchanged. Upgrade: prune per channel.
+      // shortcut: a channel we list may not be active on the merchant account, which fails the whole
+      // request. Retry once with every channel active on the account; amount and items are unchanged. Upgrade: prune per channel.
       console.warn("Snap rejected enabled_payments; retrying with dashboard channels", err.message);
-      session = await createSnapTransaction(cfg, build([]), deps.fetch);
+      session = await createCheckout(cfg, build([]), deps.fetch);
     }
     await rpc(deps.db, "record_payment_session", {
       p_order_ref: ref,

@@ -1,5 +1,5 @@
 // Application entry point: configuration check, URL callbacks (PKCE auth,
-// referral links, Midtrans return), session restore, shell, router.
+// referral links, DOKU return), session restore, shell, router.
 
 import { config, configProblems } from "./config.js";
 import { cloneTemplate, loadComponents } from "./component-loader.js";
@@ -32,7 +32,7 @@ function installGlobalErrorHandlers() {
   window.addEventListener("offline", () => toast("You are offline. Changes will fail until you reconnect.", "error"));
 }
 
-/** Midtrans redirects back to /?payment_return=1&order_id=...; route to the order page. */
+/** DOKU redirects back to /?payment_return=1&order_id=...; route to the order page. */
 function handleUrlCallbacks() {
   const url = new URL(window.location.href);
   const orderId = url.searchParams.get("order_id");

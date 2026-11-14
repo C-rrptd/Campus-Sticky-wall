@@ -2,7 +2,7 @@
 //   - supabaseUrl:            https://<project-ref>.supabase.co
 //   - supabasePublishableKey: the publishable key (sb_publishable_...) or the legacy anon key
 //   - siteUrl:                the public URL of this site (used for referral links)
-// Never put a secret key, service_role key or Midtrans server key in this file.
+// Never put a secret key, service_role key or DOKU server key in this file.
 // Static hosting does not read .env files; edit these values (or generate this
 // file during deployment as described in README.md).
 

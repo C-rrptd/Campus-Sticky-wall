@@ -1,6 +1,6 @@
 // Checkout + receipt. This page NEVER decides that a payment succeeded: it only
-// displays the status stored by the server (set by verified Midtrans
-// notifications). Returning from Midtrans just triggers a status re-check.
+// displays the status stored by the server (set by verified DOKU
+// notifications). Returning from DOKU just triggers a status re-check.
 
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
@@ -9,7 +9,7 @@ import { getClient, invoke, query } from "./supabase-client.js";
 import { busy, copyText, el, errorMessage, formatRupiah, local, openDialog, refs, toast } from "./utils.js";
 
 const TOKEN_KEY = (ref) => `csw.receipt.${ref}`;
-const PAYMENT_HOSTS = new Set(["app.midtrans.com", "app.sandbox.midtrans.com"]);
+const isDokuHost = (h) => h === "doku.com" || h.endsWith(".doku.com");
 
 /** Keep the guest access token for this order on this device (convenience only). */
 export function rememberReceipt(orderRef, token) {
@@ -115,7 +115,7 @@ export async function mount(view, { params, signal, navigate }) {
     const payable = order.status === "awaiting_payment" && order.total_amount !== "0";
     const editable = payable && !order.payment_started;
     r.pay.hidden = !payable;
-    r.pay.textContent = order.payment_started ? "Continue payment" : "Pay securely with Midtrans";
+    r.pay.textContent = order.payment_started ? "Continue payment" : "Pay securely with DOKU";
     r.refresh.hidden = !(order.status === "awaiting_payment" || order.status === "challenge");
     r.withdraw.hidden = !(order.note && ["published", "pending_moderation"].includes(order.note.status));
 
@@ -156,7 +156,7 @@ export async function mount(view, { params, signal, navigate }) {
     try {
       const res = await invoke("create-payment", { order_ref: ref, access_token: token ?? undefined });
       const target = new URL(res.redirect_url);
-      if (target.protocol !== "https:" || !PAYMENT_HOSTS.has(target.hostname)) throw new Error("Unexpected payment page address.");
+      if (target.protocol !== "https:" || !isDokuHost(target.hostname)) throw new Error("Unexpected payment page address.");
       window.location.assign(target.href);
     } catch (err) {
       r.error.textContent = errorMessage(err);

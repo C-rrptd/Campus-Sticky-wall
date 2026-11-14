@@ -9,7 +9,7 @@ The dependency set is intentionally small. There is no frontend framework, bundl
 | `@supabase/supabase-js` (browser build without Realtime, vendored) | 2.117.0 (MIT) | Auth session (PKCE), REST/RPC, Functions, Storage from the browser | `assets/vendor/supabase-2.117.0.lite.js`, loaded by `index.html`, wrapped by `assets/js/supabase-client.js` | Yes | Vendored, so the CSP stays `script-src 'self'`. SHA-256 `51e6350a5327701d3c754efc7ac880129d4834e788fdecf968f77e87c99b9156`. |
 | `npm:@supabase/supabase-js` | 2.117.0 | Service and user DB clients and Auth admin in Edge Functions | `supabase/functions/_shared/auth.ts`, `scripts/bootstrap-admin.ts` | Yes | Pinned inline (`npm:` specifier) |
 | Supabase platform | — | Postgres 15+ (verified on 15, 16 and 17), Auth, Storage, Edge Runtime (Deno 2) | everything | Yes | |
-| Midtrans Snap and Core API | Snap v1, API v2 | Payments, Get Status | `_shared/payments.ts` | Yes for payments | Plain `fetch`; no SDK |
+| DOKU Checkout API | Checkout v1, Orders v1 | Payments, Check Status | `_shared/payments.ts` | Yes for payments | Plain `fetch`; no SDK |
 | `pg_cron` (Postgres extension) | Supabase-provided | Runs `expire_stale_orders()` | OPERATIONS.md | Recommended | Without it, run the sweeper from the admin panel |
 
 ## Development tooling (not shipped to browsers)
@@ -28,7 +28,7 @@ Test-only tooling (pytest, Playwright, `npm:postgres`) is documented in the deve
 
 1. **supabase-js (browser):** rebuild the lite bundle with the recipe in "Changed: vendored supabase-js is now a build without Realtime" below. Then update the `<script>` tag in `index.html`, the import version in `_shared/auth.ts` and `bootstrap-admin.ts`, and this file (including the new SHA-256). Run the development test suite. Delete the old vendored file.
 2. **Database:** never edit an applied migration. Add `006_*.sql`. If it creates functions, **repeat the EXECUTE allowlist pattern** from the end of `005`: revoke from `public, anon, authenticated`, then grant explicitly.
-3. **Midtrans API changes:** update `_shared/payments.ts` and its tests together. Verify in sandbox.
+3. **DOKU API changes:** update `_shared/payments.ts` and its tests together. Verify in sandbox.
 4. **Deno:** run `deno task check` and the test suite after any upgrade.
 
 ## Added: video compression (browser, lazy-loaded)

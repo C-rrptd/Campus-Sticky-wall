@@ -8,7 +8,7 @@ import { type Deps, type Handler, optionalUser } from "../_shared/auth.ts";
 import { clientIp, HttpError, json, rateLimit, readJson, rpc, sha256Hex } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
 import { purgeMediaOrphans } from "../_shared/media.ts";
-import { midtransConfig, syncOrderStatus } from "../_shared/payments.ts";
+import { dokuConfig, syncOrderStatus } from "../_shared/payments.ts";
 
 export const handler: Handler = async (req: Request, deps: Deps) => {
   const body = await readJson(req);
@@ -26,10 +26,10 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     let order = await rpc<{ status?: string; payment_started?: boolean }>(deps.db, action === "withdraw" ? "withdraw_own_note" : "get_order_receipt", args);
     if (action === "withdraw") await purgeMediaOrphans(deps);
     // The webhook can be missed (wrong Notification URL, outage). While a started payment is still unpaid,
-    // ask Midtrans directly, at most 12 times a minute per order, so the page doesn't stay "awaiting" forever.
+    // ask DOKU directly, at most 12 times a minute per order, so the page doesn't stay "awaiting" forever.
     if (action === "receipt" && order.status === "awaiting_payment" && order.payment_started) {
       try {
-        const cfg = midtransConfig(deps.env);
+        const cfg = dokuConfig(deps.env);
         if (cfg) {
           await rateLimit(deps.db, `receipt-sync:order:${ref}`, 12, 60);
           await syncOrderStatus(cfg, deps.db, ref, deps.fetch);

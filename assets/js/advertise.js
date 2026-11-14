@@ -1,4 +1,4 @@
-// Advertiser flow: submit -> admin approval -> Midtrans payment -> scheduled -> live -> expired.
+// Advertiser flow: submit -> admin approval -> DOKU payment -> scheduled -> live -> expired.
 // Status, price, payment and approval are never decided in the browser: this page only collects
 // the form, shows the server's quote and lists the advertiser's own campaigns.
 

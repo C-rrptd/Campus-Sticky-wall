@@ -7,9 +7,9 @@ This document covers the threat model, trust boundaries, secrets, permissions an
 | Zone | Trust | Holds |
 |---|---|---|
 | Browser (HTML/JS) | **Untrusted** | Publishable key only. It collects input and renders server state. |
-| Edge Functions (Deno) | Trusted | Midtrans server key and the Supabase secret key (injected by Supabase). They authenticate callers and validate input. |
+| Edge Functions (Deno) | Trusted | DOKU secret key and the Supabase secret key (injected by Supabase). They authenticate callers and validate input. |
 | PostgreSQL | Authoritative | Prices, orders, credits, roles, moderation state. RLS plus `SECURITY DEFINER` functions. |
-| Midtrans | External, verified | Payment status, accepted only after a signature check **and** a Get Status re-read. |
+| DOKU | External, verified | Payment status, accepted only after an HMAC signature check (Check Status API is used for reconciliation). |
 
 The browser **never** decides any of the following: payment status, amounts, decoration prices, credit eligibility or balance, publication or approval, admin rights, donation totals, campaign status, or leaderboard results.
 
@@ -19,7 +19,7 @@ The browser **never** decides any of the following: payment status, amounts, dec
 |---|---|
 | Tampered price or total | The DB computes every amount (`quote_publication`, `create_publication_order`, `create_ad_order`). Client totals are ignored. A `confirm_amount` must equal the submitted amount. |
 | Fake "payment success" redirect | The checkout page only displays server status. Return-URL parameters are stripped. |
-| Forged or replayed or out-of-order Midtrans notification | SHA-512 signature (constant-time compare), then the Get Status API, then a DB check of order, amount and currency, a deduplication key, and a transition table (no regressions; refunded/reversed are terminal; success after close only sets `review_required`). Fulfilment is guarded by `fulfilled_at` under a row lock. |
+| Forged or replayed or out-of-order DOKU notification | HMAC-SHA256 signature over headers and body digest (constant-time compare; failure = 401), then a DB check of order, amount and currency, a deduplication key, and a transition table (no regressions; refunded/reversed are terminal; success after close only sets `review_required`). Fulfilment is guarded by `fulfilled_at` under a row lock. |
 | Double credit spend | Credits are reserved with `FOR UPDATE SKIP LOCKED`, with partial unique indexes on reserved/redeemed order. They are consumed only on fulfilment and released on failure. |
 | Referral abuse | Attribution is taken only at signup from the immutable insert, rewarded only after email verification, one credit per referred user (`unique(source, source_ref)`). Self-referral via email aliases is rejected. Attribution is immutable. Admins can revoke unredeemed credits (audited). |
 | Privilege escalation | Roles live in `profiles.role` (clients have no UPDATE grant on it; only the owner-only, audited `admin_set_user_role()` changes it). Every admin SQL function calls `require_admin()`; `admin-api` is an explicit allowlist. `is_admin(uuid)` is not exposed to clients. |
@@ -34,7 +34,7 @@ The browser **never** decides any of the following: payment status, amounts, dec
 
 ## Edge Functions
 
-All functions run with `verify_jwt = false` (set in `supabase/config.toml`), because guests call them with only the publishable key and Midtrans calls the webhook without a JWT. Each function therefore authenticates the caller itself:
+All functions run with `verify_jwt = false` (set in `supabase/config.toml`), because guests call them with only the publishable key and DOKU calls the webhook without a JWT. Each function therefore authenticates the caller itself:
 
 - `optionalUser` / `requireUser` (`_shared/auth.ts`) verify bearer JWTs with `auth.getUser`. A legacy anon-key JWT is treated as a guest. An invalid session returns **401**; it is never silently downgraded to guest.
 - Requests must be POST with JSON and a body of at most 16 KB (64 KB for the webhook). Each field is shape-validated in `_shared/validation.ts`, and the DB re-validates the business rules.
@@ -44,8 +44,8 @@ All functions run with `verify_jwt = false` (set in `supabase/config.toml`), bec
 | Function | Caller | DB access |
 |---|---|---|
 | create-publication, create-donation | guest or user | service role → trusted SQL with verified `p_user_id` |
-| create-payment | owner (JWT) or receipt token | service role; Snap call with the server key |
-| midtrans-webhook | Midtrans (signature + status API) | service role |
+| create-payment | owner (JWT) or receipt token | service role; Checkout call signed with the secret key |
+| doku-webhook | DOKU (HMAC signature) | service role |
 | redeem-referral-credit, create-ad-order, create-advertiser-campaign | user | service role with verified user id |
 | manage-guest-publication | receipt token or owner | service role |
 | leaderboard-data, admin-api | user | **user-scoped** client (JWT), so SQL checks `auth.uid()` itself |
@@ -54,7 +54,7 @@ All functions run with `verify_jwt = false` (set in `supabase/config.toml`), bec
 
 | Secret | Where | Rotation |
 |---|---|---|
-| `MIDTRANS_SERVER_KEY` | `supabase secrets set` only | Regenerate in the Midtrans dashboard → `supabase secrets set` → old key stops working |
+| `DOKU_SECRET_KEY` | `supabase secrets set` only | Regenerate in the DOKU Back Office → `supabase secrets set` → old key stops working |
 | Supabase secret key (`sb_secret_…`) | Injected into functions; used locally only for `bootstrap-admin.ts` | Dashboard → API Keys → create new, then delete old |
 | Publishable key | `assets/js/config.js` (public by design) | Rotate if abused; redeploy the site |
 
@@ -71,7 +71,7 @@ Never commit `.env` (it is gitignored). If a secret is ever committed, **rotate 
 - A restrictive `Permissions-Policy`.
 - `X-Frame-Options: DENY`.
 
-`scripts/build-site.sh` narrows `connect-src`/`img-src` to the exact Supabase project URL. The Midtrans redirect is a top-level navigation, validated against the `app.midtrans.com` / `app.sandbox.midtrans.com` hosts, so it needs no CSP allowance. `upgrade-insecure-requests` is deliberately omitted: every subresource is same-origin or an explicit `https://` origin, and the directive breaks local `wrangler pages dev` previews. The headers were checked in Cloudflare's local Pages runtime, but not yet on a real deployment.
+`scripts/build-site.sh` narrows `connect-src`/`img-src` to the exact Supabase project URL. The DOKU redirect is a top-level navigation, validated against the `doku.com` / `*.doku.com` hosts, so it needs no CSP allowance. `upgrade-insecure-requests` is deliberately omitted: every subresource is same-origin or an explicit `https://` origin, and the directive breaks local `wrangler pages dev` previews. The headers were checked in Cloudflare's local Pages runtime, but not yet on a real deployment.
 
 ### Keeping secret keys out of the browser
 

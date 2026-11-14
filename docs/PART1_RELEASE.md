@@ -1,6 +1,6 @@
 # Part 1 release notes (migration 006)
 
-Everything else below was run against Postgres 16 with a stubbed `auth` schema; no browser, Deno or Midtrans checks were run.
+Everything else below was run against Postgres 16 with a stubbed `auth` schema; no browser, Deno or DOKU checks were run.
 
 ## Deploy order
 1. Review migrations `006`-`009`. The deploy workflow runs `supabase db push` on merge to `main`, so merging deploys them. Open a pull request first: the new `Test` workflow applies and re-applies them on plain Postgres and runs the assertions.
@@ -12,7 +12,7 @@ Everything else below was run against Postgres 16 with a stubbed `auth` schema; 
 | Area | Change |
 |---|---|
 | Roles | `owner` added. Owner passes every `is_admin()` check, so existing Admin policies keep working. No function edits roles. |
-| Waivers | `admin_waive_order`. Status `payment_waived`, row in `payment_waivers`, audit entry. No Midtrans call, never in revenue totals. Admin: post-only orders. Owner: post and paid decorations. Advertising and donations are never waivable. Only before a payment session exists. Waived notes hide the amount badge. |
+| Waivers | `admin_waive_order`. Status `payment_waived`, row in `payment_waivers`, audit entry. No DOKU call, never in revenue totals. Admin: post-only orders. Owner: post and paid decorations. Advertising and donations are never waivable. Only before a payment session exists. Waived notes hide the amount badge. |
 | Owner deletes | `owner_delete_record` for report, note, announcement, campaign, referral, audit entry, country, region, city, campus. Typed `DELETE` confirm in the UI and enforced in SQL. Orders, payments and credits are never deleted. Campaigns that are `active` or `awaiting_payment` are refused. Locations in use are refused. Referral delete keeps a tombstone; credits are untouched. |
 | Security log | `security_events` is append-only (update, delete and truncate blocked by trigger). Every Owner delete is recorded there, including audit-entry deletes. Owner-only tab "Security log". |
 | News | Existing announcements model reused. Admin tab and public page are labelled News (route stays `#/announcements`). Added Preview, last-editor column, text checks. Drafts stay private through existing RLS. |
@@ -43,7 +43,7 @@ Both the inviter and the invited friend get **2 free posts + 2 free decorations*
 - Known limits: attachments are not scanned or moderated before publish (moderators can hide the note); files uploaded for an order that later fails stay in storage; the bucket and its policies are not exercised by the plain-Postgres CI (no `storage` schema).
 
 ## Automated checks
-`.github/workflows/ci.yml` (no deploy): applies all migrations and re-applies 006-009 on Postgres 16 with stubbed Supabase roles, runs `supabase/tests/assert_part1.sql` (about 50 assertions: roles, waivers, deletes, append-only log, referral credits, leaderboard), typechecks every edge function with Deno, and parses the browser JavaScript. Not covered: browsers, Midtrans, real Supabase Auth/RLS as the `authenticated` role.
+`.github/workflows/ci.yml` (no deploy): applies all migrations and re-applies 006-009 on Postgres 16 with stubbed Supabase roles, runs `supabase/tests/assert_part1.sql` (about 50 assertions: roles, waivers, deletes, append-only log, referral credits, leaderboard), typechecks every edge function with Deno, and parses the browser JavaScript. Not covered: browsers, DOKU, real Supabase Auth/RLS as the `authenticated` role.
 
 ## Media follow-ups (migration 010, on top of the existing 009)
 `main` already had its own media feature (migration 009: signed-in users upload straight into their own Storage folder; `notes.media`). These changes build on it.

@@ -55,12 +55,12 @@ file_size_limit = "26MiB"
 
 # Every function authenticates the caller itself (see _shared/auth.ts). The
 # gateway JWT check is disabled because guests call several functions with
-# only the publishable key, and Midtrans calls the webhook without any JWT.
+# only the publishable key, and DOKU calls the webhook without any JWT.
 [functions.create-publication]
 verify_jwt = false
 [functions.create-payment]
 verify_jwt = false
-[functions.midtrans-webhook]
+[functions.doku-webhook]
 verify_jwt = false
 [functions.create-donation]
 verify_jwt = false
@@ -90,8 +90,9 @@ enabled = true
 policy = "per_worker"
 
 [edge_runtime.secrets]
-MIDTRANS_SERVER_KEY = "env(MIDTRANS_SERVER_KEY)"
-MIDTRANS_IS_PRODUCTION = "env(MIDTRANS_IS_PRODUCTION)"
+DOKU_CLIENT_ID = "env(DOKU_CLIENT_ID)"
+DOKU_SECRET_KEY = "env(DOKU_SECRET_KEY)"
+DOKU_IS_PRODUCTION = "env(DOKU_IS_PRODUCTION)"
 SITE_URL = "env(SITE_URL)"
 ALLOWED_ORIGINS = "env(ALLOWED_ORIGINS)"
 [functions.username-login]

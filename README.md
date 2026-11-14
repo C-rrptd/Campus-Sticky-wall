@@ -4,9 +4,9 @@ A public sticky-note wall for college students. Anyone can post a note and **cho
 
 - **Frontend:** static HTML, CSS and vanilla ES modules. There is no framework, no bundler and no build step. Supabase JS 2.117.0 is vendored.
 - **Backend:** Supabase. It uses Auth, PostgreSQL with Row Level Security, Storage, and 10 Deno Edge Functions.
-- **Payments:** Midtrans Snap (redirect). Every notification is checked with its signature and again with the Midtrans Get Status API.
+- **Payments:** DOKU Checkout (redirect). Every notification's HMAC signature is verified before anything is applied.
 
-> **Before going live:** work through the [First-deploy checklist](#first-deploy-checklist). The external integrations (hosted Supabase, Midtrans, Cloudflare) are confirmed there, on your accounts.
+> **Before going live:** work through the [First-deploy checklist](#first-deploy-checklist). The external integrations (hosted Supabase, DOKU, Cloudflare) are confirmed there, on your accounts.
 
 ---
 
@@ -17,7 +17,7 @@ A public sticky-note wall for college students. Anyone can post a note and **cho
 1. [Project layout](#project-layout)
 2. [Run locally](#run-locally)
 3. [Configure Supabase](#configure-supabase)
-4. [Configure Midtrans](#configure-midtrans)
+4. [Configure DOKU](#configure-doku)
 5. [Configure and deploy the frontend](#configure-and-deploy-the-frontend)
 6. [Bootstrap the first administrator](#bootstrap-the-first-administrator)
 7. [First-deploy checklist](#first-deploy-checklist)
@@ -40,7 +40,7 @@ Related documents:
 | `index.html` | Small shell: mount points, stylesheets, module entry. |
 | `components/*.html` | `<template>`-only fragments. Each view has one: `core`, `wall`, `note-card`, `note-composer`, `promotions`, `promotion-card`, `announcements`, `auth`, `account`, `profile`, `referrals`, `leaderboard`, `checkout`, `donations`, `admin`, `footer`, `legal`. |
 | `assets/css/` | `base.css` holds tokens and reset. `components.css`, `pages.css` and `responsive.css` hold the rest. |
-| `assets/js/app.js` | Boots the app. It checks config, handles URL callbacks (PKCE, `?ref=`, Midtrans return), restores the session, renders the shell and starts the router. |
+| `assets/js/app.js` | Boots the app. It checks config, handles URL callbacks (PKCE, `?ref=`, DOKU return), restores the session, renders the shell and starts the router. |
 | `assets/js/router.js` | Hash router. It lazy-loads views, aborts listeners and requests on navigation, and ignores stale renders. |
 | `assets/js/component-loader.js` | Loads trusted fragments and rejects scripts and inline handlers. |
 | `assets/js/supabase-client.js` | Browser client (publishable key only), plus `rpc`/`query`/`invoke` wrappers with normalised errors. |
@@ -48,7 +48,7 @@ Related documents:
 | `assets/js/{validation,utils,config}.js` | Client-side validation for usability only, safe DOM helpers, and public configuration. |
 | `supabase/migrations/006…007` | Owner role, payment waivers, Owner-only deletion + security log, News attribution, 45 decorations (006); referral credits (007). |
 | `supabase/migrations/001…005` | Schema, RLS, payments and referrals, promotions and locations, indexes, admin functions, and the function-execute allowlist. |
-| `supabase/functions/*` | Edge Functions (see [SECURITY.md](SECURITY.md#edge-functions)). Each has `handler.ts` (logic) and a small `index.ts` entry point that serves it. `_shared/` holds auth, validation, Midtrans and security helpers. |
+| `supabase/functions/*` | Edge Functions (see [SECURITY.md](SECURITY.md#edge-functions)). Each has `handler.ts` (logic) and a small `index.ts` entry point that serves it. `_shared/` holds auth, validation, DOKU and security helpers. |
 | `scripts/bootstrap-admin.ts` | Grants admin to an existing verified account (run from a trusted machine). |
 | `scripts/build-site.sh` | Copies only the public files to `dist/`, writes `config.js` from `PUBLIC_*` variables, narrows the CSP to your Supabase project, and refuses to build if any secret key would ship. |
 | `wrangler.toml` | Cloudflare Pages project settings (`pages_build_output_dir = "dist"`). |
@@ -72,7 +72,7 @@ For a full local backend, use the Supabase CLI (requires Docker):
 ```bash
 supabase start                      # local Postgres/Auth/Storage/Functions
 supabase db reset                   # applies supabase/migrations/*
-cp .env.example supabase/functions/.env   # then edit: Midtrans sandbox key etc.
+cp .env.example supabase/functions/.env   # then edit: DOKU sandbox keys etc.
 supabase functions serve --env-file supabase/functions/.env
 ```
 
@@ -93,11 +93,11 @@ Put the printed local API URL and publishable/anon key into `assets/js/config.js
 5. **Deploy the functions**:
 
    ```bash
-   supabase secrets set --env-file .env          # MIDTRANS_SERVER_KEY, MIDTRANS_IS_PRODUCTION, SITE_URL, ALLOWED_ORIGINS
+   supabase secrets set --env-file .env          # DOKU_CLIENT_ID, DOKU_SECRET_KEY, DOKU_IS_PRODUCTION, SITE_URL, ALLOWED_ORIGINS
    supabase functions deploy                     # all functions; verify_jwt=false is set per function in config.toml
    ```
 
-   Every function verifies the caller itself, and the webhook verifies Midtrans itself. This is why `verify_jwt` is off. See [SECURITY.md](SECURITY.md).
+   Every function verifies the caller itself, and the webhook verifies DOKU itself. This is why `verify_jwt` is off. See [SECURITY.md](SECURITY.md).
 6. **Schedule the expiry sweeper.** Enable `pg_cron` and run this in the SQL editor:
 
    ```sql
@@ -117,25 +117,25 @@ Put the printed local API URL and publishable/anon key into `assets/js/config.js
    - `SUPABASE_PROJECT_ID`, your project ref.
 
    Then run the workflow once from the Actions tab (**Run workflow**).
-3. **Function secrets:** set these once in Supabase → Edge Functions → Secrets, not in GitHub: `MIDTRANS_SERVER_KEY`, `MIDTRANS_IS_PRODUCTION=false`, `SITE_URL`, `ALLOWED_ORIGINS`.
+3. **Function secrets:** set these once in Supabase → Edge Functions → Secrets, not in GitHub: `DOKU_CLIENT_ID`, `DOKU_SECRET_KEY`, `DOKU_IS_PRODUCTION=false`, `SITE_URL`, `ALLOWED_ORIGINS`.
 4. **Website (Cloudflare Pages):** connect the same repo as described in [Configure and deploy the frontend](#configure-and-deploy-the-frontend). Cloudflare rebuilds the site on every push.
 
-Some steps are still manual and done only once: the Auth URL settings and email confirmation, the `pg_cron` schedule, the Midtrans Notification URL, and the first admin.
+Some steps are still manual and done only once: the Auth URL settings and email confirmation, the `pg_cron` schedule, the DOKU Notification URL, and the first admin.
 
 ---
 
-## Configure Midtrans
+## Configure DOKU
 
-1. Create a Midtrans account and use **Sandbox** first. Copy the sandbox **Server Key**, which starts with `SB-Mid-server-`, into the `MIDTRANS_SERVER_KEY` function secret. The client key is not needed, because checkout uses the Snap redirect URL.
-2. In **Settings → Configuration**, set the **Payment Notification URL** to
-   `https://<project-ref>.supabase.co/functions/v1/midtrans-webhook`.
+1. Create a DOKU Business account and use **Sandbox** first. In **Integration → API Keys** copy the **Client ID** and **Secret Key** into the `DOKU_CLIENT_ID` and `DOKU_SECRET_KEY` function secrets.
+2. In **Settings → Payment Settings**, open each channel you want (QRIS, e-wallet, virtual accounts, cards, convenience store) and set its **Notification URL** to
+   `https://<project-ref>.supabase.co/functions/v1/doku-webhook`.
 3. Turn on the payment channels you want. Then, in **Admin → Prices & settings → Payment methods**, set each method's **min/max** from your merchant agreement. **The seeded limits are empty (unknown) on purpose.** A method is offered only when the order total fits its limits. Totals are never reduced to fit: if no method fits, the customer is told so.
 4. Make a sandbox test payment end to end (see the [First-deploy checklist](#first-deploy-checklist)).
 
 How it works:
 
-- `create-payment` builds the Snap request from the database order, not from the browser. Amounts are sent as exact integers, and `enabled_payments` lists only the eligible channels.
-- `midtrans-webhook` checks `SHA512(order_id+status_code+gross_amount+server_key)`, re-reads the transaction from the Get Status API, and passes only verified values to `apply_payment_notification`.
+- `create-payment` builds the Checkout request from the database order, not from the browser. Amounts are plain IDR integers, and `payment_method_types` lists only the eligible channels (stored lower-case in `payment_methods.midtrans_codes`, a historical column name).
+- `doku-webhook` verifies DOKU's `Signature` header (HMAC-SHA256 over Client-Id, Request-Id, Request-Timestamp, Request-Target and the body digest, keyed with the secret key), rejects anything else with 401, and passes only verified values to `apply_payment_notification`. The receipt page and Admin → Reconcile use the Check Status API as a fallback.
 - That SQL function checks the amount and currency against the order, removes duplicate notifications, and applies only allowed state transitions.
 
 ---
@@ -191,7 +191,7 @@ Confirm each item on your own accounts before taking real payments:
 | Storage bucket and policies | Storage shows `campaign-creatives` (public, 1 MB, images only) |
 | Edge Functions respond | On the site, post a note: the checkout page appears with the server-calculated total |
 | Sign-up, email confirmation, password reset | Do all three on the deployed site |
-| Midtrans sandbox payment | Pay a sandbox order. Then in SQL: `select result from payment_notifications order by received_at desc limit 1` returns `paid`, and the note is on the wall |
+| DOKU sandbox payment | Pay a sandbox order. Then in SQL: `select result from payment_notifications order by received_at desc limit 1` returns `paid`, and the note is on the wall |
 | Payment confirmed by the backend only | Before the notification arrives, the return page says "Waiting for payment" |
 | Campaign image upload | Create a campaign with an image |
 | Security headers | `curl -sI https://<your-site>/` shows the CSP with your exact Supabase URL; the browser console has no CSP errors |
@@ -205,7 +205,7 @@ Confirm each item on your own accounts before taking real payments:
 
 Live payments are **not** turned on by default. Do not switch until you have explicit authorization and a successful sandbox run:
 
-1. Get production approval from Midtrans and set the payment-method limits.
-2. Run `supabase secrets set MIDTRANS_SERVER_KEY=Mid-server-... MIDTRANS_IS_PRODUCTION=true`. Payment functions refuse to run (HTTP 500, logged) if production mode is combined with a sandbox key.
-3. Change the Notification URL in the **production** Midtrans dashboard.
+1. Get production approval from DOKU and set the payment-method limits.
+2. Run `supabase secrets set DOKU_CLIENT_ID=... DOKU_SECRET_KEY=... DOKU_IS_PRODUCTION=true` with the **production** pair.
+3. Change the Notification URL in the **production** DOKU dashboard.
 4. Place one small real order. Then check the order, the notification log and the note.

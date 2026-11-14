@@ -4,13 +4,13 @@
 
 | When | Task | How |
 |---|---|---|
-| Daily | Moderate | Admin → **Moderation** (in `pre` mode, queue for approval) and **Reports**. Removing a note does not refund it. Under the Terms of Use, refunds are not provided for deleted notes or campaigns or for content removed for rule violations, except where applicable law requires; do not promise refunds to users. Any exception is made by the Owner in the Midtrans dashboard. |
-| Daily | Review campaigns | Admin → **Campaigns** (status `pending_approval`). Approve = the advertiser may now pay; Reject needs a reason the advertiser sees. After payment the campaign is scheduled and goes live on its start date, then ends automatically (migration 013). Paid campaigns you reject or cancel, and paid ones the advertiser cancels before start, appear under Payments → needs review: refund them in the Midtrans dashboard (the webhook then marks the campaign cancelled). Set the WhatsApp number and the days-to-pay window under Prices & settings. |
-| Daily | Payment exceptions | Admin → **Payments** → tick "needs review". Causes: `amount_or_currency_mismatch`, `fraud_challenge`, `payment_after_close` (money arrived for an expired/cancelled order: refund it in Midtrans or fulfil it manually), `partial_refund_amount_unknown`. Use **Reconcile with Midtrans** to re-read the status, then **Clear review flag** with a reason (audited). |
+| Daily | Moderate | Admin → **Moderation** (in `pre` mode, queue for approval) and **Reports**. Removing a note does not refund it. Under the Terms of Use, refunds are not provided for deleted notes or campaigns or for content removed for rule violations, except where applicable law requires; do not promise refunds to users. Any exception is made by the Owner in the DOKU dashboard. |
+| Daily | Review campaigns | Admin → **Campaigns** (status `pending_approval`). Approve = the advertiser may now pay; Reject needs a reason the advertiser sees. After payment the campaign is scheduled and goes live on its start date, then ends automatically (migration 013). Paid campaigns you reject or cancel, and paid ones the advertiser cancels before start, appear under Payments → needs review: refund them in the DOKU dashboard (the webhook then marks the campaign cancelled). Set the WhatsApp number and the days-to-pay window under Prices & settings. |
+| Daily | Payment exceptions | Admin → **Payments** → tick "needs review". Causes: `amount_or_currency_mismatch`, `fraud_challenge`, `payment_after_close` (money arrived for an expired/cancelled order: refund it in DOKU or fulfil it manually), `partial_refund_amount_unknown`. Use **Reconcile with DOKU** to re-read the status, then **Clear review flag** with a reason (audited). |
 | Every 15 min | Expire unpaid orders | `pg_cron` job (see README) or Admin → Overview → "Expire stale unpaid orders". Releases reserved credits. |
 | Every 5 min | Advertising jobs | Call the `ad-maintenance` function with header `x-cron-secret: $CRON_SECRET` (see "Advertising jobs" below), or Admin → **Ad insights** → "Run ad jobs now". Sends campaign-end reports, expires waitlist holds and offers freed slots, sends queued ad email, settles auctions. |
-| Weekly | Revenue | Admin → **Revenue**. Every figure carries its definition. Processing fees are *not* known to the app; take them from Midtrans settlement reports. |
-| Monthly | Reconcile payments | Compare Admin → Payments (status `paid` / `refunded`) with the Midtrans transaction report for the same period. Investigate any `paid` order missing from Midtrans, or the reverse. |
+| Weekly | Revenue | Admin → **Revenue**. Every figure carries its definition. Processing fees are *not* known to the app; take them from DOKU settlement reports. |
+| Monthly | Reconcile payments | Compare Admin → Payments (status `paid` / `refunded`) with the DOKU transaction report for the same period. Investigate any `paid` order missing from DOKU, or the reverse. |
 | As needed | Prices | Admin → **Prices & settings**. Decoration and ad-package prices affect **new** orders only; existing orders keep immutable snapshots. The publication price minimum (Rp5.000) and the absence of a maximum are fixed product rules. |
 | As needed | Locations | Admin → **Locations**: add a country, then its regions, cities and campuses. Disabling a location removes it from pickers and targeting. |
 
@@ -38,8 +38,8 @@ from payment_notifications order by received_at desc limit 50;
 | Symptom | Check |
 |---|---|
 | "not configured" page | `assets/js/config.js` values. Rebuild with `scripts/build-site.sh`. |
-| Checkout says "Online payments are not configured" | `supabase secrets list` shows `MIDTRANS_SERVER_KEY` and `SITE_URL`. |
-| Payments stay "Waiting" | Midtrans dashboard → notification history (HTTP status from the webhook), then `supabase functions logs midtrans-webhook`. A 401 means signature failure (wrong server key for the environment). A 503 means the status API was unreachable; Midtrans retries. |
+| Checkout says "Online payments are not configured" | `supabase secrets list` shows `DOKU_CLIENT_ID`, `DOKU_SECRET_KEY` and `SITE_URL`. |
+| Payments stay "Waiting" | DOKU dashboard → notification history (HTTP status from the webhook), then `supabase functions logs doku-webhook`. A 401 means signature failure (wrong secret key for the environment, or the Notification URL path differs from `/functions/v1/doku-webhook`). Use Admin → Reconcile to pull the status directly. |
 | "No enabled payment method can process this total" | Payment-method limits in Admin → Prices & settings. This is intended behaviour for totals above every configured limit. |
 | Users cannot sign up or sign in | Supabase Auth logs; Site URL and redirect URLs; SMTP settings (Supabase's default mailer is rate-limited, so configure your own SMTP for production). |
 | CSP errors in the console | `_headers` `connect-src`/`img-src` must include your Supabase URL. |
@@ -61,7 +61,7 @@ from payment_notifications order by received_at desc limit 50;
 
 ## Secret rotation
 
-See SECURITY.md → Secrets. After rotating `MIDTRANS_SERVER_KEY`, the webhook rejects notifications signed with the old key. Rotate during quiet hours and reconcile pending orders afterwards.
+See SECURITY.md → Secrets. After rotating `DOKU_SECRET_KEY`, the webhook rejects notifications signed with the old key. Rotate during quiet hours and reconcile pending orders afterwards.
 
 ## Advertising jobs
 
@@ -100,4 +100,4 @@ Paid Promotions are separate and always labelled "Sponsored".
 - [ ] The development repository test suite passes.
 - [ ] New functions/migrations follow the EXECUTE allowlist pattern.
 - [ ] `scripts/build-site.sh dist` with production `PUBLIC_*` values; deploy `dist/` only.
-- [ ] Smoke test: wall loads, compose shows prices, sandbox checkout reaches Midtrans, admin panel loads.
+- [ ] Smoke test: wall loads, compose shows prices, sandbox checkout reaches DOKU, admin panel loads.

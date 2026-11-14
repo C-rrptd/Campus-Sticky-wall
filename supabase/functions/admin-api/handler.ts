@@ -2,11 +2,11 @@
 // Explicit allowlist of administrator operations. Each action validates its
 // parameters and calls exactly one SQL function AS THE CALLER (their JWT);
 // every SQL admin function re-checks is_admin(auth.uid()) and writes the audit
-// log. Actions that need server secrets (Midtrans reconciliation, order expiry,
+// log. Actions that need server secrets (DOKU reconciliation, order expiry,
 // Auth bans) first confirm admin status through the database.
 
 import { type AuthUser, type Db, type Deps, type Handler, requireUser } from "../_shared/auth.ts";
-import { fetchTransactionStatus, midtransConfig, parseNotification, statusToRpcArgs } from "../_shared/payments.ts";
+import { dokuConfig, fetchTransactionStatus, statusToRpcArgs } from "../_shared/payments.ts";
 import { HttpError, json, rateLimit, readJson, rpc } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
 import { purgeMediaOrphans } from "../_shared/media.ts";
@@ -246,14 +246,11 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   if (action === "reconcile_order") {
     await assertOwner(userDb, user);
     const ref = v.orderRef(params.order_ref);
-    const cfg = midtransConfig(deps.env);
+    const cfg = dokuConfig(deps.env);
     if (!cfg) throw new HttpError(503, "PAYMENTS_NOT_CONFIGURED");
     const status = await fetchTransactionStatus(cfg, ref, deps.fetch);
-    if (status.status_code === "404" || status.order_id !== ref) {
-      return json(req, 200, { data: { result: "not_found_at_provider" } }, deps.env);
-    }
-    const fallback = parseNotification({ ...status, signature_key: "n/a" });
-    const data = await rpc(deps.db, "apply_payment_notification", statusToRpcArgs(status, fallback));
+    if (!status) return json(req, 200, { data: { result: "not_found_at_provider" } }, deps.env);
+    const data = await rpc(deps.db, "apply_payment_notification", statusToRpcArgs(status));
     return json(req, 200, { data }, deps.env);
   }
 

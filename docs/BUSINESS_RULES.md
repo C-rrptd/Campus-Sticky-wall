@@ -9,7 +9,7 @@ The authoritative implementation of each rule is the SQL in `supabase/migrations
 - The only ceiling is technical: BIGINT holds up to 9.223.372.036.854.775.807. Larger values are rejected with `AMOUNT_EXCEEDS_STORAGE_LIMIT`, and nothing is ever rounded or capped.
 - The browser parses with `BigInt`. The UI accepts "25.000" or "Rp 25.000" and has no `max` attribute. The customer must tick a confirmation of the exact total, and the server requires `confirm_amount == amount`.
 - **Payment-method limits are not pricing limits.** `payment_methods.min_amount/max_amount` decide which channels are offered (`eligible_payment_methods`). If none fits, order creation fails with `NO_ELIGIBLE_PAYMENT_METHOD`, and the message says the amount was not changed.
-- Snap receives the exact digits through a raw-JSON integer emitter, so values beyond `Number.MAX_SAFE_INTEGER` are not corrupted.
+- DOKU amounts are plain IDR integers of at most 12 digits (validated), so JS numbers hold them exactly.
 
 
 ## 2. Totals
@@ -33,11 +33,11 @@ credit discount  = least(Rp5.000, chosen amount) = Rp5.000   (chosen amount ≥ 
 ## 3. Publication lifecycle
 
 1. `create_publication_order` validates the note, prices it, and creates the order, its items and the note (`awaiting_payment`). It reserves a credit if one is requested.
-2. If the total is 0, `complete_free_order` runs. Otherwise, `create-payment` → `lock_order_for_payment` creates the Snap session once; later calls reuse it.
+2. If the total is 0, `complete_free_order` runs. Otherwise, `create-payment` → `lock_order_for_payment` creates the Checkout session once; later calls reuse it.
 3. A verified `settlement`, or `capture` with fraud `accept`, triggers `fulfill_order`, exactly once. That step consumes the credit and publishes the note. In `pre` moderation mode the note goes to `pending_moderation` instead.
 4. Failed, cancelled or expired orders run `abandon_order`, which releases the credit and sets the note to `payment_failed`.
 5. A full refund or chargeback runs `reverse_order_effects`, which unpublishes the note. A partial refund keeps the note and records `refunded_amount`.
-6. Unpaid orders with no session expire after `unpaid_order_ttl_minutes` (default 120). Sessions expire after 24 hours on Midtrans' side and 25 hours on ours.
+6. Unpaid orders with no session expire after `unpaid_order_ttl_minutes` (default 120). Sessions expire after 24 hours on DOKU' side and 25 hours on ours.
 
 ## 4. Referral programme
 
@@ -81,7 +81,7 @@ These are separate `kind = donation` orders with their own confirmation. The def
 | publication_revenue | Σ(chosen amount − credit discount) for publication orders paid in the period |
 | decoration_revenue | Σ decoration amounts of those orders |
 | donations / advertising_revenue | Σ totals of donation / advertising orders paid in the period |
-| gross_payment_volume | Σ totals of all orders paid through Midtrans in the period |
+| gross_payment_volume | Σ totals of all orders paid through DOKU in the period |
 | refunds_and_reversals | Σ refunded amounts of those orders |
 | net_collected | Gross minus refunds. **Not profit**: fees and costs are not deducted. |
 | processing_fees | Not available from notifications; reported as `null` |
@@ -104,7 +104,7 @@ These are separate `kind = donation` orders with their own confirmation. The def
 - Free weekly post: one per account per week (Monday 00:00 Asia/Jakarta), claimed in `free_post_claims(user_id, week_start)`. It waives the minimum price only. Decorations are still paid.
 - Promo codes (`promo_codes`, admin-created): percent (100 = free post) or fixed rupiah off, `max_uses`, `per_user_limit`, `expires_at`. They discount **the minimum price only**; the rest of the amount is a tip and is never discounted. Decorations are never discounted. A free weekly post, a promo code and credits cannot be combined. Promo and free post need an account.
 - Race safety: `apply_post_discount` locks the code row (`FOR UPDATE`), so `uses` and the per-user count cannot be exceeded.
-- Unpaid orders (and their post) are deleted after 30 minutes; a Snap session lasts 30 minutes from the moment payment starts. Failed, denied, cancelled and expired orders delete the pending post and return the promo use and the free post.
+- Unpaid orders (and their post) are deleted after 30 minutes; a Checkout session lasts 30 minutes from the moment payment starts. Failed, denied, cancelled and expired orders delete the pending post and return the promo use and the free post.
 - Anonymity: see `docs/PRIVACY_POSTING.md`.
 
 ## Boosts and anonymity (migration 020)

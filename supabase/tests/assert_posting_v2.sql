@@ -51,7 +51,7 @@ select pg_temp.expect_err($$select pg_temp.post(null, 'Anon', '2499', '{}', null
 select pg_temp.expect_err($$select pg_temp.post(null, 'Anon', '2500', '{no-such-deco}', null, false, false)$$, 'INVALID_DECORATION');
 
 -- ---- order ref is random, no timestamp, no user data ----------------------
-select pg_temp.must(public.new_order_ref('publication') ~ '^CSW-P-[0-9a-f]{40}$', 'random order ref');
+select pg_temp.must(public.new_order_ref('publication') ~ '^CSW-P-[0-9a-f]{24}$', 'random order ref');
 select pg_temp.must(public.new_order_ref('publication') <> public.new_order_ref('publication'), 'refs differ');
 
 -- ---- author names ----------------------------------------------------------

@@ -1,10 +1,12 @@
 // Run with: deno test supabase/functions/_shared/
-// Covers the money and trust-boundary code: Midtrans signature, Snap body, request reader, input validation.
-import { buildSnapBody, expectedSignature, midtransConfig, parseNotification, statusToRpcArgs, verifySignature } from "./payments.ts";
-import { HttpError, readJson, sha512Hex, timingSafeEqual } from "./security.ts";
+// Covers the money and trust-boundary code: DOKU signatures, Checkout body, status mapping, request reader, input validation.
+import { createHash, createHmac } from "node:crypto";
+import { buildCheckoutBody, dokuConfig, parsePayload, statusToRpcArgs, verifyNotification } from "./payments.ts";
+import { HttpError, readJson, timingSafeEqual } from "./security.ts";
 import * as v from "./validation.ts";
 
-const KEY = "SB-Mid-server-TESTKEY";
+const SECRET = "SK-TESTKEY";
+const CFG = dokuConfig((k) => ({ DOKU_CLIENT_ID: "BRN-0001-TEST", DOKU_SECRET_KEY: SECRET })[k])!;
 
 function eq(actual: unknown, expected: unknown, msg: string) {
   if (actual !== expected) throw new Error(`${msg}: expected ${String(expected)}, got ${String(actual)}`);
@@ -21,66 +23,73 @@ async function throwsHttp(fn: () => unknown, status: number, code?: string) {
 const jsonReq = (body: BodyInit | null, headers: Record<string, string> = { "content-type": "application/json" }) =>
   new Request("http://test.local/", { method: "POST", headers, body, duplex: "half" } as RequestInit);
 
-Deno.test("signature: sha512(order_id + status_code + gross_amount + key), constant-time compare", async () => {
-  const n = { order_id: "CSW-P-TEST", status_code: "200", gross_amount: "10000.00" };
-  const good = await sha512Hex(n.order_id + n.status_code + n.gross_amount + KEY);
-  eq(await expectedSignature(n, KEY), good, "expected signature");
-  const note = parseNotification({ ...n, signature_key: good.toUpperCase(), transaction_status: "settlement" });
-  eq(await verifySignature(note, KEY), true, "upper-case hex accepted");
-  eq(await verifySignature({ ...note, gross_amount: "10001.00" }, KEY), false, "changed amount rejected");
-  eq(await verifySignature(note, "SB-Mid-server-OTHER"), false, "wrong key rejected");
+/** Independent (node:crypto) implementation of DOKU's documented signature, to check ours against. */
+function dokuSig(h: { cid: string; rid: string; ts: string; target: string; body: string }) {
+  const digest = createHash("sha256").update(h.body).digest("base64");
+  const lines = `Client-Id:${h.cid}\nRequest-Id:${h.rid}\nRequest-Timestamp:${h.ts}\nRequest-Target:${h.target}\nDigest:${digest}`;
+  return "HMACSHA256=" + createHmac("sha256", SECRET).update(lines).digest("base64");
+}
+
+Deno.test("notification signature: matches DOKU's documented algorithm, rejects tampering", async () => {
+  const body = JSON.stringify({ order: { invoice_number: "CSW-P-TEST", amount: 20000 }, transaction: { status: "SUCCESS" } });
+  const h = { cid: "BRN-0001-TEST", rid: "req-1", ts: "2026-11-14T02:00:00Z", target: "/functions/v1/doku-webhook", body };
+  const headers = (over: Record<string, string> = {}) =>
+    new Headers({ "client-id": h.cid, "request-id": h.rid, "request-timestamp": h.ts, signature: dokuSig(h), ...over });
+  const paths = [h.target];
+  eq(await verifyNotification(CFG, headers(), body, paths), true, "valid");
+  eq(await verifyNotification(CFG, headers(), body.replace("20000", "1"), paths), false, "changed body rejected");
+  eq(await verifyNotification(CFG, headers(), body, ["/other"]), false, "wrong path rejected");
+  eq(await verifyNotification(CFG, headers({ "client-id": "BRN-OTHER" }), body, paths), false, "wrong client id rejected");
+  eq(await verifyNotification(CFG, headers({ signature: "" }), body, paths), false, "missing signature rejected");
   eq(timingSafeEqual("abc", "abcd"), false, "different length");
   eq(timingSafeEqual("abc", "abc"), true, "equal");
 });
 
-Deno.test("parseNotification rejects missing or oversized fields", async () => {
-  await throwsHttp(() => parseNotification({ order_id: "x" }), 400, "INVALID_NOTIFICATION");
-  await throwsHttp(
-    () => parseNotification({ order_id: "x".repeat(201), status_code: "200", gross_amount: "1", signature_key: "s", transaction_status: "t" }),
-    400,
-    "INVALID_NOTIFICATION",
-  );
+Deno.test("parsePayload: status mapping, amount, privacy of stored raw", async () => {
+  const base = { order: { invoice_number: "CSW-P-TEST", amount: 20000 }, channel: { id: "QRIS_DOKU" }, customer: { name: "Budi", email: "b@x.id" } };
+  const ok = parsePayload({ ...base, transaction: { status: "SUCCESS", original_request_id: "r1" } });
+  eq(ok.status, "settlement", "SUCCESS");
+  eq(ok.amount, "20000", "amount");
+  eq(ok.channel, "qris_doku", "channel");
+  eq(JSON.stringify(ok.raw).includes("Budi"), false, "customer data not stored");
+  eq(parsePayload({ ...base, transaction: { status: "FAILED" } }).status, "pending", "FAILED is retryable on Checkout");
+  eq(parsePayload({ ...base, transaction: { status: "EXPIRED" } }).status, "expire", "EXPIRED");
+  eq(parsePayload({ ...base, transaction: { status: "REFUNDED" } }).status, "refund", "REFUNDED");
+  const args = statusToRpcArgs(ok);
+  eq(args.p_transaction_status, "settlement", "rpc status");
+  eq(args.p_gross_amount, "20000", "rpc amount");
+  eq(args.p_currency, "IDR", "rpc currency");
+  await throwsHttp(() => parsePayload({ order: { invoice_number: "x" } }), 400, "INVALID_NOTIFICATION");
+  await throwsHttp(() => parsePayload({}), 400, "INVALID_NOTIFICATION");
 });
 
-Deno.test("statusToRpcArgs prefers the verified status and redacts the signature", () => {
-  const fallback = { order_id: "CSW-P-TEST", status_code: "201", gross_amount: "1.00", signature_key: "secret", transaction_status: "pending" };
-  const args = statusToRpcArgs({ order_id: "CSW-P-TEST", status_code: "200", gross_amount: "2500.00", transaction_status: "settlement" }, fallback);
-  eq(args.p_transaction_status, "settlement", "status wins");
-  eq(args.p_gross_amount, "2500.00", "amount from status");
-  eq(JSON.stringify(args.p_raw).includes("secret"), false, "signature redacted");
-});
+Deno.test("buildCheckoutBody: integer amount, channels upper-cased, discount lines, totals must match", async () => {
+  const base = { orderRef: "CSW-P-TEST", enabledPayments: ["qris", "virtual_account_bca"], finishUrl: "https://example.test/#/checkout" };
+  const body = JSON.parse(buildCheckoutBody({ ...base, items: [{ id: "a", name: "Note", price: "25000", quantity: 1 }], grossAmount: "25000", expiryMinutes: 30 }));
+  eq(body.order.amount, 25000, "amount");
+  eq(body.order.invoice_number, "CSW-P-TEST", "invoice");
+  eq(body.payment.payment_due_date, 30, "expiry");
+  eq(body.payment.payment_method_types.join(), "QRIS,VIRTUAL_ACCOUNT_BCA", "channels");
+  eq("payment_method_types" in JSON.parse(buildCheckoutBody({ ...base, enabledPayments: [], grossAmount: "1500", items: [{ id: "a", name: "n", price: "1500", quantity: 1 }] })).payment, false, "empty = all channels");
 
-Deno.test("buildSnapBody: exact integers, discount lines, totals must match", async () => {
-  const base = { orderRef: "CSW-P-TEST", enabledPayments: ["gopay"], finishUrl: "https://example.test/#/checkout" };
-  const body = buildSnapBody({
-    ...base,
-    grossAmount: "9007199254740993", // beyond Number.MAX_SAFE_INTEGER
-    items: [{ id: "a", name: "Note", price: "9007199254740993", quantity: 1 }],
-  });
-  eq(body.includes('"gross_amount":9007199254740993'), true, "no float rounding");
-
-  const withDiscount = buildSnapBody({
+  const withDiscount = buildCheckoutBody({
     ...base,
     grossAmount: "1500",
     items: [{ id: "a", name: "Note", price: "2500", quantity: 1 }, { id: "d", name: "Promo", price: "-1000", quantity: 1 }],
   });
-  eq(JSON.parse(withDiscount).transaction_details.gross_amount, 1500, "discount applied");
+  eq(JSON.parse(withDiscount).order.amount, 1500, "discount applied");
 
-  await throwsHttp(() => buildSnapBody({ ...base, grossAmount: "2500", items: [{ id: "a", name: "n", price: "2400", quantity: 1 }] }), 500, "ORDER_TOTAL_MISMATCH");
-  await throwsHttp(() => buildSnapBody({ ...base, grossAmount: "0", items: [] }), 400, "INVALID_AMOUNT");
-  await throwsHttp(() => buildSnapBody({ ...base, grossAmount: "12.5", items: [] }), 400, "INVALID_AMOUNT");
+  await throwsHttp(() => buildCheckoutBody({ ...base, grossAmount: "2500", items: [{ id: "a", name: "n", price: "2400", quantity: 1 }] }), 500, "ORDER_TOTAL_MISMATCH");
+  await throwsHttp(() => buildCheckoutBody({ ...base, grossAmount: "0", items: [] }), 400, "INVALID_AMOUNT");
+  await throwsHttp(() => buildCheckoutBody({ ...base, grossAmount: "12.5", items: [] }), 400, "INVALID_AMOUNT");
+  await throwsHttp(() => buildCheckoutBody({ ...base, grossAmount: "1" + "0".repeat(12), items: [] }), 400, "INVALID_AMOUNT");
 });
 
-Deno.test("midtransConfig: missing key, sandbox key in production, endpoints", () => {
-  eq(midtransConfig(() => undefined), null, "no key");
-  let threw = false;
-  try {
-    midtransConfig((k) => ({ MIDTRANS_SERVER_KEY: KEY, MIDTRANS_IS_PRODUCTION: "true" })[k]);
-  } catch {
-    threw = true;
-  }
-  eq(threw, true, "sandbox key refused in production");
-  eq(midtransConfig((k) => ({ MIDTRANS_SERVER_KEY: KEY })[k])?.apiBase, "https://api.sandbox.midtrans.com", "sandbox base");
+Deno.test("dokuConfig: missing credentials, endpoints", () => {
+  eq(dokuConfig(() => undefined), null, "no credentials");
+  eq(dokuConfig((k) => ({ DOKU_CLIENT_ID: "a" })[k]), null, "no secret");
+  eq(CFG.apiBase, "https://api-sandbox.doku.com", "sandbox base");
+  eq(dokuConfig((k) => ({ DOKU_CLIENT_ID: "a", DOKU_SECRET_KEY: "b", DOKU_IS_PRODUCTION: "true" })[k])?.apiBase, "https://api.doku.com", "production base");
 });
 
 Deno.test("readJson: size cap holds without Content-Length, type and shape are enforced", async () => {
@@ -137,12 +146,4 @@ Deno.test("validation: media paths, Spotify refs, strings", async () => {
   eq(v.str("  hi  ", "Name", { max: 10 }), "hi", "trimmed");
   await throwsHttp(() => v.str("a\u0000b", "Name", { max: 10 }), 400);
   await throwsHttp(() => v.str("x".repeat(11), "Name", { max: 10 }), 400);
-});
-
-Deno.test("buildSnapBody: empty channel list omits enabled_payments", () => {
-  const b = JSON.parse(buildSnapBody({
-    orderRef: "CSW-P-TEST", grossAmount: "2500", enabledPayments: [], finishUrl: "https://example.test/#/checkout",
-    items: [{ id: "a", name: "Note", price: "2500", quantity: 1 }],
-  }));
-  eq("enabled_payments" in b, false, "key omitted");
 });

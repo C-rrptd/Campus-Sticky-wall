@@ -297,7 +297,7 @@ const panels = {
           const d = await api("order_detail", { order_ref: r.order_ref });
           await openDialog({ title: `Order ${r.order_ref}`, body: el("pre", { class: "code-block" }, JSON.stringify(d, null, 2)), okLabel: "Close" });
         }),
-        ["awaiting_payment", "challenge", "paid", "partially_refunded"].includes(r.status) && button("Reconcile with Midtrans", async () => {
+        ["awaiting_payment", "challenge", "paid", "partially_refunded"].includes(r.status) && button("Reconcile with DOKU", async () => {
           const res = await api("reconcile_order", { order_ref: r.order_ref });
           toast(`Result: ${res.result}`, "info");
           reload();
@@ -564,7 +564,7 @@ const panels = {
       el("h2", {}, "Community uploads"), el("p", { class: "small" }, el("a", { class: "btn btn--small", href: "#/decorations" }, "Upload a new decoration")), review,
       el("h2", {}, "Decorations"), decoGrid,
       el("h2", {}, "Payment methods"),
-      el("p", { class: "small muted" }, "Set limits from your Midtrans/acquirer agreement. A method is offered only when the order total fits its limits; totals are never reduced to fit."),
+      el("p", { class: "small muted" }, "Set limits from your DOKU/acquirer agreement. A method is offered only when the order total fits its limits; totals are never reduced to fit."),
       pmTable,
       el("h2", {}, "Advertising packages"),
       el("p", { class: "small muted" }, "Advertisers pick placement (Random or Featured) and duration; only enabled packages with at least one enabled location are offered. The base fee covers the first location; each added location costs the extra % of the base fee (100% = the same price again, 50% = half). The total is frozen when an advertiser submits, and changing a price never changes an existing campaign or order. Hover ⓘ for the formula."),
@@ -874,7 +874,7 @@ const panels = {
     panel.replaceChildren(
       el("p", { class: o.enabled ? "notice" : "notice notice--warn" }, o.enabled ? "Auctions are ON globally." : "Auctions are OFF. Nothing here affects fixed-price sales while they are off."),
       actions(toggleGlobal, kill),
-      el("p", { class: "small muted" }, "Rules: next period of a full slot only · reserve = current fixed price · buy now = 1.5× reserve · highest valid bid wins, earliest bid breaks ties · anti-sniping +5 min (max 6) · no money is taken at bid time (Midtrans has no authorization hold here): the winner gets a payment window, unpaid goes to the next bidder and earns a strike."),
+      el("p", { class: "small muted" }, "Rules: next period of a full slot only · reserve = current fixed price · buy now = 1.5× reserve · highest valid bid wins, earliest bid breaks ties · anti-sniping +5 min (max 6) · no money is taken at bid time (DOKU has no authorization hold here): the winner gets a payment window, unpaid goes to the next bidder and earns a strike."),
       el("h2", {}, "Settings"),
       el("div", { class: "form-grid" },
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Auction length (hours)"), hours),
@@ -1084,7 +1084,7 @@ const panels = {
     const pct = (v) => (v === null || v === undefined ? "n/a" : `${(Number(v) * 100).toFixed(1)}%`);
     const items = [
       ...money.map((k) => [k, formatRupiah(d[k])]),
-      ["processing_fees", d.processing_fees === null ? "not available (see Midtrans settlement reports)" : formatRupiah(d.processing_fees)],
+      ["processing_fees", d.processing_fees === null ? "not available (see DOKU settlement reports)" : formatRupiah(d.processing_fees)],
       ["paid_orders", d.paid_orders], ["free_publications", d.free_publications], ["checkout_sessions", d.checkout_sessions],
       ["checkout_completion_rate", pct(d.checkout_completion_rate)], ["decoration_attachment_rate", pct(d.decoration_attachment_rate)],
       ["credits_issued", d.credits_issued], ["credits_redeemed", d.credits_redeemed],
@@ -1137,7 +1137,7 @@ const GUIDE = {
     steps: ["Fill Title and Text, tick “Pin on the wall” if needed, then Save draft. Use Preview to check it first.", "A draft is not visible. Press Publish in the list to make it live.", "Unpublish moves it back to draft. Archive hides it for good. Edit loads it back into the form."],
     sub: { "Write news": "Form for a new item, or for the item you pressed Edit on.", "Recent news": "All news items and their status. Publish, unpublish, archive or edit here." } },
   orders: { what: "Every payment: sticky posts, donations and advertising orders.",
-    steps: ["Filter by kind and status. Tick “needs review” to see only orders the system flagged.", "Details shows the full record. Reconcile with Midtrans asks the payment provider for the true status: use it when a customer says they paid but the order did not update.", "Waive payment publishes an unpaid sticky post for free (reason required, recorded as waived).", "Clear review flag after you checked a flagged order.", "Customer sends a receipt ID? Paste it in the lookup box at the top to find that note."] },
+    steps: ["Filter by kind and status. Tick “needs review” to see only orders the system flagged.", "Details shows the full record. Reconcile with DOKU asks the payment provider for the true status: use it when a customer says they paid but the order did not update.", "Waive payment publishes an unpaid sticky post for free (reason required, recorded as waived).", "Clear review flag after you checked a flagged order.", "Customer sends a receipt ID? Paste it in the lookup box at the top to find that note."] },
   revenue: { what: "Money report for a date range, in Jakarta time.",
     steps: ["Pick From and To. “To” is not included, so use the next day to include a whole last day.", "Press Run report.", "Hover a figure name or read Definitions below to see how it is counted. Net collected is money in minus refunds."] },
   promos: { what: "Discount codes for sticky posts.",
@@ -1156,7 +1156,7 @@ const GUIDE = {
     steps: ["Set the rules in Settings, then Save auction settings.", "Check Auction readiness. A location is ready when it was full for enough weeks and has enough waitlist.", "Turn auctions on (type ENABLE AUCTIONS), then Enable them per location. Enabling an unready location needs a reason.", "Pick location and package, then Start auction.", "Watch Auctions: Bid log shows every bid, Cancel stops one auction.", "Kill switch turns auctions off and cancels all open auctions. Fixed prices keep working.", "Clear strikes for a bidder who won and did not pay, when appropriate."],
     sub: { "Settings": "Length, minimum raise, payment time, strike limit and readiness rules.", "Auction readiness": "Which locations may run auctions, and whether they meet the rules.", "Start an auction": "Open a new auction. Only locations with auctions enabled appear.", "Auctions": "All auctions with status, bids and end time.", "Accounts with unpaid-win strikes": "Bidders who won and did not pay. At the strike limit they cannot bid." } },
   catalog: { what: "Everything that sets what customers pay, plus general site settings.",
-    steps: ["Decorations: click one to change its name, price or visibility.", "Payment methods: set limits from your Midtrans agreement.", "Advertising packages: change base fee, extra-location %, and enable or disable packages. Old orders keep their old price.", "Site settings: change values, then press the save button at the bottom."],
+    steps: ["Decorations: click one to change its name, price or visibility.", "Payment methods: set limits from your DOKU agreement.", "Advertising packages: change base fee, extra-location %, and enable or disable packages. Old orders keep their old price.", "Site settings: change values, then press the save button at the bottom."],
     sub: { "Decorations": "Stickers and decorations people add to notes. Click one to edit.", "Site settings": "Moderation mode, donation limits, order expiry, contact details, ad payment days, launch pricing and allowed campaign lengths." } },
   locations: { what: "The places ads and notes can target: countries, regions, cities and campuses.",
     steps: ["Add from the top down: country, then region, then city, then campus.", "Each form picks its parent, then a name. Press Add.", "Disable hides a place from pickers. Campaigns that targeted it stop matching it."],

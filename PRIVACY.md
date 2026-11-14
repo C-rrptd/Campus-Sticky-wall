@@ -13,7 +13,7 @@ This is an operator-facing description of the data Campus Sticky Wall processes.
 | Votes, bookmarks | Features | Private to the user (vote counts are public) | `votes`, `bookmarks` |
 | Reports | Moderation | Reporter and admins | `reports` |
 | Orders, order items, payment status, payment type | Payments, reconciliation | User (own orders) and admins | `orders`, `order_items` |
-| Midtrans notification payloads (signature redacted) | Audit, dispute handling | Admins (via the database) | `payment_notifications.raw` |
+| DOKU notification payloads (signature redacted) | Audit, dispute handling | Admins (via the database) | `payment_notifications.raw` |
 | Guest receipt token **hash** | Guest receipt access | Never exposed | `orders.guest_token_hash` |
 | Referral code, attribution, credits | Referral programme | User; admins | `referral_codes`, `referral_attributions`, `credits` |
 | Advertiser name, contact email, campaign content, targeting | Advertising | Campaign content is public when live; contact data is for admins and the owner | `campaigns`, `campaign_targets` |
@@ -26,7 +26,7 @@ This is an operator-facing description of the data Campus Sticky Wall processes.
 
 Not collected:
 
-- Card or wallet credentials. Midtrans hosts the payment page.
+- Card or wallet credentials. DOKU hosts the payment page.
 - Precise location (no GPS).
 - Analytics or advertising cookies (no third-party scripts).
 
@@ -39,7 +39,7 @@ Donor recognition is **off by default**. A donor appears on the donor leaderboar
 ## Processors
 
 - **Supabase:** database, authentication, storage, functions. Choose a region near your users.
-- **Midtrans:** payment processing.
+- **DOKU:** payment processing.
 - **Static host** (e.g. Cloudflare Pages): standard request logs.
 
 ## Retention and deletion
