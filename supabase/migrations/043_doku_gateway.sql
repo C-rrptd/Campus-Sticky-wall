@@ -11,7 +11,7 @@ language sql volatile set search_path = '' as $$
 $$;
 
 update public.payment_methods set midtrans_codes = array['qris'] where code = 'qris';
-update public.payment_methods set midtrans_codes = array['emoney_ovo','emoney_dana','emoney_shopee_pay'] where code = 'ewallet';
+update public.payment_methods set midtrans_codes = array['emoney_ovo','emoney_dana','emoney_shopeepay'] where code = 'ewallet';
 update public.payment_methods set midtrans_codes = array['virtual_account_bca','virtual_account_bank_mandiri','virtual_account_bni','virtual_account_bri'] where code = 'virtual_account';
 update public.payment_methods set midtrans_codes = array['credit_card'] where code = 'credit_card';
-update public.payment_methods set midtrans_codes = array['online_to_offline_alfa','online_to_offline_indomaret'] where code = 'convenience_store';
+update public.payment_methods set midtrans_codes = array['online_to_offline_alfa'] where code = 'convenience_store';

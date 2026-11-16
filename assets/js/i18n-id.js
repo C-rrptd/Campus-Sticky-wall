@@ -166,6 +166,7 @@ export const ID = {
   "Period": "Periode",
   "All time": "Sepanjang waktu",
   "This week": "Minggu ini",
+  "This month": "Bulan ini",
   "Name": "Nama",
   "Count": "Jumlah",
   "Privacy notice": "Pemberitahuan privasi",
