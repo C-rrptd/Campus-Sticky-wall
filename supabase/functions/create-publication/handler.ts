@@ -4,8 +4,8 @@
 // optional free weekly post / promo code / credits), creates the pending order +
 // note and returns the order summary together with a one-time access token for
 // the guest receipt. Zero-total orders complete here without any payment.
-// The database (create_publication_order_v2) enforces every rule; the account
-// is NOT stored on the note.
+// The database (create_publication_order_v4) enforces every rule. The account is
+// linked to the note's public byline only when the member sets show_profile.
 
 import { type Deps, type Handler, optionalUser } from "../_shared/auth.ts";
 import { clientIp, HttpError, json, randomToken, rateLimit, readJson, rpc, sha256Hex } from "../_shared/security.ts";
@@ -38,11 +38,15 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     use_free_post: v.bool(body.use_free_post, "use_free_post", false),
     poll: v.poll(body.poll),
     spotify: v.spotifyRef(body.spotify),
+    show_profile: v.bool(body.show_profile, "show_profile", false),
   };
   // Promo guesses are throttled separately from posting (same buckets as check-promo).
   if (input.promo) {
     await rateLimit(deps.db, `promo:ip:${clientIp(req)}`, 15, 600);
     if (user) await rateLimit(deps.db, `promo:user:${user.id}`, 15, 600);
+  }
+  if (input.show_profile && !user) {
+    return json(req, 400, { error: { code: "PROFILE_NEEDS_ACCOUNT", message: "Sign in to put your profile on a note." } }, deps.env);
   }
   // Uploads need a session (storage policy) and must sit in the caller's own folder.
   if (input.media.length && (!user || input.media.some((m) => !m.path.startsWith(`${user.id}/`)))) {
@@ -60,7 +64,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
   // Uploads land in <user-id>/…; the public URL would reveal the account. Move them to a random folder first.
   const media = await anonymiseMediaPaths(deps, input.media);
   // One transaction: order, discounts, referral credits (free post / free decorations), media, sticker positions, poll and Spotify link.
-  const order = await rpc(deps.db, "create_publication_order_v3", {
+  const order = await rpc(deps.db, "create_publication_order_v4", {
     p_user_id: user?.id ?? null,
     p_author_name: input.author_name,
     p_body: input.body,
@@ -81,6 +85,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_confirmed: confirmed,
     p_poll: input.poll,
     p_spotify: input.spotify,
+    p_show_profile: input.show_profile,
   });
   return json(req, 201, { order, access_token: accessToken }, deps.env);
 };

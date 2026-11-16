@@ -135,3 +135,21 @@
 .deco-checks .is-bad::before{content:"✕ ";color:#b91c1c}
 .deco-preview-box{width:8rem;height:8rem;border:1px solid var(--line);border-radius:6px;background:var(--note-yellow) var(--deco-img) center/contain no-repeat}
 .otp-input{font-size:1.6rem;letter-spacing:.5em;text-align:center;max-width:12rem}
+
+/* 044: profile link on a note, public profile, achievements */
+.profile-link { display: grid; gap: .35rem; justify-items: start; }
+.profile-link__btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
+.profile-link__btn:disabled { opacity: .6; cursor: not-allowed; }
+.note__profile { color: inherit; font-weight: 700; text-decoration: underline dotted; text-underline-offset: 3px; }
+.note__profile:hover, .note__profile:focus-visible { text-decoration-style: solid; }
+.public-profile { display: grid; gap: 1rem; }
+.public-profile .profile__head { display: flex; align-items: center; gap: 1rem; }
+.public-profile .page-title { margin: 0; }
+.achievements { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .75rem; }
+.achievement { display: flex; gap: .75rem; align-items: flex-start; padding: .75rem; border: 1px dashed var(--line); border-radius: 10px; opacity: .75; }
+.achievement p { margin: .1rem 0 .35rem; }
+.achievement.is-earned { opacity: 1; border-style: solid; background: var(--accent-soft); }
+.achievement__icon { font-size: 1.8rem; line-height: 1; filter: grayscale(1); }
+.achievement.is-earned .achievement__icon { filter: none; }
+.achievement__done { font-size: .8rem; font-weight: 700; color: var(--accent-strong); }
+.achievement progress { width: 6rem; vertical-align: middle; accent-color: var(--accent); }

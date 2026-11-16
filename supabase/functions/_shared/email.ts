@@ -8,6 +8,7 @@ export async function sendEmail(
   to: string,
   subject: string,
   text: string,
+  headers?: Record<string, string>,
 ): Promise<boolean> {
   const key = env("RESEND_API_KEY");
   const from = env("EMAIL_FROM");
@@ -16,7 +17,7 @@ export async function sendEmail(
     const res = await fetchFn("https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ from, to: [to], subject, text }),
+      body: JSON.stringify({ from, to: [to], subject, text, ...(headers ? { headers } : {}) }),
       signal: AbortSignal.timeout(10000), // a slow mail API must not hold the request; the catch below returns false
     });
     if (!res.ok) console.error("Email send failed", res.status);

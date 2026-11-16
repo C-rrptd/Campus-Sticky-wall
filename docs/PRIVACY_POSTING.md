@@ -27,3 +27,5 @@ Custom names are plain text (`textContent`, no link, no handler, no data attribu
 Accepted at Rp2.500: QRIS, GoPay, ShopeePay, DANA, LinkAja, OVO (min Rp1), Alfamart (min Rp1), BNI/BRI/Permata/CIMB/Danamon VA (min Rp1).
 **Not accepted:** cards (min Rp10.000), BCA VA (min Rp10.000), Indomaret (min Rp10.000), Seabank VA (Rp10.000), BSI VA (Rp1.000), Akulaku (Rp5.000).
 Fees (published DOKU rates, excl. VAT; confirm in your dashboard): QRIS 0,7% (~Rp18 on Rp2.500), GoPay/ShopeePay 2% (Rp50), DANA 1,5%. **Eats the payment:** virtual account flat ~Rp4.000 (more than the post), card 2,9% + Rp2.000, OTC (Alfamart/Indomaret) flat fees negotiated with the store. Migration 012 therefore sets `min_amount = 20000` on VA, card and convenience store: only QRIS and e-wallets are offered for small totals.
+
+> **Update (migration 044):** a signed-in member may opt in, per note, to "Put my profile on the post". Only then is the note publicly linked to their profile. See `PRIVACY.md` → Profile links.

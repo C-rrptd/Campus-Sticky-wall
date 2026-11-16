@@ -34,6 +34,7 @@ export function referralLink(code) {
 }
 
 const STATUS = { pending_verification: "Waiting for their first paid post", qualified: "Successful", rejected: "Not eligible" };
+const pendingText = (a) => a.friend_paid ? "Waiting for you to pay for your first note" : STATUS.pending_verification;
 
 export async function mount(view, { signal }) {
   const user = currentUser();
@@ -66,16 +67,26 @@ export async function mount(view, { signal }) {
   r.available.textContent = String(data.credits_available);
   r.redeemed.textContent = String(data.credits_redeemed);
 
+  r.codeState.textContent = data.code_active
+    ? "Your code is active."
+    : "Your code is not active yet. Pay at least Rp5.000 for one sticky note to activate it.";
+  const mine = data.my_referral;
+  if (mine && mine.status === "pending_verification") {
+    r.joinState.textContent = mine.i_paid
+      ? "You joined through a friend: they still need to pay at least Rp5.000 for one note, then your credits arrive."
+      : "You joined through a friend: pay at least Rp5.000 for one note to get your referral credits.";
+  }
+
   r.copy.addEventListener("click", () => copyText(link), { signal });
   if (navigator.share) {
     r.share.hidden = false;
     r.share.addEventListener("click", () => {
-      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — we both get 2 free posts and 2 free decorations after your first paid note.", url: link }).catch(() => {});
+      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — we both get 2 free posts and 1 free decoration once we have each paid for a note.", url: link }).catch(() => {});
     }, { signal });
   }
 
   r.history.replaceChildren(...(data.referred_by_you_recent.length
-    ? data.referred_by_you_recent.map((a) => el("li", {}, `${formatDate(a.created_at)} · ${STATUS[a.status] ?? a.status}`))
+    ? data.referred_by_you_recent.map((a) => el("li", {}, `${formatDate(a.created_at)} · ${a.status === "pending_verification" ? pendingText(a) : STATUS[a.status] ?? a.status}`))
     : [el("li", { class: "muted" }, "No referrals yet — share your link!")]));
   r.credits.replaceChildren(...(data.credit_history.length
     ? data.credit_history.map((c) => el("li", {}, `${formatDate(c.created_at)} · ${c.label ?? "Credit"} · ${c.status}${c.redeemed_at ? ` (used ${formatDate(c.redeemed_at)})` : ""}`))

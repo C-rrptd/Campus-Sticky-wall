@@ -17,7 +17,7 @@ end $$;
 create function pg_temp.pub(uid uuid, st text, decos text[]) returns uuid language plpgsql as $$
 declare v jsonb; oid uuid;
 begin
-  v := public.create_publication_order_v2(uid, 'Rani', 'audit note ' || gen_random_uuid()::text, 'yellow', null, false, '2500', decos, false,
+  v := public.create_publication_order_v2(uid, 'Rani', 'audit note ' || gen_random_uuid()::text, 'yellow', null, false, current_setting('csw.tip', true), decos, false,
          encode(sha256(gen_random_uuid()::text::bytea), 'hex'), null, null, false, 0, null, null, false, false);
   select id into oid from public.orders where order_ref = v ->> 'order_ref';
   update public.orders set status = st, paid_at = now() where id = oid;
@@ -28,6 +28,7 @@ end $$;
 -- ---- wall: dead sort gone, offset cap, pin_until ----
 select pg_temp.expect_err($$select public.get_wall('contribution')$$, 'INVALID_SORT');
 select pg_temp.must(public.get_wall('newest', null, 24, 5001) = '[]'::jsonb, 'offset beyond 5000 returns an empty page');
+select set_config('csw.tip', '5000', false);
 create temp table n as select pg_temp.pub(null, 'paid', '{pin-top}') as pinned, pg_temp.pub(null, 'paid', '{}') as plain;
 select pg_temp.must((select pin_until > now() + interval '6 days' from public.notes where id = (select pinned from n)), 'pin-top note has pin_until ~7 days out');
 select pg_temp.must((select pin_until is null from public.notes where id = (select plain from n)), 'plain note has no pin_until');
@@ -48,7 +49,13 @@ select pg_temp.must((select status from public.referral_attributions where refer
 select pg_temp.pub('00000000-0000-0000-0000-0000000000f2', 'completed_free', '{}');
 select pg_temp.must((select status from public.referral_attributions where referred_user_id = '00000000-0000-0000-0000-0000000000f2') = 'pending_verification', 'a free order does not qualify the referral');
 select pg_temp.pub('00000000-0000-0000-0000-0000000000f2', 'paid', '{}');
-select pg_temp.must((select status from public.referral_attributions where referred_user_id = '00000000-0000-0000-0000-0000000000f2') = 'qualified', 'a paid order qualifies the referral');
+select pg_temp.must((select status from public.referral_attributions where referred_user_id = '00000000-0000-0000-0000-0000000000f2') = 'pending_verification', '046: the friend paying is not enough, the referrer must have a paid post');
+select set_config('csw.tip', '2500', false);
+select pg_temp.pub('00000000-0000-0000-0000-0000000000f1', 'paid', '{}');
+select pg_temp.must((select status from public.referral_attributions where referred_user_id = '00000000-0000-0000-0000-0000000000f2') = 'pending_verification', '046: a paid order under Rp5.000 does not activate the referrer');
+select set_config('csw.tip', '5000', false);
+select pg_temp.pub('00000000-0000-0000-0000-0000000000f1', 'paid', '{}');
+select pg_temp.must((select status from public.referral_attributions where referred_user_id = '00000000-0000-0000-0000-0000000000f2') = 'qualified', 'both paid: the referral qualifies');
 
 select 'audit fixes OK';
 rollback;

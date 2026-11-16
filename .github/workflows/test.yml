@@ -68,6 +68,12 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_roles_on_profiles.sql
       - name: "Phase 3 assertions (auctions: reserve, raise, tie-break, anti-sniping, fallback, kill switch)"
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_phase3.sql
+      - name: Profile links and achievements assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_profile_links.sql
+      - name: Locked, seasonal and sound decoration assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_unlocks_sounds.sql
+      - name: Daily digest and suggestion assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_digest_suggestions.sql
 
   code:
     runs-on: ubuntu-latest

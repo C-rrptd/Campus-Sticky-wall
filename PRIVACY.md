@@ -9,7 +9,7 @@ This is an operator-facing description of the data Campus Sticky Wall processes.
 | Note text, display name, colour, decorations, optional social link, optional campus | Publish the note | **Public** once published | `notes`, `note_decorations` |
 | Chosen publication amount | Pricing, receipts, optional display | Public only if "show amount" is on; otherwise visible to the author and admins only | `notes.publication_amount`, `orders` |
 | Account email, password (hashed by Supabase Auth) | Sign-in | Private; admins can see email | `auth.users` |
-| Profile: display name, avatar URL, social links, location preference, donor recognition flag | Account features | Private to the user. The display name appears on leaderboards. | `profiles` |
+| Profile: display name, avatar URL, social links, location preference, donor recognition flag | Account features | Private to the user. The display name appears on leaderboards. **Display name, social links and achievements become public** while the member has a live note linked to the profile (see "Profile links"). | `profiles` |
 | Votes, bookmarks | Features | Private to the user (vote counts are public) | `votes`, `bookmarks` |
 | Reports | Moderation | Reporter and admins | `reports` |
 | Orders, order items, payment status, payment type | Payments, reconciliation | User (own orders) and admins | `orders`, `order_items` |
@@ -22,6 +22,8 @@ This is an operator-facing description of the data Campus Sticky Wall processes.
 | Ad waitlist: email, wanted placement, length and optional maximum budget | Tell you when a slot opens | Admins (counts only on the admin dashboard) | `ad_waitlist` |
 | Auction bids: bidder account, amount, a one-way hash of the IP address | Run auctions, detect several accounts on one network | Admins only. Other bidders and the public never see who bid. | `ad_bids`, `ad_auction_flags` |
 | Outgoing ad email queue (address, notice type) | Send waitlist, report and auction emails | Admins (via the database) | `ad_outbox` |
+| Daily-digest choice (on/off) and the last day a digest was sent | Email you the previous day's top note at 8 AM; opt out in Profile or from the email | You and admins | `profiles.email_digest`, `profiles.last_digest_on` |
+| Suggestions: type, title, text, optional requirements file (decoration ideas only), status and admin note | Collect and answer feature ideas | You (your own) and admins; the file is in a private bucket only you and admins can open | `suggestions`, bucket `suggestion-files` |
 | IP-based rate-limit counters (key only, no payload) | Abuse prevention | Never exposed; windows purged after about 1 day | `rate_limits` |
 
 Not collected:
@@ -31,6 +33,10 @@ Not collected:
 - Analytics or advertising cookies (no third-party scripts).
 
 Browser storage holds the Supabase session, guest receipt tokens for this device, the location preference and UI preferences.
+
+## Profile links
+
+"Put my profile on the post" is **off by default** and chosen per note (`notes.show_profile`, migration 044). A linked note shows the member's display name as a link to a public profile page (`#/u?id=<user id>`). That page lists display name, social links, member-since date, public achievements and the member's linked notes only. Notes that are not linked are never attributed, and public achievements count linked notes only. The member can unlink a note at any time from the dashboard (the byline then reverts to "Anonymous"); a member with no live linked note has no public page. Suspended members are never shown. `notes.author_id` itself is still never exposed to clients. Update the published privacy notice to match before launch.
 
 ## Donor recognition
 

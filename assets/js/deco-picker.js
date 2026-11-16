@@ -11,13 +11,13 @@ export function decoPicker({ options, placeholder, label, signal, onChange }) {
   const rows = [{ value: "", name: placeholder }, ...options];
   let value = "", active = 0, open = false;
   const swatch = (o) => (o.value ? paintArt(el("span", { class: `deco-swatch deco-${o.value}`, "aria-hidden": "true" }), o.value) : null);
-  const text = (o) => el("span", {}, o.name, o.price ? el("small", {}, o.price) : null);
+  const text = (o) => el("span", {}, o.name, o.locked ? el("small", {}, `🔒 ${o.locked}`) : o.price ? el("small", {}, o.price) : null);
 
   const btn = el("button", { type: "button", class: "picker__btn", "aria-haspopup": "listbox", "aria-expanded": "false", "aria-label": label, "aria-controls": `${id}-list` });
   const list = el("ul", { class: "picker__list", role: "listbox", id: `${id}-list`, "aria-label": label, tabindex: "-1", hidden: true });
   const root = el("div", { class: "picker" }, btn, list);
 
-  const items = rows.map((o, i) => el("li", { class: "picker__opt", role: "option", id: `${id}-o${i}`, title: o.desc || null }, swatch(o), text(o)));
+  const items = rows.map((o, i) => el("li", { class: `picker__opt${o.locked ? " is-locked" : ""}`, role: "option", id: `${id}-o${i}`, title: o.desc || null, "aria-disabled": o.locked ? "true" : null }, swatch(o), text(o)));
   let lastCat;
   rows.forEach((o, i) => {
     if (o.cat && o.cat !== lastCat) list.append(el("li", { class: "picker__group", role: "presentation" }, o.cat));
@@ -45,6 +45,7 @@ export function decoPicker({ options, placeholder, label, signal, onChange }) {
     else btn.removeAttribute("aria-activedescendant");
   };
   function choose(i) {
+    if (rows[i].locked) return; // earn it first
     value = rows[i].value;
     paintButton();
     show(false);

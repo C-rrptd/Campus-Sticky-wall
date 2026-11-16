@@ -105,6 +105,23 @@ export function mediaUrl(path) {
 export const isUserDeco = (id) => /^u-[0-9a-f]{12}$/.test(id ?? "");
 export const decoArtUrl = (id) => (isUserDeco(id) ? `${config.supabaseUrl}/storage/v1/object/public/decoration-art/${id}.png` : null);
 
+/** Paid upvote sounds are decorations "snd-<12 hex>" whose mp3 sits at sound-effects/<id>.mp3. */
+export const isSoundDeco = (id) => /^snd-[0-9a-f]{12}$/.test(id ?? "");
+export const SOUND_MAX_MS = 5000;
+let nowPlaying;
+/** Play a note's sound for the member who just upvoted it. Always cut at 5 s, whatever the file holds. */
+export function playSound(id) {
+  if (!isSoundDeco(id)) return;
+  try {
+    nowPlaying?.pause();
+    const a = new Audio(`${config.supabaseUrl}/storage/v1/object/public/sound-effects/${id}.mp3`);
+    a.volume = 0.6;
+    nowPlaying = a;
+    a.play().catch(() => {}); // blocked or missing file: stay silent
+    setTimeout(() => a.pause(), SOUND_MAX_MS);
+  } catch { /* no audio support */ }
+}
+
 /** Give a swatch or sticker element its picture when `id` is a community decoration; other ids are CSS-only. */
 export function paintArt(node, id) {
   const url = decoArtUrl(id);
