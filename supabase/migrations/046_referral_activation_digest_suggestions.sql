@@ -3,7 +3,7 @@
 -- A. Referral rework. A referral pays out only when BOTH sides have moved real money:
 --    the referrer must have one paid post (that "activates" their code) and the friend must have one paid post.
 --    Anyone can still sign up with the code; the referral waits as pending until both conditions hold, then each
---    side gets 2 free post credits and 1 free decoration credit. Whichever side pays last triggers the payout.
+--    side gets 1 free post credit and 1 free decoration credit. Whichever side pays last triggers the payout.
 --    Credits issued by the old rule (2 + 2) stay as they are.
 -- B. Daily digest: at 8 AM in the member's own time zone (campus/city/region -> regions.timezone, default Asia/Jakarta),
 --    email the note that got the most upvotes the previous local day. On by default, one click to turn off.
@@ -11,8 +11,9 @@
 
 -- ---------------------------------------------------------------- A
 -- Orders drop their account link once fulfilled (privacy), so "has paid once" is remembered on the profile
--- the moment a publication order of at least Rp5.000 is fulfilled (trigger below, before fulfill_order clears the account link). No back-fill: past orders no longer say who paid.
+-- the moment paid publication orders add up to at least Rp5.000 (trigger below, before fulfill_order clears the account link). No back-fill: past orders no longer say who paid.
 alter table public.profiles add column if not exists first_paid_at timestamptz;
+alter table public.profiles add column if not exists paid_total bigint not null default 0;  -- Rp paid on fulfilled publication orders; first_paid_at is set once it reaches 5000
 create or replace function public.has_paid_publication(p_user uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select p_user is not null and exists (select 1 from public.profiles where id = p_user and first_paid_at is not null)
@@ -34,7 +35,7 @@ begin
   returning referrer_id into v_referrer;
   if v_referrer is null then return; end if;
   foreach v_kind in array array['post', 'decoration'] loop
-    for v_slot in 1..(case v_kind when 'post' then 2 else 1 end) loop
+    for v_slot in 1..1 loop
       insert into public.referral_credits (user_id, kind, slot, source_ref, recipient)
       values (p_user, v_kind, v_slot, p_user, 'invitee'),
              (v_referrer, v_kind, v_slot, p_user, 'inviter')
@@ -62,9 +63,11 @@ grant execute on function public.qualify_waiting_referrals(uuid) to service_role
 create or replace function public.on_order_fulfilled_paid() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  if new.kind = 'publication' and new.status = 'paid' and new.total_amount >= 5000 and new.user_id is not null
+  if new.kind = 'publication' and new.status = 'paid' and new.total_amount > 0 and new.user_id is not null
      and new.fulfilled_at is not null and old.fulfilled_at is null then
-    update public.profiles set first_paid_at = coalesce(first_paid_at, now()) where id = new.user_id;
+    update public.profiles set paid_total = paid_total + new.total_amount::bigint,
+           first_paid_at = coalesce(first_paid_at, case when paid_total + new.total_amount >= 5000 then now() end)
+     where id = new.user_id;
     perform public.qualify_waiting_referrals(new.user_id);   -- as the referrer: waiting friends can now qualify
   end if;
   return new;

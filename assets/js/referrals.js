@@ -33,7 +33,7 @@ export function referralLink(code) {
   return `${base}/?ref=${encodeURIComponent(code)}#/auth?mode=register`;
 }
 
-const STATUS = { pending_verification: "Waiting for their first paid post", qualified: "Successful", rejected: "Not eligible" };
+const STATUS = { pending_verification: "Waiting for their Rp5.000 in paid posts", qualified: "Successful", rejected: "Not eligible" };
 const pendingText = (a) => a.friend_paid ? "Waiting for you to pay for your first note" : STATUS.pending_verification;
 
 export async function mount(view, { signal }) {
@@ -69,19 +69,19 @@ export async function mount(view, { signal }) {
 
   r.codeState.textContent = data.code_active
     ? "Your code is active."
-    : "Your code is not active yet. Pay at least Rp5.000 for one sticky note to activate it.";
+    : "Your code is not active yet. Pay a total of at least Rp5.000 for sticky notes to activate it.";
   const mine = data.my_referral;
   if (mine && mine.status === "pending_verification") {
     r.joinState.textContent = mine.i_paid
-      ? "You joined through a friend: they still need to pay at least Rp5.000 for one note, then your credits arrive."
-      : "You joined through a friend: pay at least Rp5.000 for one note to get your referral credits.";
+      ? "You joined through a friend: they still need to pay a total of at least Rp5.000 for notes, then your credits arrive."
+      : "You joined through a friend: pay a total of at least Rp5.000 for notes to get your referral credits.";
   }
 
   r.copy.addEventListener("click", () => copyText(link), { signal });
   if (navigator.share) {
     r.share.hidden = false;
     r.share.addEventListener("click", () => {
-      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — we both get 2 free posts and 1 free decoration once we have each paid for a note.", url: link }).catch(() => {});
+      navigator.share({ title: "Campus Sticky Wall", text: "Join me on Campus Sticky Wall — we both get 1 free post and 1 free decoration once we have each paid at least Rp5.000 in total.", url: link }).catch(() => {});
     }, { signal });
   }
 

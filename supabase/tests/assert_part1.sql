@@ -105,12 +105,14 @@ select public.fulfill_order(id) from public.orders where order_ref = :'o1';
 select public.qualify_referral('00000000-0000-0000-0000-0000000000b2');   -- replay must not re-issue
 do $$ begin
   assert (select status from public.referral_attributions) = 'qualified', 'not qualified once both paid';
-  assert (select count(*) from public.referral_credits) = 6, 'expected 6 credits (2 posts + 1 decoration x 2 people)';
-  assert (select count(*) from public.referral_credits where user_id = '00000000-0000-0000-0000-0000000000b2' and kind = 'post') = 2, 'invitee posts';
+  assert (select count(*) from public.referral_credits) = 4, 'expected 4 credits (1 post + 1 decoration x 2 people)';
+  assert (select count(*) from public.referral_credits where user_id = '00000000-0000-0000-0000-0000000000b2' and kind = 'post') = 1, 'invitee posts';
   assert (select count(*) from public.referral_credits where user_id = '00000000-0000-0000-0000-0000000000b1' and kind = 'decoration') = 1, 'inviter decorations';
 end $$;
--- a second decoration credit issued under the pre-046 rule is still honoured (the tests below spend two)
-insert into public.referral_credits (user_id, kind, slot, source_ref, recipient) values ('00000000-0000-0000-0000-0000000000b2', 'decoration', 2, '00000000-0000-0000-0000-0000000000b2', 'invitee');
+-- credits issued under the pre-046 rules (a second post and a second decoration) are still honoured; the tests below spend them
+insert into public.referral_credits (user_id, kind, slot, source_ref, recipient) values
+  ('00000000-0000-0000-0000-0000000000b2', 'post', 2, '00000000-0000-0000-0000-0000000000b2', 'invitee'),
+  ('00000000-0000-0000-0000-0000000000b2', 'decoration', 2, '00000000-0000-0000-0000-0000000000b2', 'invitee');
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000b2');
 do $$ begin
   assert (public.my_referral_summary() ->> 'free_posts_left') = '2' and (public.my_referral_summary() ->> 'free_decorations_left') = '2', 'summary counters';
@@ -163,7 +165,7 @@ select public.owner_delete_record('referral', '00000000-0000-0000-0000-000000000
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000b1');
 do $$ begin
   assert (public.leaderboard('referrals','all',5) -> 'rows' -> 0 ->> 'value') = '1', 'leaderboard after delete';
-  assert (select count(*) from public.referral_credits) = 7, 'credits must survive entry deletion';
+  assert (select count(*) from public.referral_credits) = 6, 'credits must survive entry deletion';
 end $$;
 
 rollback;

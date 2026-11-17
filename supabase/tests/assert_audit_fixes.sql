@@ -53,8 +53,7 @@ select pg_temp.must((select status from public.referral_attributions where refer
 select set_config('csw.tip', '2500', false);
 select pg_temp.pub('00000000-0000-0000-0000-0000000000f1', 'paid', '{}');
 select pg_temp.must((select status from public.referral_attributions where referred_user_id = '00000000-0000-0000-0000-0000000000f2') = 'pending_verification', '046: a paid order under Rp5.000 does not activate the referrer');
-select set_config('csw.tip', '5000', false);
-select pg_temp.pub('00000000-0000-0000-0000-0000000000f1', 'paid', '{}');
+select pg_temp.pub('00000000-0000-0000-0000-0000000000f1', 'paid', '{}');  -- 2500 + 2500 = 5000 cumulative
 select pg_temp.must((select status from public.referral_attributions where referred_user_id = '00000000-0000-0000-0000-0000000000f2') = 'qualified', 'both paid: the referral qualifies');
 
 select 'audit fixes OK';

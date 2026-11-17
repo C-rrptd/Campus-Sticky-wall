@@ -26,7 +26,7 @@ Everything else below was run against Postgres 16 with a stubbed `auth` schema; 
 - Pinned news is listed first, then newest first (existing behaviour).
 
 ## Referral credits (migration 007)
-Both the inviter and the invited friend get **2 free posts + 1 free decoration** (since migration 046; both sides must also have paid for one post), shown as "Referral credits" with separate counters (free posts left, free decorations left).
+Both the inviter and the invited friend get **1 free post + 1 free decoration** (since migration 046; both sides must also have paid for one post), shown as "Referral credits" with separate counters (free posts left, free decorations left).
 - **When:** the friend's email is verified AND their first sticky post is published. One-time per invited account (atomic status flip plus unique key).
 - **Free post:** the publication price is free; the note shows no amount. **Free decoration:** covers one paid decoration, most expensive first. Free decorations (price 0) never use a credit.
 - **Mixing:** free decoration on a paid post and paid decoration on a free post both work; any combination is reserved in the same transaction as the order, and released if the order expires or is abandoned.
