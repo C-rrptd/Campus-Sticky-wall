@@ -131,7 +131,6 @@ update public.profiles p set paid_total = s.total, first_paid_at = coalesce(p.fi
   from (select n.author_id, sum(n.publication_amount)::bigint as total from public.notes n
          where n.author_id is not null and n.status = 'published' and n.publication_amount >= 5000 group by n.author_id) s
  where p.id = s.author_id and p.paid_total = 0;
-
 -- Referrals that were waiting only on the referrer, for members who already have a paid post, qualify now.
 do $$ declare r record; begin
   for r in select distinct referrer_id from public.referral_attributions where status = 'pending_verification' and referrer_id is not null loop

@@ -21,7 +21,7 @@ export interface R2 {
   head(key: string): Promise<{ size: number; etag: string } | null>;
   first(key: string, n: number): Promise<Uint8Array | null>;
   /** `etag`: copy only if the source is still the object that was verified (the uploader's URL stays valid for 15 minutes). */
-  copy(from: string, to: string, contentType: string, etag?: string): Promise<void>;
+  copy(from: string, to: string, contentType: string, etag?: string): Promise<void>; 
   remove(keys: string[]): Promise<void>;
 }
 

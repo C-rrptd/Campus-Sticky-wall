@@ -8,7 +8,6 @@ const page = (body: string) => new Response(
   `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Daily email</title><main style="font:16px system-ui;margin:3rem auto;max-width:30rem;padding:0 1rem">${body}</main>`,
   { status: 200, headers: { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "cache-control": "no-store" } },
 );
-
 export const handler: Handler = async (req: Request, deps: Deps) => {
   const url = new URL(req.url);
   const u = url.searchParams.get("u") ?? "", t = url.searchParams.get("t") ?? "";
