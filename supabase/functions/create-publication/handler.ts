@@ -4,12 +4,13 @@
 // optional free weekly post / promo code / credits), creates the pending order +
 // note and returns the order summary together with a one-time access token for
 // the guest receipt. Zero-total orders complete here without any payment.
-// The database (create_publication_order_v2) enforces every rule; the account
-// is NOT stored on the note.
+// The database (create_publication_order_v4) enforces every rule. The account is
+// linked to the note's public byline only when the member sets show_profile.
 
 import { type Deps, type Handler, optionalUser } from "../_shared/auth.ts";
 import { clientIp, HttpError, json, randomToken, rateLimit, readJson, rpc, sha256Hex } from "../_shared/security.ts";
 import * as v from "../_shared/validation.ts";
+import { promoteUpload, verifyReceipt } from "../_shared/r2.ts";
 
 const COLORS = ["yellow", "pink", "blue", "green", "orange", "purple"] as const;
 
@@ -38,14 +39,18 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     use_free_post: v.bool(body.use_free_post, "use_free_post", false),
     poll: v.poll(body.poll),
     spotify: v.spotifyRef(body.spotify),
+    show_profile: v.bool(body.show_profile, "show_profile", false),
   };
   // Promo guesses are throttled separately from posting (same buckets as check-promo).
   if (input.promo) {
     await rateLimit(deps.db, `promo:ip:${clientIp(req)}`, 15, 600);
     if (user) await rateLimit(deps.db, `promo:user:${user.id}`, 15, 600);
   }
+  if (input.show_profile && !user) {
+    return json(req, 400, { error: { code: "PROFILE_NEEDS_ACCOUNT", message: "Sign in to put your profile on a note." } }, deps.env);
+  }
   // Uploads need a session (storage policy) and must sit in the caller's own folder.
-  if (input.media.length && (!user || input.media.some((m) => !m.path.startsWith(`${user.id}/`)))) {
+  if (input.media.length && (!user || input.media.some((m) => !m.token && !m.path.startsWith(`${user.id}/`)))) {
     return json(req, 400, { error: { code: "INVALID_MEDIA", message: "Sign in to attach files." } }, deps.env);
   }
   // Amounts above the configured threshold (default Rp100.000) need the customer to confirm the exact amount.
@@ -58,9 +63,9 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     return json(req, 400, { error: { code: "CREDIT_CONFLICT", message: "Choose either the old Rp5.000 credit or referral credits, not both." } }, deps.env);
   }
   // Uploads land in <user-id>/…; the public URL would reveal the account. Move them to a random folder first.
-  const media = await anonymiseMediaPaths(deps, input.media);
+  const media = await anonymiseMediaPaths(deps, input.media, user?.id);
   // One transaction: order, discounts, referral credits (free post / free decorations), media, sticker positions, poll and Spotify link.
-  const order = await rpc(deps.db, "create_publication_order_v3", {
+  const order = await rpc(deps.db, "create_publication_order_v4", {
     p_user_id: user?.id ?? null,
     p_author_name: input.author_name,
     p_body: input.body,
@@ -81,16 +86,30 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
     p_confirmed: confirmed,
     p_poll: input.poll,
     p_spotify: input.spotify,
+    p_show_profile: input.show_profile,
   });
   return json(req, 201, { order, access_token: accessToken }, deps.env);
 };
 
 
 /** <user-id>/<file> -> <random uuid>/<file>. Fails closed: if the move fails the order is not created. */
-async function anonymiseMediaPaths(deps: Deps, media: { path: string; kind: "image" | "video" }[]) {
-  if (media.length === 0 || !deps.storage?.move) return media;
-  const out: { path: string; kind: "image" | "video" }[] = [];
+async function anonymiseMediaPaths(deps: Deps, media: v.MediaItem[], uid: string | undefined): Promise<{ path: string; kind: "image" | "video"; s?: "r2" }[]> {
+  if (media.length === 0) return [];
+  const out: { path: string; kind: "image" | "video"; s?: "r2" }[] = [];
   for (const m of media) {
+    if (m.token) {
+      // Uploaded to Cloudflare R2: check the receipt, then verify the file and publish it under its final key.
+      if (!deps.r2 || !uid || !(await verifyReceipt(deps.env("MEDIA_TOKEN_SECRET") ?? "", uid, m.path, m.exp ?? 0, m.token))) {
+        throw new HttpError(400, "INVALID_MEDIA", "Attachment expired. Please attach it again.");
+      }
+      try { await promoteUpload(deps.r2, m.path); } catch (err) {
+        if (err instanceof HttpError) throw err;
+        throw new HttpError(502, "MEDIA_MOVE_FAILED", "Could not prepare your attachment. Please try again.");
+      }
+      out.push({ path: m.path, kind: m.kind, s: "r2" });
+      continue;
+    }
+    if (!deps.storage?.move) { out.push({ path: m.path, kind: m.kind }); continue; }
     const to = `${crypto.randomUUID()}/${m.path.split("/")[1]}`;
     try {
       await deps.storage.move(m.path, to);

@@ -5,9 +5,10 @@
 import { cloneTemplate } from "./component-loader.js";
 import { translate } from "./i18n.js";
 import { currentUser, isAdmin, isOwner } from "./auth.js";
-import { creativeUrl, getClient, invoke, mediaUrl, paintArt, query } from "./supabase-client.js";
+import { SOUND_MAX_MS, creativeUrl, getClient, invoke, isSoundDeco, mediaUrl, paintArt, playSound, query, rpc } from "./supabase-client.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, openDialog, promptReason, refs, toast } from "./utils.js";
 import { adPrice, parseRupiah } from "./validation.js";
+import { ACHIEVEMENTS } from "./profile-view.js";
 
 async function api(action, params = {}) {
   const res = await invoke("admin-api", { action, params });
@@ -216,7 +217,7 @@ const panels = {
     panel.replaceChildren(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Status"), filter),
       table([
         { label: "Note", render: (r) => el("span", { class: "clamp" }, r.body, ...(r.media ?? []).map((m, i) =>
-          el("a", { href: mediaUrl(m.path), target: "_blank", rel: "noopener noreferrer" }, ` [${m.kind} ${i + 1}]`))) },
+          el("a", { href: mediaUrl(m), target: "_blank", rel: "noopener noreferrer" }, ` [${m.kind} ${i + 1}]`))) },
         { label: "Author", key: "author_name" },
         { label: "Paid", render: (r) => formatRupiah(r.amount) },
         { label: "Votes", key: "vote_count" },
@@ -365,17 +366,28 @@ const panels = {
       const name = el("input", { name: "name", value: d.name, maxlength: "50", minlength: "2", required: true });
       const price = amountInput("price", d.price);
       const enabled = el("input", { type: "checkbox", checked: d.enabled || null });
+      // Seasonal window (visitors see it only inside it) and the achievement that unlocks it. Both optional.
+      const local = (iso) => (iso ? new Date(new Date(iso) - new Date(iso).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
+      const from = el("input", { type: "datetime-local", value: local(d.available_from) });
+      const until = el("input", { type: "datetime-local", value: local(d.available_until) });
+      const unlock = el("select", {}, el("option", { value: "" }, "Anyone can buy it"),
+        ...Object.entries(ACHIEVEMENTS).map(([id, a]) => el("option", { value: id, selected: d.unlock_achievement === id || null }, `Unlocked by: ${a[1]}`)));
       const body = el("div", { class: "stack" },
         el("div", { class: "deco-preview" }, paintArt(el("span", { class: `deco-swatch deco-${d.id}`, "aria-hidden": "true" }), d.id)),
         el("p", { class: "small muted" }, `${d.id}${d.category ? ` · ${d.category}` : ""}`),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Name"), name),
         el("label", { class: "field" }, el("span", { class: "field__label" }, "Price (Rp)"), price),
-        el("label", { class: "check" }, enabled, el("span", {}, "Enabled")));
+        el("label", { class: "check" }, enabled, el("span", {}, "Enabled")),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Available from (your time)"), from),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Available until"), until),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Who can buy it"), unlock));
       if (!(await openDialog({ title: d.name, body, okLabel: "Save" }))) return;
       const p = parseRupiah(price.value);
       if (!p.ok) { toast(p.error, "error"); return; }
-      await api("upsert_decoration", { id: d.id, name: name.value.trim(), description: d.description, price: p.digits, enabled: enabled.checked, sort: d.sort_order });
-      Object.assign(d, { name: name.value.trim(), price: p.digits, enabled: enabled.checked });
+      await api("upsert_decoration", { id: d.id, name: name.value.trim(), description: d.description, price: p.digits, enabled: enabled.checked, sort: d.sort_order,
+        available_from: from.value ? new Date(from.value).toISOString() : null, available_until: until.value ? new Date(until.value).toISOString() : null, unlock: unlock.value || null });
+      Object.assign(d, { name: name.value.trim(), price: p.digits, enabled: enabled.checked, available_from: from.value ? new Date(from.value).toISOString() : null,
+        available_until: until.value ? new Date(until.value).toISOString() : null, unlock_achievement: unlock.value || null });
       paint();
       toast("Decoration saved. Existing orders keep their original prices.", "success");
     };
@@ -560,7 +572,40 @@ const panels = {
       reload();
     }, "btn btn--primary");
 
+    // Sound effects: an mp3 of 5 seconds or less. It becomes a "Sounds" decoration that plays when a member upvotes the note.
+    const sName = el("input", { name: "sound-name", maxlength: "50", minlength: "2", placeholder: "Name, e.g. Pop" });
+    const sPrice = amountInput("sound-price", "3000");
+    const sFile = el("input", { type: "file", accept: "audio/mpeg,.mp3" });
+    const sendSound = el("button", { type: "button", class: "btn btn--primary" }, "Add sound");
+    sendSound.addEventListener("click", () => busy(sendSound, async () => {
+      const file = sFile.files?.[0], p = parseRupiah(sPrice.value);
+      if (!file || sName.value.trim().length < 2) { toast("Pick an mp3 and give it a name.", "error"); return; }
+      if (!p.ok) { toast(p.error, "error"); return; }
+      if (file.size > 163840) { toast("The file is over 160 KB. Use a shorter or lower-bitrate mp3.", "error"); return; }
+      const ms = await new Promise((res) => { const a = new Audio(URL.createObjectURL(file)); a.onloadedmetadata = () => res(Math.round(a.duration * 1000)); a.onerror = () => res(0); });
+      if (!ms || ms > SOUND_MAX_MS) { toast("The sound must be readable and at most 5 seconds.", "error"); return; }
+      const id = `snd-${Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => b.toString(16).padStart(2, "0")).join("")}`;
+      try {
+        const { error } = await getClient().storage.from("sound-effects").upload(`${id}.mp3`, file, { contentType: "audio/mpeg", cacheControl: "31536000" });
+        if (error) throw error;
+        await rpc("admin_add_sound", { p_id: id, p_name: sName.value.trim(), p_price: p.digits, p_duration_ms: ms });
+        toast("Sound added. It is live in the composer.", "success");
+        reload();
+      } catch (err) { toast(errorMessage(err), "error"); }
+    }));
+    const soundList = c.decorations.filter((d) => isSoundDeco(d.id)).map((d) => {
+      const b = el("button", { type: "button", class: "btn btn--small" }, `▶ ${d.name}`);
+      b.addEventListener("click", () => playSound(d.id));
+      return el("li", {}, b, ` ${BigInt(d.price) ? formatRupiah(d.price) : "Free"}${d.enabled ? "" : " (off)"} · edit it in the Decorations grid below`);
+    });
+
     panel.replaceChildren(policy,
+      el("h2", {}, "Sound effects"),
+      el("p", { class: "small muted" }, "A note's author can buy one sound; it plays (max 5 s) for a member who upvotes that note. mp3 only, 160 KB max."),
+      el("div", { class: "stack" }, el("label", { class: "field" }, el("span", { class: "field__label" }, "Name"), sName),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "Price (Rp)"), sPrice),
+        el("label", { class: "field" }, el("span", { class: "field__label" }, "mp3 file"), sFile), sendSound),
+      soundList.length ? el("ul", { class: "plain-list" }, ...soundList) : null,
       el("h2", {}, "Community uploads"), el("p", { class: "small" }, el("a", { class: "btn btn--small", href: "#/decorations" }, "Upload a new decoration")), review,
       el("h2", {}, "Decorations"), decoGrid,
       el("h2", {}, "Payment methods"),
@@ -1044,6 +1089,35 @@ const panels = {
       ], items));
   },
 
+  async suggestions(panel, reload) {
+    const status = el("select", {}, ...["", "new", "reviewing", "planned", "done", "declined"].map((v) => el("option", { value: v }, v || "All")));
+    status.value = panel.dataset.status ?? "";
+    status.addEventListener("change", () => { panel.dataset.status = status.value; reload(); });
+    const rows = (await rpc("admin_list_suggestions", { p_status: status.value || null, p_limit: 200 })) ?? [];
+    panel.replaceChildren(el("label", { class: "field" }, el("span", { class: "field__label" }, "Status"), status), table([
+      { label: "When", render: (r) => formatDate(r.created_at, true) },
+      { label: "From", key: "from" },
+      { label: "Type", key: "kind" },
+      { label: "Idea", render: (r) => el("div", {}, el("strong", {}, r.title), el("p", { class: "small" }, r.body)) },
+      { label: "File", render: (r) => r.attachment_path ? button("Open", async () => {
+        const { data, error } = await getClient().storage.from("suggestion-files").createSignedUrl(r.attachment_path, 120);
+        if (error) toast(errorMessage(error), "error"); else window.open(data.signedUrl, "_blank", "noopener");
+      }) : "" },
+      { label: "Status", render: (r) => r.status + (r.admin_note ? ` — ${r.admin_note}` : "") },
+      { label: "", render: (r) => button("Set status", async () => {
+        const pick = el("select", { name: "status" }, ...["new", "reviewing", "planned", "done", "declined"].map((v) => el("option", { value: v }, v)));
+        pick.value = r.status;
+        const note = el("textarea", { name: "note", rows: "3", maxlength: "500" }, r.admin_note ?? "");
+        const data = await openDialog({ title: "Set status", okLabel: "Save", body: el("div", { class: "stack" },
+          el("label", { class: "field" }, el("span", { class: "field__label" }, "Status"), pick),
+          el("label", { class: "field" }, el("span", { class: "field__label" }, "Note the member will see (optional)"), note)) });
+        if (!data) return;
+        try { await rpc("admin_set_suggestion", { p_id: r.id, p_status: data.get("status"), p_note: String(data.get("note") || "").trim() || null }); } catch (err) { toast(errorMessage(err), "error"); }
+        reload();
+      }) },
+    ], rows));
+  },
+
   async referrals(panel, reload, state) {
     const rows = await api("list_referrals", { limit: 200 });
     panel.replaceChildren(table([
@@ -1142,6 +1216,8 @@ const GUIDE = {
     steps: ["Pick From and To. “To” is not included, so use the next day to include a whole last day.", "Press Run report.", "Hover a figure name or read Definitions below to see how it is counted. Net collected is money in minus refunds."] },
   promos: { what: "Discount codes for sticky posts.",
     steps: ["Enter a code (4–24 letters/digits), type (% or Rp), and value. 100% makes the post free.", "Set Max uses, Uses per person and an expiry date if wanted. Press Create code.", "Disable a code to stop it. Enable brings it back. Codes cannot be deleted from here.", "The discount only cuts the minimum price. Anything paid above it is a tip."] },
+  suggestions: { what: "Ideas sent by members. Decoration ideas may include a requirements file.",
+    steps: ["Filter by status. Open shows the attached file (private, link works for 2 minutes).", "Set status: pick a status and an optional note. The member sees both under Suggestions."] },
   referrals: { what: "Who invited whom, and the credits earned.",
     steps: ["Check Status and reject reason to see if a referral counted.", "Credits are used to pay for posts. Revoke referral credits takes back unused credits from fraud or abuse (reason required). Credits already spent stay spent.", "“Credit (old)” and “Revoke credit” are for the old credit system."] },
   campaigns: { what: "Advertiser campaigns. Review, approve and control every ad.",

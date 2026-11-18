@@ -8,6 +8,7 @@
 | Daily | Review campaigns | Admin → **Campaigns** (status `pending_approval`). Approve = the advertiser may now pay; Reject needs a reason the advertiser sees. After payment the campaign is scheduled and goes live on its start date, then ends automatically (migration 013). Paid campaigns you reject or cancel, and paid ones the advertiser cancels before start, appear under Payments → needs review: refund them in the DOKU dashboard (the webhook then marks the campaign cancelled). Set the WhatsApp number and the days-to-pay window under Prices & settings. |
 | Daily | Payment exceptions | Admin → **Payments** → tick "needs review". Causes: `amount_or_currency_mismatch`, `fraud_challenge`, `payment_after_close` (money arrived for an expired/cancelled order: refund it in DOKU or fulfil it manually), `partial_refund_amount_unknown`. Use **Reconcile with DOKU** to re-read the status, then **Clear review flag** with a reason (audited). |
 | Every 15 min | Expire unpaid orders | `pg_cron` job (see README) or Admin → Overview → "Expire stale unpaid orders". Releases reserved credits. |
+| Every hour | Daily digest | Call the `daily-digest` function with header `x-cron-secret: $CRON_SECRET` (see "Daily digest email" below). Emails each member the previous day's most upvoted note once per local day, from 8 AM in their campus time zone. |
 | Every 5 min | Advertising jobs | Call the `ad-maintenance` function with header `x-cron-secret: $CRON_SECRET` (see "Advertising jobs" below), or Admin → **Ad insights** → "Run ad jobs now". Sends campaign-end reports, expires waitlist holds and offers freed slots, sends queued ad email, settles auctions. |
 | Weekly | Revenue | Admin → **Revenue**. Every figure carries its definition. Processing fees are *not* known to the app; take them from DOKU settlement reports. |
 | Monthly | Reconcile payments | Compare Admin → Payments (status `paid` / `refunded`) with the DOKU transaction report for the same period. Investigate any `paid` order missing from DOKU, or the reverse. |
@@ -63,6 +64,23 @@ from payment_notifications order by received_at desc limit 50;
 
 See SECURITY.md → Secrets. After rotating `DOKU_SECRET_KEY`, the webhook rejects notifications signed with the old key. Rotate during quiet hours and reconcile pending orders afterwards.
 
+## Cloudflare R2 for note media (optional)
+
+Photos, GIFs and videos attached to notes can be stored in Cloudflare R2 instead of Supabase Storage. Browsers upload straight to R2; nothing is proxied. Old notes keep loading from Supabase, and with no R2 settings everything works as before.
+
+1. Cloudflare → R2 → create a bucket. Connect a custom domain (for example `media.yourdomain`) and turn on public access for it.
+2. Bucket → Settings → CORS: allow origin = your site, method `PUT`, header `Content-Type`.
+3. Bucket → Settings → Object lifecycle: delete objects with prefix `tmp/` after 1 day (abandoned uploads).
+4. R2 → Manage API tokens: create a token with Object Read & Write for this bucket only.
+5. Supabase secrets: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and `MEDIA_TOKEN_SECRET` (random, at least 32 characters, for example `openssl rand -hex 32`).
+6. Apply migration `048_r2_media.sql`, then deploy: `supabase functions deploy media-upload create-publication admin-api manage-guest-publication` (the functions that upload or purge media).
+7. Build the site with `PUBLIC_MEDIA_BASE=https://media.yourdomain scripts/build-site.sh`. This writes the address into config.js and allows it in the CSP.
+8. Optional smaller images: enable Cloudflare Images → Transformations for the domain, then add `PUBLIC_MEDIA_RESIZE=1` to the build. The wall then loads 400 px thumbnails and the viewer 1280 px, in WebP or AVIF, converted by Cloudflare.
+
+How it works: `media-upload` hands out 15-minute upload URLs into `tmp/` plus a signed receipt. `create-publication` checks the receipt, the size and the real file type (first bytes), then copies the file to its final key. Files are never changed after that, so they are cached for a year. Deleting a note removes its R2 files through the normal cleanup queue.
+
+Limits to know: a file copied to its final key stays there even if the order then fails (it is public but unreferenced and is not cleaned up automatically). R2 does not enforce the upload size in the signed URL, so an oversized upload can sit in `tmp/` until the lifecycle rule removes it (it is rejected when the note is created). Cloudflare Images transformations are billed after the free monthly allowance. Videos are served as uploaded; they are already compressed in the browser.
+
 ## Advertising jobs
 
 The `ad-maintenance` Edge Function runs every advertising background job and is safe to call as often as you like (each job is idempotent). Set two secrets and schedule it:
@@ -79,6 +97,22 @@ select cron.schedule('ad-maintenance', '*/5 * * * *', $$
   select net.http_post(url := 'https://<project>.functions.supabase.co/ad-maintenance',
                        headers := jsonb_build_object('x-cron-secret', '<CRON_SECRET>')) $$);
 ```
+
+## Daily digest email
+
+Every member with a verified email gets one email a day at 8 AM in their university's time zone (WIB, WITA or WIT from the region; WIB when none is set) with the note that received the most upvotes the previous local day on their campus, or on the whole site when the campus had none. It is on by default; members turn it off under Profile, or with the link at the bottom of every email.
+
+```bash
+supabase functions deploy daily-digest digest-unsubscribe
+# needs CRON_SECRET, SITE_URL, RESEND_API_KEY and EMAIL_FROM (already set for ad email)
+```
+```sql
+select cron.schedule('daily-digest', '0 * * * *', $$
+  select net.http_post(url := 'https://<project>.functions.supabase.co/daily-digest',
+                       headers := jsonb_build_object('x-cron-secret', '<CRON_SECRET>')) $$);
+```
+
+Each run sends to members whose local time is between 8:00 and 11:59 and who were not emailed that local day, so one missed hour still delivers the same morning. A member is marked as sent before the email goes out, so a crash can skip a day but never double-sends. Unsubscribe links are signed with CRON_SECRET: rotating that secret invalidates old links.
 
 What it does: emails an advertiser a summary when a campaign ends; expires waitlist holds and offers a freed slot to the next waiting person; queues price proposals when "suggest a price step" is on (you still approve each one); sends queued emails (waitlist offers, auction notices); and, only when auctions are on, settles ended auctions, moves unpaid winners to the next bidder (with a strike) and sends ending-soon and payment-reminder emails. Without this job nothing time-based happens: waitlist holds never expire, auctions never close.
 

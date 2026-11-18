@@ -95,15 +95,37 @@ export function mediaProblem(file) {
 /** Storage path of the optional thumbnail of an image path (see makeThumb). */
 export const thumbPath = (path) => path.replace(/\.[A-Za-z0-9]+$/, "-t.webp");
 
-/** Public URL of an uploaded note attachment (path is "<user-id>/<file>"). */
-export function mediaUrl(path) {
-  if (!path || !/^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,100}$/.test(path)) return null;
-  return `${config.supabaseUrl}/storage/v1/object/public/note-media/${path}`;
+/** Public URL of a note attachment. `item` is a media entry {path, s?} (or a bare legacy path). `width` asks Cloudflare for a smaller image when resizing is on. */
+export function mediaUrl(item, width) {
+  const m = typeof item === "string" ? { path: item } : item;
+  if (!m?.path || !/^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,100}$/.test(m.path)) return null;
+  if (m.s !== "r2" || !config.mediaBase) return `${config.supabaseUrl}/storage/v1/object/public/note-media/${m.path}`;
+  const resize = width && config.mediaResize && m.kind !== "video" && /\.(jpg|png|webp|gif)$/.test(m.path);
+  return resize ? `${config.mediaBase}/cdn-cgi/image/width=${width},quality=80,format=auto/${m.path}` : `${config.mediaBase}/${m.path}`;
 }
+/** Small picture for the wall: a resized copy when Cloudflare resizing is on, else the uploaded "-t.webp" thumbnail. */
+export const thumbUrl = (item) => (config.mediaResize && item.s === "r2" ? mediaUrl(item, 400) : mediaUrl({ ...item, path: thumbPath(item.path) }));
 
 /** Community decorations are ids "u-<12 hex>" whose image sits at decoration-art/<id>.png. */
 export const isUserDeco = (id) => /^u-[0-9a-f]{12}$/.test(id ?? "");
 export const decoArtUrl = (id) => (isUserDeco(id) ? `${config.supabaseUrl}/storage/v1/object/public/decoration-art/${id}.png` : null);
+
+/** Paid upvote sounds are decorations "snd-<12 hex>" whose mp3 sits at sound-effects/<id>.mp3. */
+export const isSoundDeco = (id) => /^snd-[0-9a-f]{12}$/.test(id ?? "");
+export const SOUND_MAX_MS = 5000;
+let nowPlaying;
+/** Play a note's sound for the member who just upvoted it. Always cut at 5 s, whatever the file holds. */
+export function playSound(id) {
+  if (!isSoundDeco(id)) return;
+  try {
+    nowPlaying?.pause();
+    const a = new Audio(`${config.supabaseUrl}/storage/v1/object/public/sound-effects/${id}.mp3`);
+    a.volume = 0.6;
+    nowPlaying = a;
+    a.play().catch(() => {}); // blocked or missing file: stay silent
+    setTimeout(() => a.pause(), SOUND_MAX_MS);
+  } catch { /* no audio support */ }
+}
 
 /** Give a swatch or sticker element its picture when `id` is a community decoration; other ids are CSS-only. */
 export function paintArt(node, id) {
@@ -114,9 +136,16 @@ export function paintArt(node, id) {
   return node;
 }
 
-/** Upload files into the signed-in user's folder; resolves to [{path, kind}]. */
+async function putToR2(url, body, type) {
+  let res;
+  try { res = await fetch(url, { method: "PUT", body, headers: { "content-type": type } }); } catch { res = null; }
+  return !!res?.ok;
+}
+
+/** Upload files; resolves to [{path, kind, ...}]. With Cloudflare R2 configured the browser uploads straight to R2 using
+ *  short-lived URLs from the media-upload function; otherwise (or if R2 is not set up server-side) files go to Supabase Storage. */
 export async function uploadNoteMedia(files, userId) {
-  const out = [];
+  const cleaned = [];
   for (const original of files) {
     let file;
     try {
@@ -129,6 +158,27 @@ export async function uploadNoteMedia(files, userId) {
     if (file.type.startsWith("video/") && file.size > VIDEO_MAX_BYTES) {
       throw new ApiError("UPLOAD_FAILED", `${original.name}: videos can be at most 10 MB after compression. Trim it or use a shorter clip.`, 0);
     }
+    cleaned.push({ original, file });
+  }
+  if (config.mediaBase && cleaned.length) {
+    try {
+      // Only the first attachment is shown on the wall, so only it gets a thumbnail (best effort).
+      const thumb0 = cleaned[0].file.type.startsWith("image/") && cleaned[0].file.type !== "image/gif" ? await makeThumb(cleaned[0].file).catch(() => null) : null;
+      const { data } = await invoke("media-upload", { files: cleaned.map(({ file }, i) => ({ type: file.type, size: file.size, thumb: i === 0 && !!thumb0 })) });
+      const out = [];
+      for (let i = 0; i < cleaned.length; i++) {
+        const slot = data[i], { original, file } = cleaned[i];
+        if (!(await putToR2(slot.put, file, file.type))) throw new ApiError("UPLOAD_FAILED", `Couldn’t upload ${original.name}. Please try again.`, 0);
+        if (i === 0 && thumb0 && slot.thumb_put) await putToR2(slot.thumb_put, thumb0, "image/webp"); // no thumbnail is fine
+        out.push({ path: slot.path, kind: slot.kind, token: slot.token, exp: slot.exp });
+      }
+      return out;
+    } catch (err) {
+      if (err?.code !== "R2_NOT_CONFIGURED") throw err; // not set up server-side: fall through to Supabase Storage
+    }
+  }
+  const out = [];
+  for (const { original, file } of cleaned) {
     const path = `${userId}/${crypto.randomUUID()}.${MEDIA_EXT[file.type]}`;
     const { error } = await getClient().storage.from("note-media").upload(path, file, { contentType: file.type, cacheControl: "31536000" }); // uuid path, never overwritten: cache for a year
     if (error) throw new ApiError("UPLOAD_FAILED", `Couldn’t upload ${original.name}. Please try again.`, 0);

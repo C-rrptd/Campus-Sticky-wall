@@ -84,6 +84,12 @@ verify_jwt = false
 verify_jwt = false
 [functions.ad-maintenance]
 verify_jwt = false
+[functions.media-upload]
+verify_jwt = false
+[functions.daily-digest]
+verify_jwt = false
+[functions.digest-unsubscribe]
+verify_jwt = false
 
 [edge_runtime]
 enabled = true

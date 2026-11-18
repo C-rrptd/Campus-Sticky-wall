@@ -18,6 +18,11 @@ const int = (x: unknown, d: number, max: number) =>
   typeof x === "number" && Number.isInteger(x) && x >= 0 ? Math.min(x, max) : d;
 const optStr = (x: unknown, field: string, max = 200) => v.str(x, field, { max, optional: true });
 const reason = (x: unknown) => v.str(x, "Reason", { max: 500, optional: true, multiline: true });
+const optDate = (x: unknown, field: string) => {
+  if (x === null || x === undefined || x === "") return null;
+  if (typeof x !== "string" || Number.isNaN(Date.parse(x))) throw new HttpError(400, "INVALID_FIELD", `${field} must be a date.`);
+  return new Date(x).toISOString();
+};
 const optAmount = (x: unknown) => (x === null || x === undefined || x === "" ? null : v.amount(x));
 
 /** action -> [sql function, argument builder] */
@@ -48,6 +53,9 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_price: v.amount(p.price, "price"),
     p_enabled: v.bool(p.enabled, "enabled", true),
     p_sort: int(p.sort, 0, 1000),
+    p_available_from: optDate(p.available_from, "available_from"),
+    p_available_until: optDate(p.available_until, "available_until"),
+    p_unlock: p.unlock ? (/^[a-z0-9-]{2,30}$/.test(String(p.unlock)) ? String(p.unlock) : (() => { throw new HttpError(400, "INVALID_FIELD", "unlock must be an achievement id."); })()) : null,
   })],
   review_decoration: ["admin_review_decoration", (p) => ({
     p_id: v.str(p.id, "id", { min: 14, max: 14 }),

@@ -1,0 +1,33 @@
+<!-- Suggestion box: members send ideas; decoration ideas can include a requirements file. -->
+<template id="tpl-suggestions">
+  <section class="suggestions-view">
+    <h1 class="page-title">Suggestions</h1>
+    <div class="grid-2">
+      <form class="card stack" data-ref="form" novalidate>
+        <h2>Send an idea</h2>
+        <label class="field"><span class="field__label">Type</span>
+          <select name="kind" data-ref="kind">
+            <option value="feature">New feature</option>
+            <option value="improvement">Improvement to something that exists</option>
+            <option value="decoration">New decoration</option>
+            <option value="bug">Something is broken</option>
+            <option value="other">Other</option>
+          </select></label>
+        <label class="field"><span class="field__label">Short title (3–100 characters)</span><input name="title" maxlength="100" minlength="3" required></label>
+        <label class="field"><span class="field__label">Details (10–2000 characters)</span><textarea name="body" rows="6" maxlength="2000" minlength="10" required></textarea></label>
+        <div class="field" data-ref="fileBox" hidden>
+          <span class="field__label">Requirements file (optional)</span>
+          <input type="file" name="file" accept="image/png,image/jpeg,image/webp,application/pdf,text/plain" data-ref="file">
+          <p class="muted small">PNG, JPG, WebP, PDF or TXT, up to 2 MB. Describe the look, colors, size and any animation. A sketch or reference image helps. Only admins can open the file. Do not upload art you do not have the right to share.</p>
+        </div>
+        <p class="field__error" data-ref="error" role="alert"></p>
+        <button class="btn btn--primary" type="submit" data-ref="send">Send suggestion</button>
+        <p class="muted small">You can send up to 5 suggestions a day. We read all of them but cannot promise to build each one.</p>
+      </form>
+      <div class="card">
+        <h2>Your suggestions</h2>
+        <ul class="plain-list small" data-ref="list"></ul>
+      </div>
+    </div>
+  </section>
+</template>

@@ -35,5 +35,8 @@ select pg_temp.must(:swept = 2, 'sweep queues exactly the abandoned file and its
 select pg_temp.must((select array_agg(path order by path collate "C") from public.media_orphans) =
   array['cccccccc-cccc-cccc-cccc-cccccccccccc/lost-t.webp', 'cccccccc-cccc-cccc-cccc-cccccccccccc/lost.jpg'],
   'a live note keeps its thumbnail and a fresh upload is left alone');
+select pg_temp.must(public.note_media_paths('[{"path":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/x.jpg","kind":"image","s":"r2"}]') = array['r2:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/x.jpg'],
+  'R2 files are queued with an r2: prefix and no separate thumbnail entry (the purge removes it with the file)');
+select pg_temp.must(public.validate_note_media('[{"path":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/x.jpg","kind":"image","s":"r2","evil":1}]') -> 0 = '{"path":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/x.jpg","kind":"image","s":"r2"}'::jsonb, 'only path, kind and s survive validation');
 rollback;
 \echo ALL MEDIA THUMBNAIL ASSERTIONS PASSED

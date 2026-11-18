@@ -5,6 +5,7 @@ import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
 import { getClient, query, rpc } from "./supabase-client.js";
 import { renderNote } from "./notes.js";
+import { ACHIEVEMENTS, nextMilestone, renderAchievements } from "./profile-view.js";
 import { buildLocationPicker, setLocationPref } from "./location.js";
 import { isAllowedSocialUrl, isHttpsUrl, isUsername, loginLabel } from "./validation.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, refs, toast } from "./utils.js";
@@ -33,11 +34,29 @@ export async function mount(view, { signal }) {
   const tasks = [
     (async () => {
       const notes = await rpc("my_notes");
-      r.notes.replaceChildren(...(notes.length ? notes.map((n) => el("li", {},
-        el("span", { class: `badge badge--${n.status}` }, NOTE_STATUS[n.status] ?? n.status), " ",
-        el("span", {}, n.body.length > 60 ? `${n.body.slice(0, 60)}…` : n.body), " · ",
-        el("a", { href: `#/checkout?order=${encodeURIComponent(n.order_ref)}` }, "Receipt"))) : [el("li", { class: "muted" }, "You haven’t posted any notes yet.")]));
+      r.notes.replaceChildren(...(notes.length ? notes.map((n) => {
+        // Link or unlink the note from my public profile (set_note_profile). Unlinking turns the name back to Anonymous.
+        const toggle = el("button", { type: "button", class: "link-button" }, n.show_profile ? "Unlink my profile" : "Link my profile");
+        toggle.addEventListener("click", () => busy(toggle, async () => {
+          try {
+            await rpc("set_note_profile", { p_note: n.id, p_show: !n.show_profile });
+            n.show_profile = !n.show_profile;
+            toggle.textContent = n.show_profile ? "Unlink my profile" : "Link my profile";
+            toast(n.show_profile ? "Your profile is now on this note." : "Profile removed from this note.", "success");
+          } catch (err) { toast(errorMessage(err), "error"); }
+        }), { signal });
+        return el("li", {},
+          el("span", { class: `badge badge--${n.status}` }, NOTE_STATUS[n.status] ?? n.status), " ",
+          el("span", {}, n.body.length > 60 ? `${n.body.slice(0, 60)}…` : n.body), " · ",
+          el("a", { href: `#/checkout?order=${encodeURIComponent(n.order_ref)}` }, "Receipt"), " · ", toggle);
+      }) : [el("li", { class: "muted" }, "You haven’t posted any notes yet.")]));
     })().catch((err) => r.notes.replaceChildren(el("li", { class: "wall-error" }, errorMessage(err)))),
+    (async () => {
+      const list = await rpc("my_achievements");
+      const next = nextMilestone(list);
+      r.milestone.textContent = next ? `Next milestone: ${ACHIEVEMENTS[next.id][1]} (${next.progress}/${next.target})` : "You have earned every achievement. Nice.";
+      r.achievements.replaceChildren(renderAchievements(list));
+    })().catch((err) => r.achievements.replaceChildren(el("p", { class: "wall-error" }, errorMessage(err)))),
     (async () => {
       const marks = await rpc("my_bookmarks");
       r.bookmarks.replaceChildren(...(marks.length ? marks.map((n) => renderNote(n, { signal })) : [el("p", { class: "muted" }, "No bookmarks yet.")]));
@@ -94,6 +113,8 @@ export async function mountProfile(view, { signal }) {
   form.display_name.addEventListener("input", paintHead, { signal });
   form.avatar_url.value = profile.avatar_url ?? "";
   form.donor_recognition.checked = profile.donor_recognition;
+  const digestWas = (await rpc("my_digest").catch(() => true)) !== false;
+  form.email_digest.checked = digestWas;
   r.socials.replaceChildren(...SOCIALS.map(([key, label]) => el("label", { class: "field" },
     el("span", { class: "field__label" }, label),
     el("input", { name: `social_${key}`, type: "url", maxlength: "300", value: profile.social_links?.[key] ?? "", placeholder: `https://${SOCIAL_HOST[key][0]}/…` }))));
@@ -130,6 +151,7 @@ export async function mountProfile(view, { signal }) {
         await query(client.from("profiles").update({
           display_name: name, username: username || null, avatar_url: avatar || null, social_links, donor_recognition: form.donor_recognition.checked,
         }).eq("id", user.id));
+        if (form.email_digest.checked !== digestWas) await rpc("set_my_digest", { p_on: form.email_digest.checked });
         await setLocationPref(location);
         await client.auth.updateUser({ data: { display_name: name } });
         toast("Profile saved.", "success");
