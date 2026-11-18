@@ -83,7 +83,8 @@ export function creativeUrl(path) {
 const MEDIA_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "video/mp4": "mp4", "video/webm": "webm" };
 export const MEDIA_MAX_FILES = 4;
 export const MEDIA_MAX_BYTES = 25 * 1024 * 1024;
-const VIDEO_MAX_BYTES = 10 * 1024 * 1024; // checked after compression; the bucket still allows 25 MB
+const VIDEO_MAX_BYTES = 10 * 1024 * 1024; // checked after compression
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // checked after cleaning: only bites GIFs and animated WebP, which pass through untouched
 
 /** Error text for a file that can't be attached, or null when it is fine. */
 export function mediaProblem(file) {
@@ -155,6 +156,9 @@ export async function uploadNoteMedia(files, userId) {
     }
     const problem = mediaProblem(file);
     if (problem) throw new ApiError("UPLOAD_FAILED", problem, 0);
+    if (file.type.startsWith("image/") && file.size > IMAGE_MAX_BYTES) {
+      throw new ApiError("UPLOAD_FAILED", `${original.name}: images and GIFs can be at most 5 MB. Use a shorter GIF or attach it as a video instead.`, 0);
+    }
     if (file.type.startsWith("video/") && file.size > VIDEO_MAX_BYTES) {
       throw new ApiError("UPLOAD_FAILED", `${original.name}: videos can be at most 10 MB after compression. Trim it or use a shorter clip.`, 0);
     }

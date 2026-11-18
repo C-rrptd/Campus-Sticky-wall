@@ -20,7 +20,7 @@ if [[ -e "$OUT" ]]; then
   rm -rf -- "$OUT"
 fi
 mkdir -p "$OUT"
-cp -R index.html _headers manifest.webmanifest sw.js components assets "$OUT/"
+cp -R index.html _headers _routes.json manifest.webmanifest sw.js components assets "$OUT/"
 rm -f "$OUT/assets/js/mock-supabase.js" # test double used only by local.html, which is not packaged
 
 if [[ -n "${PUBLIC_SUPABASE_URL:-}" || -n "${PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}" || -n "${PUBLIC_SITE_URL:-}" ]]; then
