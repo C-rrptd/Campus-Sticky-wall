@@ -23,7 +23,7 @@ Custom names are plain text (`textContent`, no link, no handler, no data attribu
 - The optional social link is public and chosen by the poster.
 - A late payment on an already-expired order cannot publish (the note is deleted); it is flagged `payment_after_close` for a manual refund.
 
-## Small totals (written for Midtrans; DOKU limits and fees DIFFER: check your DOKU agreement)
+## Small totals (check these limits and fees against your DOKU agreement)
 Accepted at Rp2.500: QRIS, GoPay, ShopeePay, DANA, LinkAja, OVO (min Rp1), Alfamart (min Rp1), BNI/BRI/Permata/CIMB/Danamon VA (min Rp1).
 **Not accepted:** cards (min Rp10.000), BCA VA (min Rp10.000), Indomaret (min Rp10.000), Seabank VA (Rp10.000), BSI VA (Rp1.000), Akulaku (Rp5.000).
 Fees (published DOKU rates, excl. VAT; confirm in your dashboard): QRIS 0,7% (~Rp18 on Rp2.500), GoPay/ShopeePay 2% (Rp50), DANA 1,5%. **Eats the payment:** virtual account flat ~Rp4.000 (more than the post), card 2,9% + Rp2.000, OTC (Alfamart/Indomaret) flat fees negotiated with the store. Migration 012 therefore sets `min_amount = 20000` on VA, card and convenience store: only QRIS and e-wallets are offered for small totals.

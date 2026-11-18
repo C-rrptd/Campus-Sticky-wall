@@ -18,9 +18,10 @@ const CACHE = "public, max-age=31536000, immutable";
 
 export interface R2 {
   presignPut(key: string, expiresSeconds: number): Promise<string>;
-  head(key: string): Promise<{ size: number } | null>;
+  head(key: string): Promise<{ size: number; etag: string } | null>;
   first(key: string, n: number): Promise<Uint8Array | null>;
-  copy(from: string, to: string, contentType: string): Promise<void>;
+  /** `etag`: copy only if the source is still the object that was verified (the uploader's URL stays valid for 15 minutes). */
+  copy(from: string, to: string, contentType: string, etag?: string): Promise<void>;
   remove(keys: string[]): Promise<void>;
 }
 
@@ -38,7 +39,7 @@ export function r2FromEnv(env: (k: string) => string | undefined): R2 | null {
       const res = await aws.fetch(url(key), { method: "HEAD" });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error(`R2 HEAD ${res.status}`);
-      return { size: Number(res.headers.get("content-length") ?? 0) };
+      return { size: Number(res.headers.get("content-length") ?? 0), etag: res.headers.get("etag") ?? "" };
     },
     async first(key, n) {
       const res = await aws.fetch(url(key), { headers: { range: `bytes=0-${n - 1}` } });
@@ -46,12 +47,13 @@ export function r2FromEnv(env: (k: string) => string | undefined): R2 | null {
       if (!res.ok) throw new Error(`R2 GET ${res.status}`);
       return new Uint8Array(await res.arrayBuffer());
     },
-    async copy(from, to, contentType) {
+    async copy(from, to, contentType, etag) {
       const res = await aws.fetch(url(to), {
         method: "PUT",
         headers: {
           "x-amz-copy-source": `/${bucket}/${from.split("/").map(encodeURIComponent).join("/")}`,
           "x-amz-metadata-directive": "REPLACE", "content-type": contentType, "cache-control": CACHE,
+          ...(etag ? { "x-amz-copy-source-if-match": etag } : {}),
         },
       });
       if (!res.ok) throw new Error(`R2 copy ${res.status}`);
@@ -106,12 +108,12 @@ export async function promoteUpload(r2: R2, path: string): Promise<void> {
   if (head.size <= 0 || head.size > MEDIA_MAX_BYTES) { await r2.remove([tmp]); throw bad("An attachment is too large."); }
   const bytes = await r2.first(tmp, 16);
   if (!bytes || !magicOk(ext, bytes)) { await r2.remove([tmp]); throw bad("An attachment is not a valid file."); }
-  await r2.copy(tmp, path, type);
+  await r2.copy(tmp, path, type, head.etag);
   // Optional thumbnail "<name>-t.webp"; missing or bad is fine (the wall falls back to the full image).
   const t = path.replace(/\.[A-Za-z0-9]+$/, "-t.webp");
   try {
     const th = await r2.head(`tmp/${t}`);
     const tb = th && th.size > 0 && th.size <= THUMB_MAX_BYTES ? await r2.first(`tmp/${t}`, 16) : null;
-    if (tb && magicOk("webp", tb)) await r2.copy(`tmp/${t}`, t, "image/webp");
+    if (tb && magicOk("webp", tb)) await r2.copy(`tmp/${t}`, t, "image/webp", th!.etag);
   } catch { /* no thumbnail */ }
 }

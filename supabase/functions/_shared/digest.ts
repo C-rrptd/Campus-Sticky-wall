@@ -17,7 +17,18 @@ export async function sendDigests(deps: Deps): Promise<{ claimed: number; sent: 
   const secret = deps.env("CRON_SECRET") ?? "";
   const site = (deps.env("SITE_URL") ?? "").replace(/\/$/, "");
   const api = (deps.env("SUPABASE_URL") ?? "").replace(/\/$/, "");
-  const rows = (await rpc<Claim[]>(deps.db, "digest_claim", { p_limit: 100 })) ?? [];
+  let claimed = 0, sent = 0;
+  // Claim in batches of 100 until nobody is due (at most 20 batches = 2,000 emails per run; the next hourly run continues).
+  for (let batch = 0; batch < 20; batch++) {
+    const rows = (await rpc<Claim[]>(deps.db, "digest_claim", { p_limit: 100 })) ?? [];
+    claimed += rows.length;
+    sent += await sendBatch(deps, rows, secret, site, api);
+    if (rows.length < 100) break;
+  }
+  return { claimed, sent };
+}
+
+async function sendBatch(deps: Deps, rows: Claim[], secret: string, site: string, api: string): Promise<number> {
   let sent = 0;
   for (const c of rows) {
     const excerpt = c.body.length > 280 ? c.body.slice(0, 277) + "…" : c.body;
@@ -29,5 +40,5 @@ export async function sendDigests(deps: Deps): Promise<{ claimed: number; sent: 
       { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" });
     if (ok) sent++;
   }
-  return { claimed: rows.length, sent };
+  return sent;
 }

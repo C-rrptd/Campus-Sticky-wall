@@ -7,6 +7,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   sql:
     runs-on: ubuntu-latest
@@ -32,6 +35,8 @@ jobs:
         run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql supabase/migrations/02*_*.sql supabase/migrations/03*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Apply 040 onward (040 drops user_roles, which the 006 re-apply above needs, so it runs after)
         run: for f in supabase/migrations/04*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: Re-apply 044 onward (must be idempotent)
+        run: for f in supabase/migrations/04[4-9]*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: SQL assertions
         run: for f in supabase/tests/assert_*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -t -A -f "$f" || exit 1; done
 
