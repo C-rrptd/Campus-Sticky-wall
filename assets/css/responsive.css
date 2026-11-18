@@ -53,4 +53,28 @@
   /* Decorations stay inside the smaller card: stickers shrink, whole-note frames get thinner */
   .wall .sticker { font-size: 0.7em; }
   .wall .note.deco-border { outline-width: 2px; outline-offset: -6px; }
+
+  /* Tall content gets a compact phone form so the feed keeps ~5 notes per screen. */
+  .wall-toolbar { gap: var(--space-2); margin-bottom: var(--space-3); }
+  .wall-toolbar .page-title { font-size: 1.5rem; margin: 0; }
+  .wall-toolbar .page-lead { display: none; }
+  .wall-toolbar > div:first-child { flex-basis: 100%; }
+  .wall-search { max-width: none; }
+  .wall { padding: 10px 0 0; } /* room for the tape that sticks out above a note */
+  .note-skeleton { height: 90px; }
+  /* Photo/video: small thumbnail beside its label instead of a full-width 16:9 picture. */
+  .wall .note__media--thumb { flex-direction: row; justify-content: flex-start; gap: var(--space-2); text-align: left; }
+  .wall .note__thumb { width: 64px; height: 48px; aspect-ratio: auto; flex: none; }
+  /* Polls/quizzes: full card width, choices flow in a row. */
+  .wall .note__extras { grid-column: 1 / -1; }
+  .wall .poll { padding: 6px var(--space-2); gap: 6px; }
+  .wall .poll__set { flex-direction: row; flex-wrap: wrap; gap: 2px var(--space-3); }
+  .wall .poll__legend { flex: 0 0 100%; margin: 0; }
+  /* Ads and pinned news: shorter picture, two lines of text. */
+  .promo__image { aspect-ratio: 3 / 1; }
+  .promo__content { padding: var(--space-3); gap: 2px; }
+  .promo__desc, .announcement__body { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+  .promo__meta { display: none; }
+  .announcement { margin-bottom: var(--space-2); }
+  [data-ref="featured"]:not(:empty) { margin-bottom: var(--space-3); }
 }

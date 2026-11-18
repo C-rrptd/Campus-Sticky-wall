@@ -130,6 +130,13 @@ export async function mount(view, { signal }, { campus = null } = {}) {
   }, { signal });
   signal.addEventListener("abort", () => clearTimeout(timer));
   r.more.addEventListener("click", () => loadPage(false), { signal });
+  // Auto-load the next page shortly before the button scrolls into view (the button stays as the fallback).
+  // It is hidden while a page loads, so this cannot fire twice for one page.
+  if ("IntersectionObserver" in window) {
+    const more = new IntersectionObserver((e) => { if (e[0].isIntersecting) loadPage(false); }, { rootMargin: "800px" });
+    more.observe(r.more);
+    signal.addEventListener("abort", () => more.disconnect());
+  }
 
   await loadPage(true, true);
 }
