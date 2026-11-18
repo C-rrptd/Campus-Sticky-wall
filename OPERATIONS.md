@@ -112,7 +112,7 @@ select cron.schedule('daily-digest', '0 * * * *', $$
                        headers := jsonb_build_object('x-cron-secret', '<CRON_SECRET>')) $$);
 ```
 
-Each run sends to members whose local time is between 8:00 and 11:59 and who were not emailed that local day, so one missed hour still delivers the same morning. A member is marked as sent before the email goes out, so a crash can skip a day but never double-sends. Unsubscribe links are signed with CRON_SECRET: rotating that secret invalidates old links.
+Each run sends, in batches of 100 (up to 2,000 per run), to members whose local time is between 8:00 and 11:59 and who were not emailed that local day, so one missed hour still delivers the same morning. Check your email provider's daily sending limit: Resend's free plan allows 100 emails a day, so a bigger member list needs a paid plan. A member is marked as sent before the email goes out, so a crash can skip a day but never double-sends. Unsubscribe links are signed with CRON_SECRET (rotating that secret invalidates old links) and open a confirmation page, so mail scanners that open links do not unsubscribe anyone.
 
 What it does: emails an advertiser a summary when a campaign ends; expires waitlist holds and offers a freed slot to the next waiting person; queues price proposals when "suggest a price step" is on (you still approve each one); sends queued emails (waitlist offers, auction notices); and, only when auctions are on, settles ended auctions, moves unpaid winners to the next bidder (with a strike) and sends ending-soon and payment-reminder emails. Without this job nothing time-based happens: waitlist holds never expire, auctions never close.
 
