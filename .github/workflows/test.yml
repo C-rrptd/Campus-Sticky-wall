@@ -72,6 +72,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_profile_links.sql
       - name: Locked, seasonal and sound decoration assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_unlocks_sounds.sql
+      - name: Referral credit cap assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_referral_cap.sql
       - name: Daily digest and suggestion assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_digest_suggestions.sql
 

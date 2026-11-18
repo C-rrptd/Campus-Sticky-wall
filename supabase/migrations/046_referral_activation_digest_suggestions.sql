@@ -34,11 +34,13 @@ begin
      and public.has_paid_publication(referrer_id)                           -- the referrer's code is active
   returning referrer_id into v_referrer;
   if v_referrer is null then return; end if;
+  -- Referral credits are capped per person: at most 3 free posts and 3 free decorations in total (the weekly free post is separate).
   foreach v_kind in array array['post', 'decoration'] loop
     for v_slot in 1..1 loop
       insert into public.referral_credits (user_id, kind, slot, source_ref, recipient)
-      values (p_user, v_kind, v_slot, p_user, 'invitee'),
-             (v_referrer, v_kind, v_slot, p_user, 'inviter')
+      select u.id, v_kind, v_slot, p_user, u.role
+        from (values (p_user, 'invitee'), (v_referrer, 'inviter')) as u(id, role)
+       where (select count(*) from public.referral_credits c where c.user_id = u.id and c.kind = v_kind) < 3
       on conflict (source_ref, user_id, kind, slot) do nothing;
     end loop;
   end loop;

@@ -5,7 +5,7 @@
 import { decoPicker } from "./deco-picker.js";
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
-import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, isSoundDeco, mediaUrl, paintArt, playSound, query, rpc, thumbPath, uploadNoteMedia } from "./supabase-client.js";
+import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, isSoundDeco, mediaUrl, paintArt, playSound, query, rpc, thumbUrl, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, loginLabel, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
@@ -128,12 +128,12 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   r.mediaBadge.hidden = !hasMedia;
   if (hasMedia) {
     const first = note.media[0];
-    const src = mediaUrl(first.path);
+    const src = mediaUrl(first);
     if (src) {
       const video = first.kind === "video";
       const thumb = video
         ? el("video", { class: "note__thumb", preload: "metadata", muted: "", playsinline: "", "aria-hidden": "true" })
-        : el("img", { class: "note__thumb", src: /\.gif$/i.test(first.path) ? src : mediaUrl(thumbPath(first.path)) ?? src, alt: "", loading: "lazy", decoding: "async" });
+        : el("img", { class: "note__thumb", src: /\.gif$/i.test(first.path) ? src : thumbUrl(first) ?? src, alt: "", loading: "lazy", decoding: "async" });
       if (!video) thumb.addEventListener("error", () => { if (thumb.src !== src) thumb.src = src; }, { once: true }); // no thumbnail (older note): use the full image
       if (video) lazyVideo(thumb, `${src}#t=0.1`);
       r.mediaBadge.replaceChildren(thumb, el("span", { class: "note__media-label" },
@@ -330,7 +330,7 @@ function truncateBody(text) {
 function openNoteViewer(note) {
   const color = COLORS.has(note.color) ? note.color : "yellow";
   const media = (note.media ?? []).map((m) => {
-    const src = mediaUrl(m.path);
+    const src = mediaUrl(m, 1280);
     if (!src) return null;
     return m.kind === "video"
       // "#t=0.1" makes the browser show the first frame as the thumbnail before play.

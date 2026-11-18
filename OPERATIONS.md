@@ -64,6 +64,23 @@ from payment_notifications order by received_at desc limit 50;
 
 See SECURITY.md → Secrets. After rotating `DOKU_SECRET_KEY`, the webhook rejects notifications signed with the old key. Rotate during quiet hours and reconcile pending orders afterwards.
 
+## Cloudflare R2 for note media (optional)
+
+Photos, GIFs and videos attached to notes can be stored in Cloudflare R2 instead of Supabase Storage. Browsers upload straight to R2; nothing is proxied. Old notes keep loading from Supabase, and with no R2 settings everything works as before.
+
+1. Cloudflare → R2 → create a bucket. Connect a custom domain (for example `media.yourdomain`) and turn on public access for it.
+2. Bucket → Settings → CORS: allow origin = your site, method `PUT`, header `Content-Type`.
+3. Bucket → Settings → Object lifecycle: delete objects with prefix `tmp/` after 1 day (abandoned uploads).
+4. R2 → Manage API tokens: create a token with Object Read & Write for this bucket only.
+5. Supabase secrets: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and `MEDIA_TOKEN_SECRET` (random, at least 32 characters, for example `openssl rand -hex 32`).
+6. Apply migration `048_r2_media.sql`, then deploy: `supabase functions deploy media-upload create-publication admin-api manage-guest-publication` (the functions that upload or purge media).
+7. Build the site with `PUBLIC_MEDIA_BASE=https://media.yourdomain scripts/build-site.sh`. This writes the address into config.js and allows it in the CSP.
+8. Optional smaller images: enable Cloudflare Images → Transformations for the domain, then add `PUBLIC_MEDIA_RESIZE=1` to the build. The wall then loads 400 px thumbnails and the viewer 1280 px, in WebP or AVIF, converted by Cloudflare.
+
+How it works: `media-upload` hands out 15-minute upload URLs into `tmp/` plus a signed receipt. `create-publication` checks the receipt, the size and the real file type (first bytes), then copies the file to its final key. Files are never changed after that, so they are cached for a year. Deleting a note removes its R2 files through the normal cleanup queue.
+
+Limits to know: a file copied to its final key stays there even if the order then fails (it is public but unreferenced and is not cleaned up automatically). R2 does not enforce the upload size in the signed URL, so an oversized upload can sit in `tmp/` until the lifecycle rule removes it (it is rejected when the note is created). Cloudflare Images transformations are billed after the free monthly allowance. Videos are served as uploaded; they are already compressed in the browser.
+
 ## Advertising jobs
 
 The `ad-maintenance` Edge Function runs every advertising background job and is safe to call as often as you like (each job is idempotent). Set two secrets and schedule it:

@@ -89,14 +89,18 @@ export function idList(v: unknown, field: string, max: number): string[] {
   return v as string[];
 }
 
-export function mediaList(v: unknown, field: string, max: number): { path: string; kind: "image" | "video" }[] {
+export type MediaItem = { path: string; kind: "image" | "video"; token?: string; exp?: number };
+export function mediaList(v: unknown, field: string, max: number): MediaItem[] {
   if (v === undefined || v === null) return [];
   if (!Array.isArray(v) || v.length > max) throw bad("INVALID_MEDIA", `${field} must be a list (max ${max}).`);
   return v.map((m) => {
-    const o = m as { path?: unknown; kind?: unknown };
+    const o = m as { path?: unknown; kind?: unknown; token?: unknown; exp?: unknown };
     if ((o?.kind !== "image" && o?.kind !== "video") || typeof o.path !== "string" ||
         !/^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,100}$/.test(o.path)) throw bad("INVALID_MEDIA", `${field} contains an invalid file.`);
-    return { path: o.path, kind: o.kind };
+    if (o.token !== undefined && (typeof o.token !== "string" || !/^[0-9a-f]{64}$/.test(o.token) || !Number.isInteger(o.exp))) {
+      throw bad("INVALID_MEDIA", `${field} contains an invalid receipt.`);
+    }
+    return { path: o.path, kind: o.kind, ...(o.token ? { token: o.token, exp: o.exp as number } : {}) };
   });
 }
 

@@ -217,7 +217,7 @@ const panels = {
     panel.replaceChildren(el("label", { class: "field field--inline" }, el("span", { class: "field__label" }, "Status"), filter),
       table([
         { label: "Note", render: (r) => el("span", { class: "clamp" }, r.body, ...(r.media ?? []).map((m, i) =>
-          el("a", { href: mediaUrl(m.path), target: "_blank", rel: "noopener noreferrer" }, ` [${m.kind} ${i + 1}]`))) },
+          el("a", { href: mediaUrl(m), target: "_blank", rel: "noopener noreferrer" }, ` [${m.kind} ${i + 1}]`))) },
         { label: "Author", key: "author_name" },
         { label: "Paid", render: (r) => formatRupiah(r.amount) },
         { label: "Votes", key: "vote_count" },

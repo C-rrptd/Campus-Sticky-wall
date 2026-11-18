@@ -852,6 +852,7 @@ export const ID_EXTRA = {
   "Join me on Campus Sticky Wall — we both get 1 free post and 1 free decoration once we have each paid at least Rp5.000 in total.": "Gabung denganku di Campus Sticky Wall — kita berdua dapat 1 pos gratis dan 1 dekorasi gratis setelah masing-masing membayar total minimal Rp5.000.",
   "Your code is active.": "Kodemu aktif.",
   "Your code is not active yet. Pay a total of at least Rp5.000 for sticky notes to activate it.": "Kodemu belum aktif. Bayar total minimal Rp5.000 untuk catatan tempel untuk mengaktifkannya.",
+  "Referral credits are capped at 3 free posts and 3 free decorations per person. Your free weekly post is separate.": "Kredit referral dibatasi 3 pos gratis dan 3 dekorasi gratis per orang. Pos gratis mingguanmu terpisah.",
   "You joined through a friend: they still need to pay a total of at least Rp5.000 for notes, then your credits arrive.": "Kamu bergabung lewat teman: dia masih perlu membayar total minimal Rp5.000 untuk catatan, lalu kreditmu masuk.",
   "You joined through a friend: pay a total of at least Rp5.000 for notes to get your referral credits.": "Kamu bergabung lewat teman: bayar total minimal Rp5.000 untuk catatan agar mendapat kredit referralmu.",
   "Waiting for you to pay for your first note": "Menunggu kamu membayar catatan pertamamu",
