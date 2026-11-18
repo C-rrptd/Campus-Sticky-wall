@@ -10,6 +10,7 @@
 
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.117.0";
 import { HttpError, withErrors } from "./security.ts";
+import { type R2, r2FromEnv } from "./r2.ts";
 
 export type Handler = (req: Request, deps: Deps) => Promise<Response>;
 
@@ -66,6 +67,8 @@ export interface Deps {
   /** optional Supabase Auth admin hook (ban/unban); absent in tests */
   setUserBan?: (userId: string, banned: boolean) => Promise<void>;
   storage?: MediaStorage;
+  /** Cloudflare R2 for note attachments; absent when R2_* secrets are not set */
+  r2?: R2 | null;
 }
 
 function firstKey(jsonDict: string | undefined): string | undefined {
@@ -126,6 +129,7 @@ export function defaultDeps(): Deps {
     },
     fetch: (...args) => fetch(...args),
     env,
+    r2: r2FromEnv(env),
     setUserBan: async (userId, banned) => {
       const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: banned ? "876000h" : "none" });
       if (error) throw new Error(error.message);

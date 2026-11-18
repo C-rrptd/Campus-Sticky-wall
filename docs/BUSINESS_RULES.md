@@ -94,7 +94,9 @@ These are separate `kind = donation` orders with their own confirmation. The def
 
 
 ## Referral credits (Part 1, migration 007) — supersedes the reward in section 4
-- Inviter and invited friend each receive 2 free post credits and 2 free decoration credits.
+- Inviter and invited friend each receive 1 free post credit and 1 free decoration credit (migration 046; earlier referrals keep what they were given).
+- Cap (migration 046): referral credits are capped per person at 3 free posts and 3 free decorations in total (inviter and invitee credits, including older ones). The free weekly post (1 per week) is separate, so a member can hold at most 4 free posts. Beyond the cap the referral still qualifies but issues no further credit to that person.
+- Activation (migration 046): a referral code only works once its owner has paid at least Rp5.000 in total on publications (cumulative across orders), and the friend gets the benefit only after they have paid for one too. Both must have paid; whoever pays last triggers the credits for both. "Paid" means a fulfilled publication order with a total above zero, recorded on `profiles.first_paid_at` (not back-filled: members who paid before 046 activate on their next paid post). This stops credit stacking from free-only accounts.
 - Qualifies once, when the friend has a verified email and their first PAID sticky post (a paid order with a total above zero) is published. Free weekly posts, promo-zero and credit-only orders do not qualify (migration 024). Self-referrals, suspended referrers and unverified accounts do not qualify.
 - A post credit makes the note's publication price free (no amount is shown on the note). A decoration credit makes one paid decoration free (highest price first). Free decorations never consume a credit.
 - Post and decoration credits are independent and can be mixed with paid items. They cannot be used for ads or donations, have no cash value and cannot be combined with the old Rp5.000 credit on the same order.

@@ -11,6 +11,11 @@ export const config = Object.freeze({
   supabasePublishableKey: "sb_publishable_2XS-29fFMJ8z6p8FQRHcvg_39C8oMtO",
   siteUrl: "https://campusstickywall.app",
   creativeBucket: "campaign-creatives",
+  // Cloudflare R2 for note photos, GIFs and videos. Leave mediaBase empty to keep using Supabase Storage.
+  //   mediaBase:   public address of the R2 bucket, e.g. "https://media.campusstickywall.app"
+  //   mediaResize: true once Cloudflare Image Transformations is on for that domain (smaller images via /cdn-cgi/image)
+  mediaBase: "",
+  mediaResize: false,
 });
 
 /** List of human-readable configuration problems (empty when OK). */

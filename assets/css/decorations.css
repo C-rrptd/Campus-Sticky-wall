@@ -103,3 +103,92 @@
 .sticker.deco-sticker-grad::after{content:"🎓";font-size:1.5em;line-height:1}
 .note.deco-pin-top::before,.deco-swatch.deco-pin-top::before{content:"📌";position:absolute;top:-.6em;left:.5em;width:auto;height:auto;margin:0;border-radius:0;background:none;box-shadow:none;font-size:1.5em;line-height:1;pointer-events:none}
 .note.deco-highlight-glow,.deco-swatch.deco-highlight-glow{--sh-boost:0 0 0 .18em #fbbf24,0 0 1.4em .3em rgba(251,191,36,.75)}
+
+/* 044: more decorations */
+.deco-swatch.deco-sticker-sparkles::after{content:"✨";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-sparkles::after{content:"✨";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-rainbow::after{content:"🌈";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-rainbow::after{content:"🌈";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-boba::after{content:"🧋";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-boba::after{content:"🧋";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-game::after{content:"🎮";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-game::after{content:"🎮";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-camera::after{content:"📷";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-camera::after{content:"📷";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-ghost::after{content:"👻";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-ghost::after{content:"👻";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-balloon::after{content:"🎈";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-balloon::after{content:"🎈";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-trophy::after{content:"🏆";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-trophy::after{content:"🏆";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-moon::after{content:"🌙";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-moon::after{content:"🌙";font-size:1.5em;line-height:1}
+.deco-swatch.deco-sticker-ojek::after{content:"🛵";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker.deco-sticker-ojek::after{content:"🛵";font-size:1.5em;line-height:1}
+.deco-swatch.deco-label-lost::after{white-space:nowrap;content:"LOST";position:absolute;right:.5em;top:.5em;background:#dc2626;color:#fff;font-weight:700;font-size:.75em;letter-spacing:.14em;padding:.2em .8em;border-radius:.2em;pointer-events:none}
+.sticker.deco-label-lost::after{white-space:nowrap;content:"LOST";background:#dc2626;color:#fff;font-weight:700;font-size:.75em;letter-spacing:.14em;padding:.2em .8em;border-radius:.2em}
+.deco-swatch.deco-label-found::after{white-space:nowrap;content:"FOUND";position:absolute;right:.5em;top:.5em;background:#16a34a;color:#fff;font-weight:700;font-size:.75em;letter-spacing:.14em;padding:.2em .8em;border-radius:.2em;pointer-events:none}
+.sticker.deco-label-found::after{white-space:nowrap;content:"FOUND";background:#16a34a;color:#fff;font-weight:700;font-size:.75em;letter-spacing:.14em;padding:.2em .8em;border-radius:.2em}
+.deco-swatch.deco-label-forsale::after{white-space:nowrap;content:"FOR SALE";position:absolute;right:.5em;top:.5em;background:#2563eb;color:#fff;font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .8em;border-radius:.2em;pointer-events:none}
+.sticker.deco-label-forsale::after{white-space:nowrap;content:"FOR SALE";background:#2563eb;color:#fff;font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .8em;border-radius:.2em}
+.deco-swatch.deco-label-wanted::after{white-space:nowrap;content:"WANTED";position:absolute;right:.5em;top:.5em;background:#111827;color:#fde68a;font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .8em;border-radius:.2em;pointer-events:none}
+.sticker.deco-label-wanted::after{white-space:nowrap;content:"WANTED";background:#111827;color:#fde68a;font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .8em;border-radius:.2em}
+.deco-swatch.deco-badge-hot::after{white-space:nowrap;content:"HOT";position:absolute;right:.5em;top:.5em;background:#ea580c;color:#fff;font-weight:700;font-size:.7em;padding:.15em .7em;border-radius:1em;pointer-events:none}
+.sticker.deco-badge-hot::after{white-space:nowrap;content:"HOT";background:#ea580c;color:#fff;font-weight:700;font-size:.7em;padding:.15em .7em;border-radius:1em}
+.deco-swatch.deco-stamp-verified::after{white-space:nowrap;content:"✔ VERIFIED";position:absolute;right:.5em;top:.5em;transform:rotate(-8deg);padding:.1em .5em;border:.15em solid rgba(29,78,216,.75);color:rgba(29,78,216,.9);font-weight:700;font-size:.8em;border-radius:.2em;pointer-events:none}
+.sticker.deco-stamp-verified::after{white-space:nowrap;content:"✔ VERIFIED";transform:rotate(-8deg);padding:.1em .5em;border:.15em solid rgba(29,78,216,.75);color:rgba(29,78,216,.9);font-weight:700;font-size:.8em;border-radius:.2em}
+.note.deco-frame-double,.deco-swatch.deco-frame-double{--sh-border:inset 0 0 0 .12em rgba(43,37,32,.7),inset 0 0 0 .38em transparent,inset 0 0 0 .5em rgba(43,37,32,.7)}
+.note.deco-frame-neon,.deco-swatch.deco-frame-neon{--sh-border:inset 0 0 0 .15em #a855f7,0 0 .9em rgba(168,85,247,.7)}
+.note.deco-frame-sketch,.deco-swatch.deco-frame-sketch{border:.12em solid #2b2520;border-radius:.3em .8em .4em .9em/.8em .3em .9em .4em;--sh-border:.25em .3em 0 rgba(43,37,32,.35)}
+.note.deco-paper-blueprint,.deco-swatch.deco-paper-blueprint{--bi-bg:linear-gradient(rgba(37,99,235,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.3) 1px,transparent 1px),linear-gradient(rgba(37,99,235,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.12) 1px,transparent 1px);--bp-bg:0 0,0 0,0 0,0 0;--br-bg:repeat,repeat,repeat,repeat;--bs-bg:3em 3em,3em 3em,.6em .6em,.6em .6em}
+.note.deco-paper-stripes,.deco-swatch.deco-paper-stripes{--bi-bg:repeating-linear-gradient(45deg,rgba(43,37,32,.07) 0 .5em,transparent .5em 1em);--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-paper-polka,.deco-swatch.deco-paper-polka{--bi-bg:radial-gradient(rgba(236,72,153,.22) .28em,transparent .3em);--bp-bg:0 0;--br-bg:repeat;--bs-bg:1.6em 1.6em}
+.note.deco-mood-love,.deco-swatch.deco-mood-love{--bi-theme:radial-gradient(circle at 15% 25%,rgba(244,63,94,.6) .22em,transparent .25em),radial-gradient(circle at 80% 18%,rgba(244,63,94,.6) .3em,transparent .33em),radial-gradient(circle at 70% 80%,rgba(244,63,94,.6) .2em,transparent .23em),linear-gradient(180deg,transparent 65%,rgba(251,207,232,.5));--bp-theme:0 0,0 0,0 0,0 0;--br-theme:no-repeat,no-repeat,no-repeat,no-repeat;--bs-theme:auto}
+.note.deco-mood-night,.deco-swatch.deco-mood-night{--sh-theme:inset 0 0 1.6em rgba(30,58,138,.45)}
+.note.deco-mood-sunny,.deco-swatch.deco-mood-sunny{--bi-theme:radial-gradient(circle at 100% 0,rgba(253,224,71,.7),transparent 55%);--bp-theme:0 0;--br-theme:no-repeat;--bs-theme:auto}
+.note.deco-campus-batik,.deco-swatch.deco-campus-batik{--bi-theme:radial-gradient(circle,transparent .3em,rgba(120,72,30,.22) .32em .42em,transparent .44em),linear-gradient(45deg,transparent 46%,rgba(120,72,30,.12) 47% 53%,transparent 54%);--bp-theme:0 0,0 0;--br-theme:repeat,repeat;--bs-theme:1.6em 1.6em,1.6em 1.6em}
+.note.deco-tape-gold::after,.deco-swatch.deco-tape-gold::after,.note.deco-tape-checker::after,.deco-swatch.deco-tape-checker::after{content:"";position:absolute;left:50%;top:-.5em;width:46%;height:1.5em;transform:translateX(-50%) rotate(-2deg);opacity:.9;pointer-events:none}
+.note.deco-tape-gold::after,.deco-swatch.deco-tape-gold::after{background:linear-gradient(90deg,#fde68a,#f59e0b 50%,#fde68a);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.note.deco-tape-checker::after,.deco-swatch.deco-tape-checker::after{background:repeating-conic-gradient(#2b2520 0 25%,#fff 0 50%) 0 0/.8em .8em;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+
+/* 045: achievement-locked, seasonal, animated and sound decorations */
+.note.deco-frame-gold,.deco-swatch.deco-frame-gold{--sh-border:inset 0 0 0 .25em #d4a017,inset 0 0 0 .4em #fde68a}
+.deco-swatch.deco-sticker-crown::after{content:"👑";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;display:inline-block;pointer-events:none}
+.sticker.deco-sticker-crown::after{content:"👑";font-size:1.5em;line-height:1;display:inline-block}
+.deco-swatch.deco-badge-wall-legend::after{white-space:nowrap;content:"WALL LEGEND";position:absolute;right:.5em;top:.5em;background:linear-gradient(90deg,#b45309,#fbbf24);color:#fff;font-weight:700;font-size:.65em;letter-spacing:.1em;padding:.2em .8em;border-radius:1em;pointer-events:none}
+.sticker.deco-badge-wall-legend::after{white-space:nowrap;content:"WALL LEGEND";background:linear-gradient(90deg,#b45309,#fbbf24);color:#fff;font-weight:700;font-size:.65em;letter-spacing:.1em;padding:.2em .8em;border-radius:1em}
+.deco-swatch.deco-badge-og::after{white-space:nowrap;content:"OG";position:absolute;right:.5em;top:.5em;background:#111827;color:#fbbf24;font-weight:800;font-size:.8em;padding:.1em .7em;border:.12em solid #fbbf24;border-radius:.3em;pointer-events:none}
+.sticker.deco-badge-og::after{white-space:nowrap;content:"OG";background:#111827;color:#fbbf24;font-weight:800;font-size:.8em;padding:.1em .7em;border:.12em solid #fbbf24;border-radius:.3em}
+.note.deco-season-newyear,.deco-swatch.deco-season-newyear{--bi-theme:radial-gradient(circle at 12% 20%,rgba(234,179,8,.75) .16em,transparent .2em),radial-gradient(circle at 88% 14%,rgba(239,68,68,.6) .2em,transparent .24em),radial-gradient(circle at 78% 82%,rgba(234,179,8,.75) .14em,transparent .18em),radial-gradient(circle at 22% 86%,rgba(59,130,246,.6) .18em,transparent .22em);--bp-theme:0 0,0 0,0 0,0 0;--br-theme:no-repeat,no-repeat,no-repeat,no-repeat;--bs-theme:auto}
+.deco-swatch.deco-sticker-fireworks::after{content:"🎆";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;display:inline-block;pointer-events:none}
+.sticker.deco-sticker-fireworks::after{content:"🎆";font-size:1.5em;line-height:1;display:inline-block}
+.note.deco-anim-rainbow-frame,.deco-swatch.deco-anim-rainbow-frame{outline:.22em solid #ef4444;outline-offset:-.55em}
+.note.deco-anim-shimmer::after,.deco-swatch.deco-anim-shimmer::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.7) 50%,transparent 65%) -100% 0/60% 100% no-repeat}
+.note.deco-anim-glow-pulse,.deco-swatch.deco-anim-glow-pulse{--sh-boost:0 0 .6em .1em rgba(251,191,36,.6)}
+.deco-swatch.deco-anim-star-twinkle::after{content:"🌟";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;display:inline-block;pointer-events:none}
+.sticker.deco-anim-star-twinkle::after{content:"🌟";font-size:1.5em;line-height:1;display:inline-block}
+.deco-swatch.deco-anim-heart-beat::after{content:"💗";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;display:inline-block;pointer-events:none}
+.sticker.deco-anim-heart-beat::after{content:"💗";font-size:1.5em;line-height:1;display:inline-block}
+.deco-swatch.deco-anim-ball-bounce::after{content:"🏀";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;display:inline-block;pointer-events:none}
+.sticker.deco-anim-ball-bounce::after{content:"🏀";font-size:1.5em;line-height:1;display:inline-block}
+.deco-swatch.deco-anim-record-spin::after{content:"💿";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;display:inline-block;pointer-events:none}
+.sticker.deco-anim-record-spin::after{content:"💿";font-size:1.5em;line-height:1;display:inline-block}
+@keyframes csw-hue{0%,100%{outline-color:#ef4444}17%{outline-color:#f59e0b}33%{outline-color:#22c55e}50%{outline-color:#3b82f6}67%{outline-color:#a855f7}83%{outline-color:#ec4899}}
+@keyframes csw-sweep{from{background-position:-100% 0}to{background-position:200% 0}}
+@keyframes csw-twinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.3)}}
+@keyframes csw-beat{0%,45%,100%{transform:scale(1)}15%{transform:scale(1.3)}30%{transform:scale(1.05)}}
+@keyframes csw-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-.45em)}}
+@keyframes csw-spin{to{transform:rotate(360deg)}}
+@keyframes csw-pulse{0%,100%{box-shadow:0 0 .3em rgba(251,191,36,.3),var(--shadow-note)}50%{box-shadow:0 0 1.5em .35em rgba(251,191,36,.95),var(--shadow-note)}}
+.deco-swatch[class*="deco-snd-"]::after{content:"🔊";position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.note__sound{font-size:.9em;cursor:help}
+/* Motion only when the visitor has not asked for less */
+@media (prefers-reduced-motion:no-preference){
+.note.deco-anim-rainbow-frame,.deco-swatch.deco-anim-rainbow-frame{animation:csw-hue 4s linear infinite}
+.note.deco-anim-shimmer::after,.deco-swatch.deco-anim-shimmer::after{animation:csw-sweep 3.2s ease-in-out infinite}
+.note.deco-anim-glow-pulse,.deco-swatch.deco-anim-glow-pulse{animation:csw-pulse 2.4s ease-in-out infinite}
+.sticker.deco-anim-star-twinkle::after,.deco-swatch.deco-anim-star-twinkle::after{animation:csw-twinkle 1.6s ease-in-out infinite}
+.sticker.deco-anim-heart-beat::after,.deco-swatch.deco-anim-heart-beat::after{animation:csw-beat 1.2s ease-in-out infinite}
+.sticker.deco-anim-ball-bounce::after,.deco-swatch.deco-anim-ball-bounce::after{animation:csw-bounce .9s ease-in-out infinite}
+.sticker.deco-anim-record-spin::after,.deco-swatch.deco-anim-record-spin::after{animation:csw-spin 3s linear infinite}
+}

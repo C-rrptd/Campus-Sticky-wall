@@ -1,4 +1,4 @@
-// POST /functions/v1/leaderboard-data  { kind: "referrals"|"donations", period: "all"|"week" }
+// POST /functions/v1/leaderboard-data  { kind: "referrals"|"donations", period: "all"|"week"|"month" }
 // Public rankings. Signed-in callers run the SQL as themselves (so is_me works);
 // guests run it with auth.uid() = null. Donor-privacy opt-ins apply either way.
 
@@ -13,7 +13,7 @@ export const handler: Handler = async (req: Request, deps: Deps) => {
 
   const data = await rpc(jwt ? deps.userDb(jwt) : deps.db, "leaderboard", {
     p_kind: v.oneOf(body.kind, "kind", ["referrals", "donations"] as const),
-    p_period: v.oneOf(body.period ?? "all", "period", ["all", "week"] as const),
+    p_period: v.oneOf(body.period ?? "all", "period", ["all", "week", "month"] as const),
     p_limit: 25,
   });
   const res = json(req, 200, data, deps.env);

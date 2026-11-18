@@ -310,3 +310,4 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .poll-builder__row { display: flex; gap: var(--space-2); align-items: center; }
 .poll-builder__row > input:first-child { flex: 1; min-width: 0; }
 .poll-builder__ok { white-space: nowrap; font-size: 0.85rem; }
+.picker__opt.is-locked { opacity: .55; cursor: not-allowed; }

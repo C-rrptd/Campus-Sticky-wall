@@ -5,12 +5,13 @@
 import { decoPicker } from "./deco-picker.js";
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
-import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, mediaUrl, paintArt, query, rpc, thumbPath, uploadNoteMedia } from "./supabase-client.js";
+import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, isSoundDeco, mediaUrl, paintArt, playSound, query, rpc, thumbUrl, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
-import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
-import { busy, copyText, el, errorMessage, formatRupiah, local, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
+import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, loginLabel, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
+import { busy, copyText, el, errorMessage, formatDate, formatRupiah, local, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const COLORS = new Set(["yellow", "pink", "blue", "green", "orange", "purple"]);
 
 // New salt on every page load, so each note gets a different resting tilt after a reload (stable while the page stays open).
@@ -103,6 +104,11 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   for (const d of note.decorations ?? []) {
     if (/^[a-z0-9-]{2,40}$/.test(d) && !placed.has(d)) r.root.classList.add(`deco-${d}`);
   }
+  const soundId = (note.decorations ?? []).find(isSoundDeco);
+  if (soundId) {
+    r.root.dataset.sound = soundId;
+    r.author.closest(".note__author")?.after(el("span", { class: "note__sound", title: "Plays a sound when you upvote this note", role: "img", "aria-label": "Plays a sound when you upvote" }, "🔊"));
+  }
   for (const t of stickers) {
     // A real element placed by percentages, so the author can drag it.
     const sticker = paintArt(el("span", { class: `sticker deco-${t.id}`, "aria-hidden": "true" }), t.id);
@@ -122,12 +128,12 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   r.mediaBadge.hidden = !hasMedia;
   if (hasMedia) {
     const first = note.media[0];
-    const src = mediaUrl(first.path);
+    const src = mediaUrl(first);
     if (src) {
       const video = first.kind === "video";
       const thumb = video
         ? el("video", { class: "note__thumb", preload: "metadata", muted: "", playsinline: "", "aria-hidden": "true" })
-        : el("img", { class: "note__thumb", src: /\.gif$/i.test(first.path) ? src : mediaUrl(thumbPath(first.path)) ?? src, alt: "", loading: "lazy", decoding: "async" });
+        : el("img", { class: "note__thumb", src: /\.gif$/i.test(first.path) ? src : thumbUrl(first) ?? src, alt: "", loading: "lazy", decoding: "async" });
       if (!video) thumb.addEventListener("error", () => { if (thumb.src !== src) thumb.src = src; }, { once: true }); // no thumbnail (older note): use the full image
       if (video) lazyVideo(thumb, `${src}#t=0.1`);
       r.mediaBadge.replaceChildren(thumb, el("span", { class: "note__media-label" },
@@ -141,7 +147,10 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   }
   const player = spotifyFrame(note.spotify, 80);
   if (player) r.extras.append(player);
-  r.author.textContent = byline(note);
+  const profileId = note.profile && UUID.test(note.profile.id) ? note.profile.id : null;
+  if (profileId && interactive) {
+    r.author.replaceChildren(el("a", { class: "note__profile", href: `#/u?id=${profileId}`, title: "View profile" }, String(note.profile.name ?? "")), isMine(note) ? " (You)" : "");
+  } else r.author.textContent = byline(note);
   const social = note.social_link && isAllowedSocialUrl(note.social_link) ? safeUrl(note.social_link, false) : null;
   if (social) {
     r.social.href = social;
@@ -247,7 +256,7 @@ function rememberMine(id) {
 
 /** "Anonymous (You)" on your own notes, so you can tell them from other people's anonymous ones. */
 function byline(note) {
-  return `${note.author_name ?? ""}${isMine(note) ? " (You)" : ""}`;
+  return `${note.profile?.name ?? note.author_name ?? ""}${isMine(note) ? " (You)" : ""}`;
 }
 
 /** Poll / quiz: choices and one button before answering, result bars after. Redraws every copy of the note (card and viewer). */
@@ -321,7 +330,7 @@ function truncateBody(text) {
 function openNoteViewer(note) {
   const color = COLORS.has(note.color) ? note.color : "yellow";
   const media = (note.media ?? []).map((m) => {
-    const src = mediaUrl(m.path);
+    const src = mediaUrl(m, 1280);
     if (!src) return null;
     return m.kind === "video"
       // "#t=0.1" makes the browser show the first frame as the thumbnail before play.
@@ -370,7 +379,10 @@ async function toggleVote(note, r) {
     try {
       const table = getClient().from("votes");
       if (was) await query(table.delete().eq("note_id", note.id).eq("user_id", user.id));
-      else await query(table.insert({ note_id: note.id, user_id: user.id }));
+      else {
+        await query(table.insert({ note_id: note.id, user_id: user.id }));
+        playSound(r.root.dataset.sound);
+      }
     } catch (err) {
       note.voted = was;
       note.vote_count = Math.max(0, note.vote_count + (was ? 1 : -1));
@@ -505,12 +517,28 @@ export async function mountComposer(view, { signal, navigate }) {
   const campus = buildCampusSelect({ value: getLocationPref().campus ?? "", signal });
   r.campusField.append(campus.element);
 
+  // "Put my profile on the post": the server swaps the name for the member's display name and links to their public profile.
+  const myName = user ? (user.user_metadata?.display_name || loginLabel(user.email)) : "";
+  let showProfile = false;
+  r.profileHint.textContent = user
+    ? "Shows your display name on the note as a link to your public profile (display name, social links, badges and the notes you link). You can unlink it later from your dashboard."
+    : "Sign in to put your profile on a post.";
+  r.profileBtn.disabled = !user;
+  r.profileBtn.addEventListener("click", () => {
+    showProfile = !showProfile;
+    r.profileBtn.setAttribute("aria-pressed", String(showProfile));
+    r.author.disabled = showProfile;
+    r.author.placeholder = showProfile ? myName : "Leave empty to post as Anonymous";
+    updatePreview();
+  }, { signal });
+
   let lastPreview = ""; // skip identical rebuilds: a blur-triggered "change" must not replace the sticker under the pointer
   const updatePreview = () => {
     const data = new FormData(r.form);
     const note = {
       body: String(data.get("body") || "Your note will look like this."),
-      author_name: String(data.get("author_name") || "").trim() || "Anonymous",
+      author_name: showProfile ? myName : String(data.get("author_name") || "").trim() || "Anonymous",
+      profile: showProfile ? { id: user.id, name: myName } : null,
       color: String(data.get("color") || "yellow"),
       decorations: picked(),
       spotify: spotifyRef(data.get("spotify")),
@@ -595,13 +623,20 @@ export async function mountComposer(view, { signal, navigate }) {
 
   // Decorations (enabled only, prices from the database)
   try {
-    state.decorations = await query(getClient().from("decorations").select("id,name,description,category,placeable,default_x,default_y,price::text").order("sort_order"));
+    state.decorations = await query(getClient().from("decorations").select("id,name,description,category,placeable,default_x,default_y,unlock_achievement,available_until,price::text").order("sort_order"));
     // Whole-note decorations (frames, tapes, papers, themes): one dropdown per category, one choice each.
     // Stickers, stamps and badges: one dropdown that adds a copy; pick the same one again for more copies.
     // Only decoration ids are sent; the server re-checks them.
-    const ORDER = ["Borders", "Tapes", "Stickers", "Stamps & badges", "Backgrounds", "Themes"];
+    const ORDER = ["Borders", "Tapes", "Stickers", "Stamps & badges", "Backgrounds", "Themes", "Seasonal", "Animated", "Sounds"];
     const rank = (c) => (ORDER.includes(c) ? ORDER.indexOf(c) : ORDER.length);
-    const option = (d) => ({ value: d.id, name: d.name, price: priceLabel(d), desc: d.description, cat: d.category || "Other" });
+    // Locked until the member earns the achievement; a seasonal one shows when it ends.
+    let earned = new Set();
+    if (user) { try { earned = new Set((await rpc("my_achievements")).filter((a) => a.earned).map((a) => a.id)); } catch { /* all locked ones stay locked */ } }
+    const option = (d) => ({
+      value: d.id, name: d.name, desc: d.description, cat: d.category || "Other",
+      price: priceLabel(d) + (d.available_until ? ` · until ${formatDate(d.available_until)}` : ""),
+      locked: d.unlock_achievement && !earned.has(d.unlock_achievement) ? (d.description || "Earn an achievement to unlock") : null,
+    });
     const byCategory = (list) => {
       const groups = new Map();
       for (const d of list) groups.set(d.category || "Other", [...(groups.get(d.category || "Other") ?? []), d]);
@@ -610,7 +645,7 @@ export async function mountComposer(view, { signal, navigate }) {
     const usable = state.decorations.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id));
     const wholeNote = byCategory(usable.filter((d) => !d.placeable));
     singles = wholeNote.map(([, list]) => decoPicker({ options: list.map((d) => ({ ...option(d), cat: undefined })), placeholder: "None", label: list[0].category || "Other", signal,
-      onChange: () => { renderStickerList(); recompute(); } }));
+      onChange: (v) => { playSound(v); renderStickerList(); recompute(); } })); // picking a sound previews it
     r.decoSingles.replaceChildren(...singles.map((p, i) => el("div", { class: "field" }, el("span", { class: "field__label" }, wholeNote[i][0]), p.element)));
     const stickers = byCategory(usable.filter((d) => d.placeable));
     adder = decoPicker({ options: stickers.flatMap(([, list]) => list.map(option)), placeholder: "Choose a sticker…", label: "Stickers, stamps and badges", signal,
@@ -723,7 +758,7 @@ export async function mountComposer(view, { signal, navigate }) {
   r.submit.addEventListener("click", () => busy(r.submit, async () => {
     r.formError.textContent = "";
     const data = new FormData(r.form);
-    const fields = { body: String(data.get("body") ?? ""), author_name: String(data.get("author_name") ?? "") };
+    const fields = { body: String(data.get("body") ?? ""), author_name: showProfile ? "" : String(data.get("author_name") ?? "") };
     const errors = validateNote(fields);
     const amount = validatePublicationAmount(r.amount.value);
     const social = String(data.get("social_link") ?? "").trim();
@@ -746,6 +781,7 @@ export async function mountComposer(view, { signal, navigate }) {
       const media = files.length ? await uploadNoteMedia(files, user.id) : [];
       const res = await invoke("create-publication", {
         author_name: fields.author_name.trim() || "Anonymous",
+        show_profile: showProfile,
         body: fields.body.trim(),
         color: String(data.get("color") ?? "yellow"),
         social_link: social || null,

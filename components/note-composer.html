@@ -15,8 +15,13 @@
         <label class="field">
           <span class="field__label">Name shown on the note</span>
           <input name="author_name" data-ref="author" maxlength="40" autocomplete="off" value="" placeholder="Leave empty to post as Anonymous">
-          <span class="field__hint">Optional. Empty = “Anonymous”. Plain text only: never a link, never tied to an account. Names of registered members, links and @handles are not allowed.</span>
+          <span class="field__hint">Optional. Empty = “Anonymous”.</span>
         </label>
+
+        <div class="field profile-link">
+          <button type="button" class="chip profile-link__btn" data-ref="profileBtn" aria-pressed="false" aria-describedby="profile-link-hint">Put my profile on the post</button>
+          <span class="field__hint" id="profile-link-hint" data-ref="profileHint"></span>
+        </div>
 
         <label class="field">
           <span class="field__label">How much do you want to pay to publish? (Rp)</span>
@@ -154,6 +159,7 @@
           <details class="small privacy-note">
             <summary>What we can and can’t see</summary>
             <p><strong>Public:</strong> your note, the name you typed (or “Anonymous”), decorations.</p>
+            <p><strong>Only if you choose it:</strong> “Put my profile on the post” links the note to your public profile page.</p>
             <p><strong>We don’t keep:</strong> any link between your account and a published note. Payment, free-post and promo records hold no note text or note id. Free-post and promo records only keep the hour, not the minute.</p>
             <p><strong>Still visible:</strong> DOKU sees who paid and when (we can’t hide that); if you choose a social link it is public; at the moment you post, the time of your payment and the time your note appears are close together.</p>
           </details>

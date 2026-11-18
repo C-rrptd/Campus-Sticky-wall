@@ -7,6 +7,7 @@
 #   PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
 #   PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_... \
 #   PUBLIC_SITE_URL=https://campus-sticky-wall.pages.dev \
+#   PUBLIC_MEDIA_BASE=https://media.example.com   (optional: Cloudflare R2 public address; PUBLIC_MEDIA_RESIZE=1 turns on Cloudflare image resizing) \
 #   scripts/build-site.sh [output-dir]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -74,6 +75,24 @@ src, m = re.subn(r"https://\*\.supabase\.co", url, src)
 assert m == 3, "expected connect-src, img-src and media-src wildcards"
 open(path, "w").write(src)
 PY
+  # Optional Cloudflare R2 for note attachments: set the address in config.js and let the CSP load from / upload to it.
+  if [[ -n "${PUBLIC_MEDIA_BASE:-}" ]]; then
+    [[ "$PUBLIC_MEDIA_BASE" =~ ^https://[a-z0-9.-]+$ ]] || { echo "PUBLIC_MEDIA_BASE must look like https://media.example.com" >&2; exit 1; }
+    python3 - "$OUT/assets/js/config.js" "$OUT/_headers" "$PUBLIC_MEDIA_BASE" "${PUBLIC_MEDIA_RESIZE:-}" <<'PY'
+import re, sys
+cfg, hdr, base, resize = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+src = open(cfg).read()
+src, n = re.subn(r'(mediaBase:\s*)"[^"]*"', rf'\g<1>"{base}"', src, count=1); assert n == 1
+if resize == "1":
+    src, n = re.subn(r'(mediaResize:\s*)false', r'\g<1>true', src, count=1); assert n == 1
+open(cfg, "w").write(src)
+h = open(hdr).read()
+for d in ("img-src", "media-src", "connect-src"):
+    h, n = re.subn(rf"({d} 'self'[^;]*)", rf"\1 {base}", h, count=1); assert n == 1, d
+open(hdr, "w").write(h)
+PY
+    echo "R2 media enabled at $PUBLIC_MEDIA_BASE"
+  fi
   # Warm the connection to Supabase while the page's own files load.
   python3 - "$OUT/index.html" "$PUBLIC_SUPABASE_URL" <<'PY'
 import sys
