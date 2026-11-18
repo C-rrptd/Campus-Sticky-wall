@@ -8,6 +8,9 @@ on:
     paths: ["supabase/**"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: supabase-deploy
   cancel-in-progress: false

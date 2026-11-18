@@ -10,9 +10,9 @@ function fakeR2(files: Record<string, { size: number; head: Uint8Array }>) {
   const log: string[] = [];
   const r2: R2 = {
     presignPut: () => Promise.resolve("https://x"),
-    head: (k) => Promise.resolve(files[k] ? { size: files[k].size } : null),
+    head: (k) => Promise.resolve(files[k] ? { size: files[k].size, etag: '"e1"' } : null),
     first: (k) => Promise.resolve(files[k]?.head ?? null),
-    copy: (f, t, type) => { log.push(`copy ${f} -> ${t} ${type}`); return Promise.resolve(); },
+    copy: (f, t, type, etag) => { log.push(`copy ${f} -> ${t} ${type} ${etag}`); return Promise.resolve(); },
     remove: (ks) => { log.push(`remove ${ks.join(",")}`); return Promise.resolve(); },
   };
   return { r2, log };
@@ -41,7 +41,7 @@ Deno.test("promoteUpload verifies then copies; bad files are deleted", async () 
   const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0]);
   const ok = fakeR2({ "tmp/a/b.jpg": { size: 1000, head: jpg } });
   await promoteUpload(ok.r2, "a/b.jpg");
-  eq(ok.log, ["copy tmp/a/b.jpg -> a/b.jpg image/jpeg"], "copied with server-chosen type");
+  eq(ok.log, ["copy tmp/a/b.jpg -> a/b.jpg image/jpeg \"e1\""], "copied with server-chosen type, only if unchanged since the check");
 
   const fake = fakeR2({ "tmp/a/b.jpg": { size: 1000, head: bytes("<html>") } });
   let failed = false;

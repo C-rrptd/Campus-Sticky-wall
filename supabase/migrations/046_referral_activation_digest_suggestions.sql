@@ -124,6 +124,13 @@ language sql stable security definer set search_path = '' as $$
           from public.referral_credits r where r.user_id = auth.uid()) q), '[]'::jsonb)) end
 $$;
 
+-- Grandfather members who paid before this change. Orders no longer point at the member, so this uses their published notes
+-- (publication_amount is what the note was priced at; free weekly posts are excluded by the 5000 floor). Runs once per member
+-- (only while paid_total is still 0), so re-applying this migration never double counts.
+update public.profiles p set paid_total = s.total, first_paid_at = coalesce(p.first_paid_at, case when s.total >= 5000 then now() end)
+  from (select n.author_id, sum(n.publication_amount)::bigint as total from public.notes n
+         where n.author_id is not null and n.status = 'published' and n.publication_amount >= 5000 group by n.author_id) s
+ where p.id = s.author_id and p.paid_total = 0;
 -- Referrals that were waiting only on the referrer, for members who already have a paid post, qualify now.
 do $$ declare r record; begin
   for r in select distinct referrer_id from public.referral_attributions where status = 'pending_verification' and referrer_id is not null loop
@@ -323,7 +330,10 @@ do $$ begin
     drop policy if exists "suggestion files read" on storage.objects;
     drop policy if exists "suggestion files admin delete" on storage.objects;
     execute $p$create policy "suggestion files upload own" on storage.objects for insert to authenticated
-      with check (bucket_id = 'suggestion-files' and name ~ ('^' || (select auth.uid())::text || '/[0-9a-f-]{36}\.(png|jpg|webp|pdf|txt)$'))$p$;
+      with check (bucket_id = 'suggestion-files' and name ~ ('^' || (select auth.uid())::text || '/[0-9a-f-]{36}\.(png|jpg|webp|pdf|txt)$')
+        and (select count(*) from storage.objects o
+              where o.bucket_id = 'suggestion-files' and (storage.foldername(o.name))[1] = (select auth.uid())::text
+                and o.created_at > now() - interval '1 hour') < 10)$p$;
     execute $p$create policy "suggestion files read" on storage.objects for select to authenticated
       using (bucket_id = 'suggestion-files' and (name like (select auth.uid())::text || '/%' or public.is_admin((select auth.uid()))))$p$;
     execute $p$create policy "suggestion files admin delete" on storage.objects for delete to authenticated
