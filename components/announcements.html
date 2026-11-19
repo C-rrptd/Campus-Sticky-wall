@@ -10,9 +10,11 @@
 </template>
 
 <template id="tpl-announcement">
-  <article class="card announcement" data-ref="root">
-    <p class="announcement__meta"><span class="badge badge--official">Official</span> <span class="badge" data-ref="pinned" hidden>Pinned</span> <time data-ref="time"></time></p>
-    <h2 class="announcement__title" data-ref="title"></h2>
+  <details class="card announcement" data-ref="root">
+    <summary class="announcement__head">
+      <span class="announcement__meta"><span class="badge badge--official">Official</span> <span class="badge" data-ref="pinned" hidden>Pinned</span> <time data-ref="time"></time></span>
+      <h2 class="announcement__title" data-ref="title"></h2>
+    </summary>
     <p class="announcement__body" data-ref="body"></p>
-  </article>
+  </details>
 </template>

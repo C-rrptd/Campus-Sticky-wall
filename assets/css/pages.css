@@ -16,6 +16,11 @@
 .announcement--pinned { background: var(--pinned); }
 .announcement__meta { display: flex; gap: var(--space-2); align-items: center; font-size: 0.8rem; color: var(--muted); }
 .announcement__body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.announcement__head { position: relative; display: block; cursor: pointer; list-style: none; padding-right: 1.5rem; }
+.announcement__head::-webkit-details-marker { display: none; }
+.announcement__head::after { content: "▾"; position: absolute; right: 0; top: 0; color: var(--muted); transition: transform 0.15s ease; }
+.announcement[open] > .announcement__head::after { transform: rotate(180deg); }
+.announcement__title { margin: var(--space-1) 0 0; }
 
 /* Composer */
 .note-skeleton { height: 190px; border-radius: 4px; background: var(--paper-dark); animation: note-pulse 1.2s ease-in-out infinite alternate; }

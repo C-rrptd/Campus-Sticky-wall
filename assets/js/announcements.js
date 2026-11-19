@@ -12,9 +12,10 @@ function fetchPublished(limit = 50, pinnedOnly = false) {
   return query(q);
 }
 
-function renderAnnouncement(a) {
+function renderAnnouncement(a, open = false) {
   const frag = cloneTemplate("tpl-announcement");
   const r = refs(frag);
+  r.root.open = open;
   r.title.textContent = a.title;
   r.body.textContent = a.body;
   r.pinned.hidden = !a.pinned;
@@ -30,7 +31,7 @@ export async function mount(view) {
   const r = refs(view);
   try {
     const items = await fetchPublished();
-    r.list.replaceChildren(...items.map(renderAnnouncement));
+    r.list.replaceChildren(...items.map((a) => renderAnnouncement(a, true)));
     r.empty.hidden = items.length > 0;
   } catch (err) {
     r.error.textContent = err.message;
@@ -45,7 +46,7 @@ export async function renderPinned(container) {
   try {
     const items = await fetchPublished(2, true);
     container.replaceChildren(...items.map((a) => {
-      const node = renderAnnouncement(a);
+      const node = renderAnnouncement(a); // folded: the wall only shows the title until the visitor opens it
       node.firstElementChild?.classList.add("announcement--pinned");
       return node;
     }));
