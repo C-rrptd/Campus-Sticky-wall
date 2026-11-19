@@ -9,6 +9,7 @@ import { captureReferral } from "./referrals.js";
 import { getClient, query } from "./supabase-client.js";
 import { lang, setLang } from "./i18n.js";
 import { clear, el, refs, safeUrl, toast } from "./utils.js";
+import { mountNotifications } from "./notifications.js";
 
 const view = () => document.getElementById("view");
 
@@ -67,6 +68,7 @@ async function renderHeader() {
     r.nav.classList.toggle("is-open", open);
   });
   r.signOut.addEventListener("click", () => signOut());
+  const notif = mountNotifications(r.accountMenu);
   const root = document.documentElement;
   const paintTheme = () => {
     const dark = root.dataset.theme === "dark";
@@ -87,6 +89,7 @@ async function renderHeader() {
     r.signInLink.hidden = Boolean(user);
     r.accountMenu.hidden = !user;
     r.accountName.textContent = user ? (user.user_metadata?.display_name || "Account") : "Account";
+    notif.refresh();
     r.adminLink.hidden = !(user && (await isAdmin()));
   };
   onUserChange(() => { update(); rerender(); });

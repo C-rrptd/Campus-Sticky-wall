@@ -9,6 +9,8 @@ import { loadFeatured, renderPromotion } from "./promotions.js";
 import { buildLocationPicker, getLocationPref, promotionArgs, setLocationPref } from "./location.js";
 import { getClient, query } from "./supabase-client.js";
 import { el, errorMessage, local, refs } from "./utils.js";
+import { mountDailyPrompt } from "./daily-prompt.js";
+import { mountFomo } from "./fomo.js";
 
 const PAGE = 24;
 const SPONSOR_EVERY = 8;
@@ -23,9 +25,11 @@ export function mountCampus(view, ctx) {
 export async function mount(view, { signal }, { campus = null } = {}) {
   view.append(cloneTemplate("tpl-wall"));
   const r = refs(view);
+  mountDailyPrompt(view);
   const state = { offset: 0, sort: local.get("csw.wallSort", "newest"), loc: getLocationPref(), sponsored: [], requestId: 0, q: "", color: "", seen: new Set() };
   if (campus) state.loc = { ...state.loc, campus };
   if (!["newest", "top"].includes(state.sort)) state.sort = "newest";
+  const fomo = mountFomo(view, { campus: state.loc.campus, signal });
   r.sort.value = state.sort;
 
   renderPinned(r.pinned);
@@ -52,6 +56,7 @@ export async function mount(view, { signal }, { campus = null } = {}) {
         state.loc = loc;
         setLocationPref(loc);
         showCampusLink();
+        fomo.setCampus(loc.campus);
         reload(true); // new area: sponsored and featured listings depend on it
       },
     }));

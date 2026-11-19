@@ -37,6 +37,8 @@ jobs:
         run: for f in supabase/migrations/04*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Re-apply 044 onward (must be idempotent)
         run: for f in supabase/migrations/04[4-9]*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: Apply 050 onward, then again (must be idempotent)
+        run: for i in 1 2; do for f in supabase/migrations/0[5-9]*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done; done
       - name: SQL assertions
         run: for f in supabase/tests/assert_*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -t -A -f "$f" || exit 1; done
 

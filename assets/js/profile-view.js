@@ -23,6 +23,8 @@ export const ACHIEVEMENTS = {
   "referral-5": ["🎉", "Community builder", "Refer 5 friends who join."],
   "member-30": ["📅", "One month in", "Be a member for 30 days."],
   "member-365": ["🎂", "One year in", "Be a member for a year."],
+  "streak-7": ["⚡", "Week streak", "Visit 7 days in a row."],
+  "streak-30": ["🌟", "Month streak", "Visit 30 days in a row."],
 };
 
 /** The first achievement not yet earned, for a "next milestone" line. */

@@ -8,6 +8,7 @@ import { currentUser } from "./auth.js";
 import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, isSoundDeco, mediaUrl, paintArt, playSound, query, rpc, thumbUrl, uploadNoteMedia } from "./supabase-client.js";
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
+import { translate } from "./i18n.js";
 import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, loginLabel, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
 import { busy, copyText, el, errorMessage, formatDate, formatRupiah, local, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
 
@@ -174,6 +175,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
     r.bookmark.hidden = true;
     r.report.hidden = true;
     r.share.hidden = true;
+    r.card.hidden = true;
     r.body.removeAttribute("role"); r.body.removeAttribute("tabindex"); r.body.removeAttribute("title");
     r.mediaBadge.removeAttribute("role"); r.mediaBadge.removeAttribute("tabindex"); r.mediaBadge.removeAttribute("title");
     return frag;
@@ -192,6 +194,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   r.bookmark.addEventListener("click", () => toggleBookmark(note, r), { signal });
   r.report.addEventListener("click", () => reportNote(note), { signal });
   r.share.addEventListener("click", () => shareNote(note), { signal });
+  r.card.addEventListener("click", () => import("./share-card.js").then((m) => m.shareNote(note, (s) => translate(el("span", {}, s)).textContent)).catch((err) => console.warn("Share failed", err)), { signal });
   return frag;
 }
 

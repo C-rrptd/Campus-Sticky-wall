@@ -18,7 +18,7 @@ export async function onRequestGet({ params, env, request }) {
       if (res.ok) note = await res.json();
     } catch { /* fall through to the generic preview */ }
   }
-  const text = note ? [...String(note.body)].slice(0, 160).join("") : "A sticky note on Campus Sticky Wall.";
+  const text = note ? `${note.vote_count > 0 ? `▲ ${note.vote_count} · ` : ""}${[...String(note.body)].slice(0, 160).join("")}` : "A sticky note on Campus Sticky Wall.";
   const title = note ? `Note by ${note.author_name}` : "Campus Sticky Wall";
   const target = `${site}/#/note?id=${ID.test(id) ? id : ""}`;
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title>

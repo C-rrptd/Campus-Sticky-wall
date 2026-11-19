@@ -48,7 +48,7 @@ update public.profiles set suspended_at = null where id = '00000000-0000-0000-00
 select pg_temp.must((select (a ->> 'earned')::boolean from jsonb_array_elements(public.achievements_for('00000000-0000-0000-0000-0000000000a1', false)) a where a ->> 'id' = 'first-note'), 'first note earned');
 select pg_temp.must((select (a ->> 'progress')::int from jsonb_array_elements(public.achievements_for('00000000-0000-0000-0000-0000000000a1', false)) a where a ->> 'id' = 'votes-100') = 24, 'private votes count both notes');
 select pg_temp.must((select (a ->> 'progress')::int from jsonb_array_elements(public.achievements_for('00000000-0000-0000-0000-0000000000a1', true)) a where a ->> 'id' = 'votes-100') = 12, 'public votes count the linked note only');
-select pg_temp.must(jsonb_array_length(public.achievements_for('00000000-0000-0000-0000-0000000000a1', false)) = 10, 'ten achievements');
+select pg_temp.must(jsonb_array_length(public.achievements_for('00000000-0000-0000-0000-0000000000a1', false)) = 12, 'twelve achievements (10 + 2 streak, migration 051)');
 select pg_temp.must(not (select (a ->> 'earned')::boolean from jsonb_array_elements(public.achievements_for('00000000-0000-0000-0000-0000000000a2', false)) a where a ->> 'id' = 'first-note'), 'nothing earned without notes');
 
 -- 5. owner-only link/unlink
@@ -59,7 +59,7 @@ select public.set_note_profile((select id from public.notes where body = 'plain-
 select pg_temp.must((select author_name from public.notes where body = 'plain-note') = 'Rina Putri', 'late link sets name');
 select public.set_note_profile((select id from public.notes where body = 'plain-note'), false);
 select pg_temp.must((select author_name from public.notes where body = 'plain-note') = 'Anonymous', 'unlink resets to Anonymous');
-select pg_temp.must(jsonb_array_length(public.my_achievements()) = 10, 'my_achievements works for the member');
+select pg_temp.must(jsonb_array_length(public.my_achievements()) = 12, 'my_achievements works for the member');
 
 -- 6. grants
 select pg_temp.must(has_function_privilege('anon', 'public.get_public_profile(uuid)', 'execute'), 'guests can open a public profile');

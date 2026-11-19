@@ -1,14 +1,15 @@
 // Public leaderboards: guests see them too ("you" highlighting only when signed in).
 
 import { cloneTemplate } from "./component-loader.js";
-import { invoke } from "./supabase-client.js";
+import { invoke, rpc } from "./supabase-client.js";
 import { el, errorMessage, formatRupiah, local, refs } from "./utils.js";
 
 const EXPLAIN = {
   referrals: "Friends who joined with your link and verified their email.",
   donations: "Successful voluntary donations, only for donors who chose to be shown (Profile → donor leaderboard). Note payments and ads don’t count.",
+  campuses: "Upvotes on published notes from each campus. A member’s vote on their own note doesn’t count.",
 };
-const HEADER = { referrals: "Referrals", donations: "Donated" };
+const HEADER = { referrals: "Referrals", donations: "Donated", campuses: "Upvotes" };
 
 export async function mount(view, { signal }) {
   view.append(cloneTemplate("tpl-leaderboard"));
@@ -23,7 +24,7 @@ export async function mount(view, { signal }) {
     r.valueHeader.textContent = HEADER[state.kind];
     r.rows.replaceChildren(el("tr", {}, el("td", { colspan: "3", class: "muted" }, "Loading…")));
     try {
-      const data = await invoke("leaderboard-data", { kind: state.kind, period: state.period });
+      const data = state.kind === "campuses" ? await rpc("campus_leaderboard", { p_period: state.period }) : await invoke("leaderboard-data", { kind: state.kind, period: state.period });
       if (id !== state.req || signal.aborted) return;
       r.rows.replaceChildren(...(data.rows.length ? data.rows.map((row) => el("tr", { class: row.is_me ? "is-me" : null },
         el("td", {}, String(row.rank)),
