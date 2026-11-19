@@ -31,7 +31,7 @@ jobs:
       - name: Re-apply 006 onward (must be idempotent)
         run: for f in supabase/migrations/00[6789]_*.sql supabase/migrations/01*_*.sql supabase/migrations/02*_*.sql supabase/migrations/03*_*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Apply 040 onward (040 drops user_roles, which the 006 re-apply above needs, so it runs after)
-        run: for f in supabase/migrations/04*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+        run: for f in supabase/migrations/0[45]*.sql; do echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"; done
       - name: Part 1 assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_part1.sql
       - name: Media cleanup assertions
@@ -76,6 +76,12 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_referral_cap.sql
       - name: Daily digest and suggestion assertions
         run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_digest_suggestions.sql
+      - name: Notification assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_notifications.sql
+      - name: Streak and campus leaderboard assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_streaks.sql
+      - name: FOMO hook assertions
+        run: psql -v ON_ERROR_STOP=1 -q -t -A -f supabase/tests/assert_fomo.sql
 
   code:
     runs-on: ubuntu-latest
