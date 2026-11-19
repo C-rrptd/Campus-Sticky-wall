@@ -35,10 +35,11 @@
       my_bookmarks: [], my_digest: true, my_suggestions: [{ id: "s1", kind: "decoration", title: "Neon frame", status: "planned", admin_note: "Coming in December", created_at: new Date().toISOString() }],
       my_referral_summary: { code: "ABCD2345", code_active: false, my_referral: { status: "pending_verification", referrer_active: true, i_paid: false }, successful_referrals: 0, pending_referrals: 1, credits_available: 0, credits_redeemed: 0, free_posts_left: 0, free_decorations_left: 0, referred_by_you_recent: [{ status: "pending_verification", created_at: new Date().toISOString(), friend_paid: true }], credit_history: [] },
       get_locations_recent_views: [], get_ad_availability: [], list_open_auctions: [], my_auction_offers: [], join_ad_waitlist: { ok: true }, my_price_locks: { founding: false, locks: [], grace_days: 7 },
+      daily_top: { today: { id: "n1", snippet: "Looking for a study group for Calculus", votes: 3 }, yesterday: { id: "n1", snippet: "Free tutoring at the library", votes: 7 } },
       get_public_stats: { updated_at: new Date().toISOString(), views_total: 0, clicks_total: 0, views_30d: 0, clicks_30d: 0, locations: [] },
     })[fn] ?? false, error: null }),
     functions: { invoke: async (name, o) => { (window.__invoked ||= []).push({ name, body: o?.body }); return { data: { price: "60000", id: "mock" }, error: null }; } },
-    storage: { from: () => ({ upload: async () => ({ error: null }) }) },
+    storage: { from: () => ({ upload: async () => ({ error: null }), remove: async () => ({ error: null }) }) },
   };
   window.supabase = { createClient: () => client };
 })();

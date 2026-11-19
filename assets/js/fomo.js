@@ -5,7 +5,8 @@ import { currentUser } from "./auth.js";
 import { rpc } from "./supabase-client.js";
 import { translate } from "./i18n.js";
 import { el } from "./utils.js";
-import { leftParts, msToWeekEnd, rivalry } from "./fomo-math.js";
+import { crownNote } from "./notes.js";
+import { leftParts, msToDayEnd, msToWeekEnd, rivalry } from "./fomo-math.js";
 
 const t = (s) => translate(el("span", {}, s)).textContent;
 const plural = (n, one, many) => (n === 1 ? one : many);
@@ -29,16 +30,35 @@ export function mountFomo(view, { campus, signal }) {
   const shareRace = el("button", { class: "btn btn--small", type: "button" }, t("Share"));
   const raceRow = el("div", { class: "fomo__row", hidden: true }, main, ends, shareRace);
   const pulse = el("p", { class: "fomo__pulse", hidden: true });
+  const top = el("p", { class: "fomo__pulse", hidden: true }); // today's leading note + yesterday's winner (daily_top)
   const week = el("button", { class: "btn btn--small", type: "button", hidden: true }, t("Share my week"));
-  const root = el("aside", { class: "fomo", hidden: true }, raceRow, pulse, week);
+  const root = el("aside", { class: "fomo", hidden: true }, raceRow, top, pulse, week);
   const anchor = view.querySelector(".daily-prompt");
   if (anchor) anchor.after(root); else view.querySelector(".wall-view")?.prepend(root);
+
+  const topRow = ({ today, yesterday }) => {
+    crownNote(today?.id ?? null);
+    const kids = [];
+    if (today) {
+      const [unit, n] = leftParts(msToDayEnd());
+      kids.push(t(`🏆 Top note today (${today.votes} ${plural(today.votes, "upvote", "upvotes")}): `), el("a", { href: `#/note?id=${encodeURIComponent(today.id)}` }, `“${today.snippet}”`),
+        t(` · Resets in ${n} ${unit === "hours" && n === 1 ? "hour" : unit}. Upvote your favourite before it does.`));
+    }
+    if (yesterday) {
+      if (kids.length) kids.push(el("br"));
+      kids.push(t(`Yesterday’s winner (${yesterday.votes} ${plural(yesterday.votes, "upvote", "upvotes")}): `), el("a", { href: `#/note?id=${encodeURIComponent(yesterday.id)}` }, `“${yesterday.snippet}”`));
+    }
+    top.replaceChildren(...kids);
+    top.hidden = kids.length === 0;
+    if (kids.length) root.hidden = false;
+  };
 
   let standing = null;
   let board; // the weekly board, fetched once
   let req = 0;
   async function setCampus(id) {
     const mine = ++req;
+    rpc("daily_top", { p_campus: id || null }).then((d) => { if (mine === req && !signal.aborted) topRow(d); }).catch(() => {});
     standing = null;
     raceRow.hidden = true;
     if (!id) return;
@@ -59,7 +79,7 @@ export function mountFomo(view, { campus, signal }) {
   }
 
   const tick = setInterval(() => { if (standing) ends.textContent = resets(); }, 60_000);
-  signal.addEventListener("abort", () => clearInterval(tick));
+  signal.addEventListener("abort", () => { clearInterval(tick); crownNote(null); });
 
   shareRace.addEventListener("click", async () => {
     if (!standing) return;

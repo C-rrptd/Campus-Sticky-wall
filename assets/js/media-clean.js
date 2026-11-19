@@ -92,3 +92,21 @@ export async function makeThumb(file) {
     bitmap.close?.();
   }
 }
+
+/** Profile picture: JPG/PNG/WebP become a 256 px square WebP (centre-cropped, metadata gone). GIFs and animated WebP pass through
+ *  unchanged (a canvas would keep one frame), so the caller enforces a small size cap on them. */
+export async function makeAvatar(file) {
+  if (file.type === "image/gif" || (file.type === "image/webp" && (await isAnimatedWebp(file)))) return file;
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  try {
+    const side = Math.min(bitmap.width, bitmap.height), size = Math.min(256, side);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    canvas.getContext("2d").drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.85)); // Safari hands back PNG: the File type follows the blob
+    if (!blob || blob.size === 0) throw new Error("re-encode failed");
+    return new File([blob], "avatar", { type: blob.type });
+  } finally {
+    bitmap.close?.();
+  }
+}

@@ -2,7 +2,7 @@
 // A profile is public only while the member has a live note linked to it (get_public_profile enforces that).
 // Public achievements count linked notes only, so a badge never reveals how many anonymous notes someone wrote.
 
-import { rpc } from "./supabase-client.js";
+import { avatarUrl, rpc } from "./supabase-client.js";
 import { renderNote } from "./notes.js";
 import { translate } from "./i18n.js";
 import { el, errorMessage, formatDate } from "./utils.js";
@@ -26,6 +26,13 @@ export const ACHIEVEMENTS = {
   "streak-7": ["⚡", "Week streak", "Visit 7 days in a row."],
   "streak-30": ["🌟", "Month streak", "Visit 30 days in a row."],
 };
+
+/** Fills an .avatar element with the member's picture, or their initial when they have none. `path` is profiles.avatar_url. */
+export function paintAvatar(node, path, name) {
+  const src = avatarUrl(path);
+  if (src) node.replaceChildren(el("img", { src, alt: "", loading: "lazy", decoding: "async" }));
+  else node.replaceChildren(Array.from(name ?? "?")[0] ?? "?");
+}
 
 /** The first achievement not yet earned, for a "next milestone" line. */
 export const nextMilestone = (list) => list.find((a) => !a.earned && ACHIEVEMENTS[a.id]);
@@ -64,7 +71,7 @@ export async function mount(view, { params, signal }) {
   const earned = (p.achievements ?? []).filter((a) => a.earned).length;
   root.append(
     el("div", { class: "card profile__head" },
-      el("span", { class: "avatar", "aria-hidden": "true" }, Array.from(p.name ?? "?")[0] ?? "?"),
+      paintAvatar(el("span", { class: "avatar", "aria-hidden": "true" }), p.avatar_url, p.name),
       el("div", {},
         el("h1", { class: "page-title" }, p.name),
         el("p", { class: "muted small" }, `Member since ${formatDate(p.member_since)} · ${earned} achievement${earned === 1 ? "" : "s"}`),

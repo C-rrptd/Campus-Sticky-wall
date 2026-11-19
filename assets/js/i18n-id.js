@@ -252,7 +252,6 @@ export const ID = {
   "for this note.": "untuk catatan ini.",
   "Profile settings": "Pengaturan profil",
   "Public profile": "Profil publik",
-  "Avatar image URL (https, optional)": "URL gambar avatar (https, opsional)",
   "Social links": "Tautan sosial",
   "Area & privacy": "Area & privasi",
   "Show my name and total donations on the donor leaderboard (off by default)": "Tampilkan nama dan total donasiku di papan peringkat donatur (nonaktif secara bawaan)",

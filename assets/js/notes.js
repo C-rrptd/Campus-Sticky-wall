@@ -9,6 +9,7 @@ import { MEDIA_MAX_FILES, getClient, invoke, mediaProblem, isSoundDeco, mediaUrl
 import { rememberReceipt } from "./checkout.js";
 import { buildCampusSelect, getLocationPref } from "./location.js";
 import { translate } from "./i18n.js";
+import { paintAvatar } from "./profile-view.js";
 import { CREDIT_VALUE, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, buildPoll, formatMoney, isAllowedSocialUrl, loginLabel, pricing, setPricing, spotifyRef, textLength, validateNote, validatePublicationAmount } from "./validation.js";
 import { busy, copyText, el, errorMessage, formatDate, formatRupiah, local, openDialog, refs, renderFilePreviews, safeUrl, setInputFiles, timeAgo, toast } from "./utils.js";
 
@@ -22,6 +23,18 @@ function tilt(id) {
   let h = 0;
   for (const ch of TILT_SALT + String(id)) h = (h * 31 + ch.charCodeAt(0)) | 0;
   return ((Math.abs(h) % 801) - 400) / 100; // -4deg .. 4deg
+}
+
+// 👑 on today's top note. fomo.js reports the winner (daily_top); cards drawn before or after it arrives both get the crown.
+let topId = null;
+const crown = (root, on) => {
+  root.classList.toggle("note--top", on);
+  root.querySelector(":scope > .note__crown")?.remove();
+  if (on) root.prepend(translate(el("span", { class: "note__crown", role: "img", title: "Top note today", "aria-label": "Top note today" }, "👑")));
+};
+export function crownNote(id) {
+  topId = id;
+  for (const n of document.querySelectorAll(".note[data-note-id]")) crown(n, n.dataset.noteId === id);
 }
 
 const clampPct = (n) => Math.min(96, Math.max(4, Math.round(n * 100) / 100));
@@ -121,6 +134,7 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
     r.root.append(sticker);
   }
   if (note.id) r.root.dataset.noteId = note.id;
+  if (interactive && note.id && note.id === topId) crown(r.root, true);
   const hasMedia = Array.isArray(note.media) && note.media.length > 0;
   r.body.textContent = truncateBody(note.body ?? "");
   if (r.body.textContent.endsWith("…")) r.body.dataset.cut = "1";
@@ -150,7 +164,8 @@ export function renderNote(note, { interactive = true, signal, onPlace = null, o
   if (player) r.extras.append(player);
   const profileId = note.profile && UUID.test(note.profile.id) ? note.profile.id : null;
   if (profileId && interactive) {
-    r.author.replaceChildren(el("a", { class: "note__profile", href: `#/u?id=${profileId}`, title: "View profile" }, String(note.profile.name ?? "")), isMine(note) ? " (You)" : "");
+    const face = note.profile.avatar_url ? paintAvatar(el("span", { class: "avatar avatar--tiny", "aria-hidden": "true" }), note.profile.avatar_url, "") : null;
+    r.author.replaceChildren(el("a", { class: "note__profile", href: `#/u?id=${profileId}`, title: "View profile" }, face, String(note.profile.name ?? "")), isMine(note) ? " (You)" : "");
   } else r.author.textContent = byline(note);
   const social = note.social_link && isAllowedSocialUrl(note.social_link) ? safeUrl(note.social_link, false) : null;
   if (social) {

@@ -9,7 +9,7 @@ This is an operator-facing description of the data Campus Sticky Wall processes.
 | Note text, display name, colour, decorations, optional social link, optional campus | Publish the note | **Public** once published | `notes`, `note_decorations` |
 | Chosen publication amount | Pricing, receipts, optional display | Public only if "show amount" is on; otherwise visible to the author and admins only | `notes.publication_amount`, `orders` |
 | Account email, password (hashed by Supabase Auth) | Sign-in | Private; admins can see email | `auth.users` |
-| Profile: display name, avatar URL, social links, location preference, donor recognition flag | Account features | Private to the user. The display name appears on leaderboards. **Display name, social links and achievements become public** while the member has a live note linked to the profile (see "Profile links"). | `profiles` |
+| Profile: display name, profile picture (uploaded file), social links, location preference, donor recognition flag | Account features | Private to the user. The display name appears on leaderboards. **Display name, social links and achievements become public** while the member has a live note linked to the profile (see "Profile links"). | `profiles` |
 | Votes, bookmarks | Features | Private to the user (vote counts are public) | `votes`, `bookmarks` |
 | Reports | Moderation | Reporter and admins | `reports` |
 | Orders, order items, payment status, payment type | Payments, reconciliation | User (own orders) and admins | `orders`, `order_items` |
@@ -54,6 +54,7 @@ Donor recognition is **off by default**. A donor appears on the donor leaderboar
   - Profile, votes, bookmarks, referral code and credits cascade.
   - Notes and orders keep their records with `author_id`/`user_id` set to null, for financial reconciliation.
   - Campaigns owned by the user are deleted.
+- Profile pictures stay until the member replaces or removes them (or deletes the account by request: then delete the `avatars/<user-id>/` folder in Storage).
 - Payment records (orders, items, notifications) are kept for accounting. Decide and document your retention period with your adviser.
 - Guests can take down their own note with their receipt link. This hides it from the wall; it is not a refund.
 

@@ -2,7 +2,7 @@
 // for RPC and Edge Function calls. Errors become ApiError {code, message, status}.
 
 import { config } from "./config.js";
-import { cleanForUpload, makeThumb } from "./media-clean.js";
+import { cleanForUpload, makeAvatar, makeThumb } from "./media-clean.js";
 
 let client = null;
 
@@ -106,6 +106,25 @@ export function mediaUrl(item, width) {
 }
 /** Small picture for the wall: a resized copy when Cloudflare resizing is on, else the uploaded "-t.webp" thumbnail. */
 export const thumbUrl = (item) => (config.mediaResize && item.s === "r2" ? mediaUrl(item, 400) : mediaUrl({ ...item, path: thumbPath(item.path) }));
+
+const AVATAR_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp|gif)$/;
+const AVATAR_MAX_BYTES = 1024 * 1024; // same as the bucket limit (migration 053)
+/** Public URL of a profile picture. profiles.avatar_url holds the storage path, so anything else (old links) gives null. */
+export const avatarUrl = (path) => (AVATAR_PATH.test(path ?? "") ? `${config.supabaseUrl}/storage/v1/object/public/avatars/${path}` : null);
+
+/** Shrinks a picked image and uploads it to the avatars bucket. Resolves to the storage path to save in profiles.avatar_url. */
+export async function uploadAvatar(original, userId) {
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(original.type)) throw new ApiError("UPLOAD_FAILED", "Use a JPG, PNG, WebP or GIF picture.", 0);
+  let file;
+  try { file = await makeAvatar(original); } catch { throw new ApiError("UPLOAD_FAILED", "Couldn’t read that picture. Try a different file.", 0); }
+  if (file.size > AVATAR_MAX_BYTES) throw new ApiError("UPLOAD_FAILED", "Animated pictures can be at most 1 MB. Try a shorter or smaller GIF.", 0);
+  const path = `${userId}/${crypto.randomUUID()}.${MEDIA_EXT[file.type]}`;
+  const { error } = await getClient().storage.from("avatars").upload(path, file, { contentType: file.type, cacheControl: "31536000" }); // new name every time: cache for a year
+  if (error) throw new ApiError("UPLOAD_FAILED", "Couldn’t upload your picture. Please try again.", 0);
+  return path;
+}
+/** Best effort: a leftover file is harmless, so failures are ignored. */
+export const deleteAvatar = (path) => (AVATAR_PATH.test(path ?? "") ? getClient().storage.from("avatars").remove([path]).catch(() => {}) : Promise.resolve());
 
 /** Community decorations are ids "u-<12 hex>" whose image sits at decoration-art/<id>.png. */
 export const isUserDeco = (id) => /^u-[0-9a-f]{12}$/.test(id ?? "");

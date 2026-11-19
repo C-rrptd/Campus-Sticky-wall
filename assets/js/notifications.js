@@ -12,6 +12,7 @@ const t = (s) => translate(el("span", {}, s)).textContent;
 
 const titleOf = (n) => {
   if (n.kind === "streak") return t(`${n.count}-day streak 🔥`);
+  if (n.kind === "milestone") return t(`🎉 Your note reached ${n.count} upvotes`);
   if (n.kind !== "upvote") return t("New activity");
   return n.count === 1 ? t("1 new upvote on your note") : t(`${n.count} new upvotes on your note`);
 };

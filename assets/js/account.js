@@ -3,11 +3,11 @@
 
 import { cloneTemplate } from "./component-loader.js";
 import { currentUser } from "./auth.js";
-import { getClient, query, rpc } from "./supabase-client.js";
+import { deleteAvatar, getClient, query, rpc, uploadAvatar } from "./supabase-client.js";
 import { renderNote } from "./notes.js";
-import { ACHIEVEMENTS, nextMilestone, renderAchievements } from "./profile-view.js";
+import { ACHIEVEMENTS, nextMilestone, paintAvatar, renderAchievements } from "./profile-view.js";
 import { buildLocationPicker, setLocationPref } from "./location.js";
-import { isAllowedSocialUrl, isHttpsUrl, isUsername, loginLabel } from "./validation.js";
+import { isAllowedSocialUrl, isUsername, loginLabel } from "./validation.js";
 import { busy, el, errorMessage, formatDate, formatRupiah, refs, toast } from "./utils.js";
 
 const NOTE_STATUS = {
@@ -103,15 +103,36 @@ export async function mountProfile(view, { signal }) {
 
   form.display_name.value = profile.display_name;
   form.username.value = profile.username ?? "";
+  // Avatar: `saved` is the storage path now on the profile; `picked` a new file waiting for Save; `cleared` means Remove was pressed.
+  let saved = profile.avatar_url ?? null;
+  let picked = null, previewUrl = null, cleared = false;
   const paintHead = () => {
     const n = form.display_name.value.trim();
     r.headName.textContent = n || "Your name";
-    r.avatar.textContent = Array.from(n)[0] ?? "?";
+    if (previewUrl) { const img = document.createElement("img"); img.src = previewUrl; img.alt = ""; r.avatar.replaceChildren(img); } // blob: URL, local only
+    else paintAvatar(r.avatar, cleared ? null : saved, n);
+    r.avatarClear.hidden = !(previewUrl || (saved && !cleared));
   };
   paintHead();
   r.headEmail.textContent = loginLabel(user.email);
   form.display_name.addEventListener("input", paintHead, { signal });
-  form.avatar_url.value = profile.avatar_url ?? "";
+  form.avatar_file.addEventListener("change", () => {
+    const f = form.avatar_file.files[0];
+    r.error.textContent = "";
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null; picked = null;
+    if (f) {
+      if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(f.type)) { r.error.textContent = "Use a JPG, PNG, WebP or GIF picture."; form.avatar_file.value = ""; }
+      else if (f.size > 10 * 1024 * 1024) { r.error.textContent = "That picture is too large (10 MB at most)."; form.avatar_file.value = ""; }
+      else { picked = f; previewUrl = URL.createObjectURL(f); cleared = false; }
+    }
+    paintHead();
+  }, { signal });
+  r.avatarClear.addEventListener("click", () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null; picked = null; cleared = true; form.avatar_file.value = "";
+    paintHead();
+  }, { signal });
   form.donor_recognition.checked = profile.donor_recognition;
   const digestWas = (await rpc("my_digest").catch(() => true)) !== false;
   form.email_digest.checked = digestWas;
@@ -137,8 +158,6 @@ export async function mountProfile(view, { signal }) {
       if (name.length < 2 || name.length > 40) { r.error.textContent = "Display name must be 2–40 characters."; return; }
       const username = form.username.value.trim();
       if (username && !isUsername(username)) { r.error.textContent = "Username must be 3–30 characters: letters, digits, _ . -"; return; }
-      const avatar = form.avatar_url.value.trim();
-      if (avatar && !isHttpsUrl(avatar)) { r.error.textContent = "Avatar must be an https link."; return; }
       const social_links = {};
       for (const [key, label] of SOCIALS) {
         const v = form[`social_${key}`].value.trim();
@@ -147,15 +166,25 @@ export async function mountProfile(view, { signal }) {
         if (!isAllowedSocialUrl(v) || !SOCIAL_HOST[key].includes(host)) { r.error.textContent = `${label} link must be an https link on ${SOCIAL_HOST[key][0]}.`; return; }
         social_links[key] = v;
       }
+      let avatar = cleared ? null : saved;
+      const old = saved;
       try {
+        if (picked) avatar = await uploadAvatar(picked, user.id);
         await query(client.from("profiles").update({
-          display_name: name, username: username || null, avatar_url: avatar || null, social_links, donor_recognition: form.donor_recognition.checked,
+          display_name: name, username: username || null, avatar_url: avatar, social_links, donor_recognition: form.donor_recognition.checked,
         }).eq("id", user.id));
+        saved = avatar; // the profile now points at it: from here on a later failure must not delete it
+        if (old && old !== avatar) deleteAvatar(old); // the old file is no longer referenced
         if (form.email_digest.checked !== digestWas) await rpc("set_my_digest", { p_on: form.email_digest.checked });
         await setLocationPref(location);
         await client.auth.updateUser({ data: { display_name: name } });
+        picked = null; cleared = false; form.avatar_file.value = "";
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+        paintHead();
         toast("Profile saved.", "success");
       } catch (err) {
+        if (picked && avatar && avatar !== saved) deleteAvatar(avatar); // uploaded but the profile update failed: drop the new file
         r.error.textContent = err?.code === "DUPLICATE" ? "That username is taken." : errorMessage(err);
       }
     });

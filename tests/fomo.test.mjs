@@ -39,3 +39,9 @@ test("wrapLines", () => {
   assert.deepEqual(wrapLines(m, "ab  \n cd", 100), ["ab cd"]);
   assert.deepEqual(wrapLines(m, "", 100), []);
 });
+
+import { msToDayEnd } from "../assets/js/fomo-math.js";
+test("daily top resets at 00:00 WIB", () => {
+  assert.equal(msToDayEnd(wib(2026, 11, 19, 20)), 4 * 3600e3);
+  assert.equal(msToDayEnd(wib(2026, 11, 20, 0)), 864e5);
+});

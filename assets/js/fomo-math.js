@@ -3,6 +3,9 @@
 const DAY = 864e5;
 const WIB = 7 * 3600e3;
 
+/** Milliseconds until the daily top note resets (next 00:00 WIB). */
+export const msToDayEnd = (now = Date.now()) => DAY - ((now + WIB) % DAY);
+
 /** Milliseconds until the weekly board resets (next Monday 00:00 WIB). */
 export function msToWeekEnd(now = Date.now()) {
   const t = now + WIB;

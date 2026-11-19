@@ -81,6 +81,10 @@ How it works: `media-upload` hands out 15-minute upload URLs into `tmp/` plus a 
 
 Limits to know: a file copied to its final key stays there even if the order then fails (it is public but unreferenced and is not cleaned up automatically). R2 does not enforce the upload size in the signed URL, so an oversized upload can sit in `tmp/` until the lifecycle rule removes it (it is rejected when the note is created). Cloudflare Images transformations are billed after the free monthly allowance. Videos are served as uploaded; they are already compressed in the browser.
 
+## Profile pictures
+
+Profile pictures live in the public `avatars` bucket (migration 053): 1 MB per file, images only, 10 uploads an hour per member. The browser shrinks JPG, PNG and WebP to 256 px; GIFs are not resized, so the 1 MB cap is what keeps them small. The site replaces the old file when a member changes picture. Old avatar links (which were never displayed) are cleared by the migration.
+
 ## Advertising jobs
 
 The `ad-maintenance` Edge Function runs every advertising background job and is safe to call as often as you like (each job is idempotent). Set two secrets and schedule it:
