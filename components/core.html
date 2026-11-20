@@ -17,7 +17,18 @@
         <a href="#/donate" data-nav="/donate">Support us</a>
         <a href="#/admin" data-nav="/admin" data-ref="adminLink" hidden>Admin</a>
         <span class="main-nav__spacer"></span>
-        <a class="theme-toggle settings-link" href="#/settings" data-nav="/settings" aria-label="Settings" title="Settings"><span aria-hidden="true">⚙</span></a>
+        <details class="dropdown settings-menu" data-ref="settings">
+          <summary class="dropdown__tab settings-menu__tab" aria-label="Settings" title="Settings"><span aria-hidden="true">⚙</span></summary>
+          <div class="dropdown__panel settings-menu__panel">
+            <strong>Settings</strong>
+            <label class="field"><span class="field__label">Skin</span>
+              <select data-ref="skin"><option value="paper">Classic</option><option value="neo">Neo</option></select></label>
+            <label class="field"><span class="field__label">Theme</span>
+              <select data-ref="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+            <label class="field"><span class="field__label">Language</span>
+              <select data-ref="language"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select></label>
+          </div>
+        </details>
         <a class="btn btn--primary btn--small" href="#/compose" data-nav="/compose">+ Post a note</a>
         <a href="#/auth" data-nav="/auth" data-ref="signInLink">Sign in</a>
         <div class="account-menu" data-ref="accountMenu" hidden>

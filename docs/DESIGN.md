@@ -1,8 +1,8 @@
 # Skins
 
-The site has two skins. **Classic** (`paper`) is the default and is untouched. **Neo** is opt-in: Neo-Japanese digital culture x editorial zine x game HUD (掲示板 notice board).
+The site has two skins. **Classic** (`paper`) is the default. **Neo** is opt-in: Neo-Japanese digital culture x editorial zine x game HUD (掲示板 notice board).
 
-Switch: Settings page (`#/settings`), opened from the cog in the header (guests too) or the Settings tab in Account. It also holds Theme (light/dark, `csw-theme`) and Language. Skin is saved in `localStorage` key `csw-skin`; the page reloads on switch. Dark/light works in both skins.
+Switch: the cog in the header (guests too) opens a dropdown with Skin, Theme (light/dark, `csw-theme`) and Language. Skin is saved in `localStorage` key `csw-skin`; the page reloads on switch. Dark/light works in both skins. Classic was redesigned (Nov 2026): warm-neutral canvas, white cards, violet accent, pill buttons/nav, pastel notes.
 
 ## How it loads
 `assets/js/theme-init.js` reads `csw-skin`, sets `<html data-skin>`, and `document.write`s only that skin's stylesheets (parser-blocking, so no flash). The other skin's CSS is never downloaded. `index.html` keeps the Classic set in `<noscript>`. Every stylesheet gets the `?v=` of `theme-init.js`, so one version bump (the build does it) busts them all.
@@ -16,7 +16,7 @@ Switch: Settings page (`#/settings`), opened from the cog in the header (guests 
 
 ## Add a skin
 1. Add its file list to `SKIN_CSS` in `theme-init.js`.
-2. Add a button with `data-value="<name>"` to the Skin group in `components/settings.html`.
+2. Add an `<option value="<name>">` to the Skin `<select>` in the settings dropdown in `components/core.html`.
 3. Add the skin's colours to `THEME_COLOR` in `settings.js` and, if you want, to `share-card.js`.
 
 ## Neo skin files

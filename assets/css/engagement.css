@@ -1,13 +1,13 @@
 /* Header bell + dropdown (assets/js/notifications.js), streak chip, daily prompt. Builds on .dropdown from components.css. */
 .notif .dropdown__tab::after { content: none; }
 .notif__tab { position: relative; }
-.notif__badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--err); color: var(--paper); font-size: 0.7rem; font-weight: 700; line-height: 18px; text-align: center; }
+.notif__badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 0.7rem; font-weight: 700; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--paper); }
 .notif__badge[hidden] { display: none; }
 .notif__panel { gap: var(--space-2); width: min(340px, 92vw); max-height: min(70vh, 420px); overflow-y: auto; }
 .notif__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 /* .notif prefix beats ".main-nav a" (the bell lives inside the nav). */
-.notif .notif__item { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 0; border-left: 3px solid transparent; border-radius: var(--radius-small); color: var(--ink); font-weight: 400; text-decoration: none; }
-.notif .notif__item.is-unread { background: var(--accent-soft); border-left-color: var(--accent); }
+.notif .notif__item { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-small); color: var(--ink); font-weight: 400; text-decoration: none; }
+.notif .notif__item.is-unread { background: var(--accent-soft); }
 .notif a.notif__item:hover { background: var(--paper-dark); }
 .notif__title { font-weight: 600; font-size: 0.9rem; }
 .notif__snippet { color: var(--ink-soft); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -22,13 +22,13 @@
 /* Streak chip (next to the bell) and the daily prompt banner on the wall. */
 .streak { font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
 .streak[hidden] { display: none; }
-.daily-prompt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--accent-soft); border: 1px solid var(--line); border-radius: var(--radius); }
-.daily-prompt__label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+.daily-prompt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-4); padding: var(--space-4) var(--space-5); background: linear-gradient(120deg, var(--accent-soft), var(--card)); border: 1px solid var(--line); border-radius: var(--radius); }
+.daily-prompt__label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-strong); }
 .daily-prompt strong { flex: 1 1 220px; }
 
 /* Wall banner (assets/js/fomo.js): campus race, today's pulse, share buttons. The streak chip is a button now. */
 button.streak { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: inherit; cursor: pointer; }
-.fomo { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); }
+.fomo { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-4); padding: var(--space-4) var(--space-5); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .fomo[hidden], .fomo [hidden] { display: none; }
 .fomo__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); width: 100%; }
 .fomo__main { flex: 1 1 240px; }
