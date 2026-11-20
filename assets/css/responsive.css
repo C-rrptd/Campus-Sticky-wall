@@ -94,3 +94,7 @@
   .settings-menu .dropdown__panel { position: static; width: auto; margin-top: var(--space-2); animation: none; }
   .main-nav a { border-radius: var(--radius-small); }
 }
+
+@media (max-width: 1240px) {
+  .settings-menu .dropdown__panel { position: static; width: auto; margin-top: var(--space-2); }
+}
