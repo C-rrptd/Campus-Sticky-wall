@@ -1,35 +1,36 @@
-/* Design tokens, reset, typography and layout primitives. */
+/* Classic skin, redesigned: calm warm-neutral canvas, white cards, one violet accent, pastel notes as the only loud colour.
+   Design tokens, reset, typography and layout primitives. Token names are shared with decorations.css / advertise.css. */
 :root {
-  /* Light theme: muted sticky-note yellow paper with ballpoint-blue ink. */
-  --paper: #ece3b0;
-  --paper-dark: #ddd29a;
-  --ink: #16213a;
-  --ink-soft: #414e6b;
-  --muted: #4a5775;
-  --line: #cdc17f;
-  --card: #fffcec;
-  --accent: #2a44c7;
-  --accent-strong: #1f349c;
+  --paper: #e7dfc6;
+  --paper-dark: #d8cdad;
+  --ink: #1c1b22;
+  --ink-soft: #424150;
+  --muted: #575665;
+  --line: #c9bd98;
+  --card: #f3ecd7;
+  --accent: #5b3df5;
+  --accent-strong: #4426d4;
   --accent-ink: #ffffff;
-  --accent-soft: #e4e9ff;
+  --accent-soft: #ddd5ee;
   --focus: #d9480f;
-  --ok: #166534;
-  --ok-soft: #dcfce7;
-  --err: #b91c1c;
-  --err-soft: #fee2e2;
-  --info-soft: #e4ecff;
+  --ok: #12663a;
+  --ok-soft: #cfe6d8;
+  --err: #b42318;
+  --err-soft: #f0d6d1;
+  --info-soft: #d6dcd9;
 
-  --note-yellow: #fff3a3;
-  --note-pink: #ffd3e1;
-  --note-blue: #cfe6ff;
-  --note-green: #d6f5c9;
-  --note-orange: #ffdcb3;
-  --note-purple: #e6d8ff;
+  --note-yellow: #f5e389;
+  --note-pink: #f3c2d2;
+  --note-blue: #bedaf0;
+  --note-green: #c5e6b7;
+  --note-orange: #f3cea1;
+  --note-purple: #d8c8f0;
 
-  --radius: 8px;
-  --radius-small: 5px;
-  --shadow: 0 1px 0 rgba(22, 33, 58, 0.06), 0 10px 24px -14px rgba(22, 33, 58, 0.35);
-  --shadow-note: 0 1px 1px rgba(22, 33, 58, 0.2), 0 12px 18px -8px rgba(22, 33, 58, 0.3);
+  --radius: 16px;
+  --radius-small: 10px;
+  --shadow: 0 1px 2px rgba(28, 27, 34, 0.05), 0 10px 28px -14px rgba(28, 27, 34, 0.2);
+  --shadow-pop: 0 2px 4px rgba(28, 27, 34, 0.06), 0 22px 44px -16px rgba(28, 27, 34, 0.32);
+  --shadow-note: 0 1px 1px rgba(28, 27, 34, 0.14), 0 14px 22px -12px rgba(28, 27, 34, 0.38);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -38,60 +39,67 @@
   --space-6: 32px;
   --space-7: 48px;
   --max: 1200px;
-  --grid: 110, 90, 20;
-  --header-bg: rgba(236, 227, 176, 0.96);
-  --pinned: #f7f1cc;
-  --hl: rgba(42, 68, 199, 0.2); /* title highlighter: blue on yellow paper */
+  --grid: 91, 61, 245; /* kept for shared files; the classic canvas no longer draws a grid */
+  --header-bg: rgba(231, 223, 198, 0.85);
+  --pinned: #e4dcc9;
+  --hl: rgba(91, 61, 245, 0.18);
+  --glow-a: rgba(91, 61, 245, 0.07);
+  --glow-b: rgba(255, 122, 89, 0.06);
   color-scheme: light;
-  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Inter Tight", "Avenir Next", "Segoe UI Variable Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-note: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
 }
 
 /* Dark theme: set by theme-init.js (saved choice, else the OS setting). Notes keep their paper colours, slightly dimmed. */
 :root[data-theme="dark"] {
-  --paper: #0f1424; --paper-dark: #1a2138; --ink: #e6eaf7; --ink-soft: #b4bdd6; --muted: #8f9bb8; --line: #2d3754;
-  --card: #171e33; --accent: #8da0ff; --accent-strong: #aab8ff; --accent-ink: #0b1030; --accent-soft: #222c52;
-  --focus: #ff9a5c; --ok: #6ee7a0; --ok-soft: #12331f; --err: #ff8a8a; --err-soft: #3b1717; --info-soft: #1c2850;
-  --note-yellow: #e9db8a; --note-pink: #e8b9c9; --note-blue: #b3cde8; --note-green: #bfdfb3; --note-orange: #e8c79c; --note-purple: #cfc0e8;
-  --shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 10px 24px -14px rgba(0, 0, 0, 0.8);
-  --shadow-note: 0 1px 1px rgba(0, 0, 0, 0.5), 0 12px 18px -8px rgba(0, 0, 0, 0.7);
-  --grid: 141, 160, 255; --header-bg: rgba(15, 20, 36, 0.96); --pinned: #1a2242; --hl: rgba(255, 214, 10, 0.3);
+  --paper: #121118; --paper-dark: #1e1d28; --ink: #efeef6; --ink-soft: #c3c2d2; --muted: #9b9aae; --line: #2d2c3b;
+  --card: #1a1923; --accent: #a99cff; --accent-strong: #c0b7ff; --accent-ink: #15102f; --accent-soft: #2a2650;
+  --focus: #ff9a5c; --ok: #6ee7a0; --ok-soft: #12331f; --err: #ff8f86; --err-soft: #3b1a17; --info-soft: #1d2850;
+  --note-yellow: #ebdd8e; --note-pink: #e9bccb; --note-blue: #b5cfe9; --note-green: #c1e0b5; --note-orange: #e9c8a0; --note-purple: #d0c1e9;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.8);
+  --shadow-pop: 0 2px 4px rgba(0, 0, 0, 0.5), 0 22px 44px -16px rgba(0, 0, 0, 0.9);
+  --shadow-note: 0 1px 1px rgba(0, 0, 0, 0.5), 0 14px 22px -12px rgba(0, 0, 0, 0.75);
+  --grid: 169, 156, 255; --header-bg: rgba(18, 17, 24, 0.82); --pinned: #221f40; --hl: rgba(255, 214, 10, 0.3);
+  --glow-a: rgba(169, 156, 255, 0.1); --glow-b: rgba(255, 122, 89, 0.06);
   color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font-ui);
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--ink);
   background-color: var(--paper);
+  /* two soft colour washes instead of the old graph-paper grid */
   background-image:
-    linear-gradient(rgba(var(--grid), 0.11) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--grid), 0.11) 1px, transparent 1px),
-    linear-gradient(rgba(var(--grid), 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--grid), 0.06) 1px, transparent 1px);
-  background-size: 140px 140px, 140px 140px, 28px 28px, 28px 28px;
+    radial-gradient(48rem 26rem at 88% -8%, var(--glow-a), transparent 70%),
+    radial-gradient(40rem 22rem at -8% 2%, var(--glow-b), transparent 70%);
+  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
+  -webkit-font-smoothing: antialiased;
 }
 
-main { flex: 1; width: 100%; max-width: var(--max); margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); }
+main { flex: 1; width: 100%; max-width: var(--max); margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-7); }
 main:focus { outline: none; }
 
-h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 var(--space-3); }
-h2 { font-size: 1.2rem; }
-h3 { font-size: 1rem; margin-top: var(--space-4); }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 var(--space-3); }
+h2 { font-size: 1.25rem; font-weight: 750; }
+h3 { font-size: 1.02rem; font-weight: 700; margin-top: var(--space-4); }
 p { margin: 0 0 var(--space-3); }
-a { color: var(--accent); text-underline-offset: 2px; }
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { text-decoration-thickness: 2px; }
 img { max-width: 100%; height: auto; }
 code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+code { background: var(--paper-dark); padding: 0.1em 0.4em; border-radius: 6px; }
+::selection { background: var(--accent); color: var(--accent-ink); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 /* Headings receive programmatic focus on navigation (for screen readers); no ring. */
 [tabindex="-1"]:focus { outline: none; }
@@ -100,7 +108,7 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
   position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
-.skip-link { position: absolute; left: -999px; top: 0; z-index: 100; background: var(--card); padding: var(--space-2) var(--space-3); }
+.skip-link { position: absolute; left: -999px; top: 0; z-index: 100; background: var(--card); padding: var(--space-2) var(--space-3); border-radius: 0 0 var(--radius-small) 0; }
 .skip-link:focus { left: var(--space-3); top: var(--space-3); }
 
 [hidden] { display: none !important; }
@@ -114,11 +122,12 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .card--wide { grid-column: 1 / -1; }
 .plain-list { list-style: none; padding: 0; margin: 0; }
-.plain-list > li { padding: var(--space-2) 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
+.plain-list > li { padding: var(--space-2) 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .plain-list > li:last-child { border-bottom: 0; }
 
 .boot { color: var(--muted); text-align: center; padding: var(--space-7) 0; }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
