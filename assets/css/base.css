@@ -39,10 +39,10 @@
   --space-6: 32px;
   --space-7: 48px;
   --max: 1200px;
-  --grid: 110, 90, 30; /* graph-paper lines on the wall canvas */
+  --grid: 91, 61, 245; /* kept for shared files; the classic canvas no longer draws a grid */
   --header-bg: rgba(231, 223, 198, 0.85);
   --pinned: #e4dcc9;
-  --hl: rgba(91, 61, 245, 0.22);
+  --hl: rgba(91, 61, 245, 0.18);
   --glow-a: rgba(91, 61, 245, 0.07);
   --glow-b: rgba(255, 122, 89, 0.06);
   color-scheme: light;
@@ -77,16 +77,11 @@ body {
   line-height: 1.55;
   color: var(--ink);
   background-color: var(--paper);
-  /* graph paper (140px sheets, 28px squares) over two soft colour washes */
+  /* two soft colour washes instead of the old graph-paper grid */
   background-image:
-    linear-gradient(rgba(var(--grid), 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--grid), 0.12) 1px, transparent 1px),
-    linear-gradient(rgba(var(--grid), 0.065) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--grid), 0.065) 1px, transparent 1px),
     radial-gradient(48rem 26rem at 88% -8%, var(--glow-a), transparent 70%),
     radial-gradient(40rem 22rem at -8% 2%, var(--glow-b), transparent 70%);
-  background-size: 140px 140px, 140px 140px, 28px 28px, 28px 28px, auto, auto;
-  background-repeat: repeat, repeat, repeat, repeat, no-repeat, no-repeat;
+  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;

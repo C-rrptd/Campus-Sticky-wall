@@ -13,9 +13,9 @@
 .btn:active { transform: scale(0.98); }
 .btn:disabled, .btn[aria-busy="true"] { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
 .btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn--primary, .btn--primary:hover { box-shadow: 0 3px 0 var(--accent-strong); }
+.btn--primary, .btn--primary:hover { box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent); }
 .btn--primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
-.btn--primary:active { transform: translateY(3px); box-shadow: none; }
+.btn--primary:active { transform: scale(0.98); box-shadow: none; }
 .btn--danger { color: var(--err); border-color: var(--err); }
 .btn--danger:hover { background: var(--err-soft); border-color: var(--err); }
 .btn--small { min-height: 34px; padding: 0 var(--space-4); font-size: 0.875rem; }
@@ -166,10 +166,10 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .promo--inline { border-style: dashed; }
 
 /* Navigation & header ---------------------------------------------------------------- */
-.site-header { background: var(--header-bg); -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px); border-bottom: 2px solid var(--ink); position: sticky; top: 0; z-index: 20; }
+.site-header { background: var(--header-bg); -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
 .site-header__inner { max-width: var(--max); margin: 0 auto; padding: var(--space-3) var(--space-4); display: flex; align-items: center; gap: var(--space-4); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-family: var(--font-display); font-weight: 800; font-size: 1.12rem; letter-spacing: -0.03em; white-space: nowrap; }
-.brand__pin { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff9a7e, #d9381e); box-shadow: 0 3px 3px rgba(0, 0, 0, 0.3); }
+.brand__pin { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(140deg, var(--accent), #ff7a59); transform: rotate(-8deg); box-shadow: 0 6px 12px -6px color-mix(in srgb, var(--accent) 80%, transparent); }
 .main-nav { display: flex; align-items: center; gap: var(--space-1); flex: 1; }
 .main-nav a { color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 0.93rem; padding: 7px 8px; border-radius: 999px; transition: background 0.15s ease, color 0.15s ease; }
 .main-nav a:hover { background: var(--paper-dark); color: var(--ink); }
