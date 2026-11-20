@@ -20,7 +20,7 @@ export function getClient() {
     throw new ApiError("CLIENT_MISSING", "The Supabase library failed to load. Check your connection and reload.");
   }
   client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
-    auth: { flowType: "pkce", detectSessionInUrl: true, persistSession: true, autoRefreshToken: true },
+    auth: { flowType: "implicit", detectSessionInUrl: true, persistSession: true, autoRefreshToken: true },
   });
   return client;
 }

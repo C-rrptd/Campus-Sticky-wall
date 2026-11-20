@@ -5,7 +5,7 @@
 import { config } from "./config.js";
 import { getClient, invoke, query, rpc } from "./supabase-client.js";
 import { pendingReferralCode } from "./referrals.js";
-import { isEmail, isOtp, isUsername, loginLabel, validatePassword } from "./validation.js";
+import { isEmail, isUsername, loginLabel, validatePassword } from "./validation.js";
 import { cloneTemplate } from "./component-loader.js";
 import { busy, errorMessage, refs, toast } from "./utils.js";
 
@@ -74,7 +74,7 @@ export async function signOut() {
 
 const MESSAGES = {
   "Invalid login credentials": "Email or password is incorrect.",
-  "Email not confirmed": "Please verify your email first — enter the 6-digit code we sent you.",
+  "Email not confirmed": "Please verify your email first — click the link we sent you.",
   "Token has expired or is invalid": "That code is wrong or has expired. Only the newest code works — older codes stop working when you ask for a new one.",
 };
 const friendly = (err) => MESSAGES[err?.message] ?? errorMessage(err);
@@ -97,14 +97,14 @@ export async function mountAuthView(view, { params, signal }) {
   };
   const notice = (text) => { r.notice.textContent = text; r.notice.hidden = false; };
 
-  // Supabase keeps ONE signup code per user: sending a new one replaces the old, so earlier codes stop working.
+  // Resending is rate limited by Supabase; the button waits this long.
   const COOLDOWN_S = 60; // same as max_frequency in supabase/config.toml
   const startCooldown = () => {
     let left = COOLDOWN_S;
     clearInterval(cooldown);
     r.resend.disabled = true;
     const tick = () => {
-      r.resend.textContent = left > 0 ? `Send a new code (${left}s)` : "Send a new code";
+      r.resend.textContent = left > 0 ? `Send the link again (${left}s)` : "Send the link again";
       if (left-- <= 0) { clearInterval(cooldown); r.resend.disabled = false; }
     };
     tick();
@@ -113,10 +113,9 @@ export async function mountAuthView(view, { params, signal }) {
   const showOtp = (email, text) => {
     otpEmail = email;
     show("otp");
-    r.otpHelp.textContent = `We sent a 6-digit code to ${email}. It expires in 10 minutes. If you ask for a new code, the old one stops working.`;
+    r.otpHelp.textContent = `We sent a verification link to ${email}. Open the email and click the link to finish. Check your spam folder too.`;
     if (text) notice(text);
     startCooldown();
-    r.otpForm.token.focus();
   };
 
   const mode = params.get("mode");
@@ -151,8 +150,8 @@ export async function mountAuthView(view, { params, signal }) {
         } catch (err) { error = err; }
       }
       if (error?.message === "Email not confirmed" && isEmail(login)) {
-        const { error: sendError } = await client.auth.resend({ type: "signup", email: login });
-        if (!sendError) { showOtp(login, "Your email is not verified yet. We sent you a new code."); return; }
+        const { error: sendError } = await client.auth.resend({ type: "signup", email: login, options: { emailRedirectTo: config.siteUrl } });
+        if (!sendError) { showOtp(login, "Your email is not verified yet. We sent you a new verification link."); return; }
       }
       if (error) { r.error.textContent = friendly(error); return; }
       toast("Welcome back!", "success");
@@ -179,14 +178,14 @@ export async function mountAuthView(view, { params, signal }) {
       const { data: res, error } = await client.auth.signUp({
         email,
         password: String(data.get("password")),
-        options: { data: { display_name: displayName, username, referral_code: referral || undefined } },
+        options: { emailRedirectTo: config.siteUrl, data: { display_name: displayName, username, referral_code: referral || undefined } },
       });
       if (error) { r.error.textContent = friendly(error); return; }
       if (res.session) {
         toast("Account created!", "success");
         window.location.hash = "#/";
       } else {
-        showOtp(email, `Almost done! Enter the code to activate your account${referral ? " and unlock your referral credit" : ""}.`);
+        showOtp(email, `Almost done! Click the link in the email to activate your account${referral ? " and unlock your referral credit" : ""}.`);
       }
     });
   }, { signal });
@@ -195,24 +194,11 @@ export async function mountAuthView(view, { params, signal }) {
   r.resend.addEventListener("click", async () => {
     r.resend.disabled = true; // not busy(): that would re-enable the button and break the cooldown
     r.error.textContent = "";
-    const { error } = await client.auth.resend({ type: "signup", email: otpEmail });
+    const { error } = await client.auth.resend({ type: "signup", email: otpEmail, options: { emailRedirectTo: config.siteUrl } });
     if (error) { r.error.textContent = friendly(error); r.resend.disabled = false; return; }
-    notice("A new code is on its way. The previous code no longer works.");
+    notice("A new link is on its way.");
     startCooldown();
   }, { signal });
-  r.otpForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const token = String(new FormData(r.otpForm).get("token")).trim();
-    if (!isOtp(token)) { r.error.textContent = "Enter the 6-digit code."; return; }
-    busy(r.otpForm.querySelector("button[type=submit]"), async () => {
-      r.error.textContent = "";
-      const { data: res, error } = await client.auth.verifyOtp({ email: otpEmail, token, type: "signup" });
-      if (error || !res?.session) { r.error.textContent = friendly(error ?? new Error("Token has expired or is invalid")); return; }
-      toast("Account created!", "success");
-      window.location.hash = "#/";
-    });
-  }, { signal });
-
   r.forgotForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const email = String(new FormData(r.forgotForm).get("email")).trim();
@@ -220,7 +206,8 @@ export async function mountAuthView(view, { params, signal }) {
     busy(r.forgotForm.querySelector("button[type=submit]"), async () => {
       const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: config.siteUrl });
       // Same message either way: don't reveal whether an account exists.
-      if (error) console.warn("Reset request failed", error.message);
+      // Only real failures (rate limit, mail not configured) are shown; "no such account" is not an error here.
+      if (error) { r.error.textContent = friendly(error); return; }
       notice("If an account exists for that email, a reset link is on its way.");
     });
   }, { signal });

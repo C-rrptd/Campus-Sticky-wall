@@ -1,5 +1,5 @@
-<h2>Your Campus Sticky Wall code</h2>
-<p>Enter this code on the sign-up page to finish creating your account:</p>
-<p style="font-size:32px;font-weight:700;letter-spacing:8px">{{ .Token }}</p>
-<p>It works for 10 minutes. If you asked for a newer code, only the newest one works.</p>
+<h2>Confirm your Campus Sticky Wall account</h2>
+<p>Click the button to finish creating your account:</p>
+<p><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:12px 20px;background:#c2410c;color:#fff;text-decoration:none;border-radius:6px;font-weight:700">Verify my email</a></p>
+<p>Button not working? Copy this address into your browser:<br>{{ .ConfirmationURL }}</p>
 <p>Did not sign up? Ignore this email.</p>

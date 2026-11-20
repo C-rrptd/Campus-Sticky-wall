@@ -32,13 +32,11 @@ password_requirements = "lower_upper_letters_digits"
 enable_signup = true
 enable_confirmations = true
 double_confirm_changes = true
-# Sign-up confirms with a 6-digit code instead of a link. A new code replaces the old one (Supabase stores one per user).
-otp_length = 6
-otp_expiry = 600
+# Sign-up confirms with a link in the email (tokens come back in the URL, so it works on any device).
 max_frequency = "60s"
 
 [auth.email.template.confirmation]
-subject = "Your Campus Sticky Wall code"
+subject = "Verify your Campus Sticky Wall email"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.rate_limit]
