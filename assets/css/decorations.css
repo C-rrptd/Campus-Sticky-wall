@@ -192,3 +192,172 @@
 .sticker.deco-anim-ball-bounce::after,.deco-swatch.deco-anim-ball-bounce::after{animation:csw-bounce .9s ease-in-out infinite}
 .sticker.deco-anim-record-spin::after,.deco-swatch.deco-anim-record-spin::after{animation:csw-spin 3s linear infinite}
 }
+
+/* 057: free decoration pack (generated: scripts keep ids in sync with migration 057) */
+.deco-swatch[class*="deco-emo-"]::after{position:absolute;right:.5em;top:.4em;font-size:1.5em;line-height:1;pointer-events:none}
+.sticker[class*="deco-emo-"]::after{font-size:1.5em;line-height:1}
+.deco-swatch.deco-emo-smile::after,.sticker.deco-emo-smile::after{content:"😀"}
+.deco-swatch.deco-emo-grin::after,.sticker.deco-emo-grin::after{content:"😄"}
+.deco-swatch.deco-emo-laugh::after,.sticker.deco-emo-laugh::after{content:"😂"}
+.deco-swatch.deco-emo-wink::after,.sticker.deco-emo-wink::after{content:"😉"}
+.deco-swatch.deco-emo-cool::after,.sticker.deco-emo-cool::after{content:"😎"}
+.deco-swatch.deco-emo-love-eyes::after,.sticker.deco-emo-love-eyes::after{content:"😍"}
+.deco-swatch.deco-emo-thinking::after,.sticker.deco-emo-thinking::after{content:"🤔"}
+.deco-swatch.deco-emo-sleepy-face::after,.sticker.deco-emo-sleepy-face::after{content:"😴"}
+.deco-swatch.deco-emo-party-face::after,.sticker.deco-emo-party-face::after{content:"🥳"}
+.deco-swatch.deco-emo-nerd::after,.sticker.deco-emo-nerd::after{content:"🤓"}
+.deco-swatch.deco-emo-shocked::after,.sticker.deco-emo-shocked::after{content:"😱"}
+.deco-swatch.deco-emo-angry::after,.sticker.deco-emo-angry::after{content:"😤"}
+.deco-swatch.deco-emo-cry::after,.sticker.deco-emo-cry::after{content:"😭"}
+.deco-swatch.deco-emo-sick::after,.sticker.deco-emo-sick::after{content:"🤒"}
+.deco-swatch.deco-emo-shush::after,.sticker.deco-emo-shush::after{content:"🤫"}
+.deco-swatch.deco-emo-heart-red::after,.sticker.deco-emo-heart-red::after{content:"❤️"}
+.deco-swatch.deco-emo-heart-blue::after,.sticker.deco-emo-heart-blue::after{content:"💙"}
+.deco-swatch.deco-emo-heart-green::after,.sticker.deco-emo-heart-green::after{content:"💚"}
+.deco-swatch.deco-emo-heart-yellow::after,.sticker.deco-emo-heart-yellow::after{content:"💛"}
+.deco-swatch.deco-emo-heart-purple::after,.sticker.deco-emo-heart-purple::after{content:"💜"}
+.deco-swatch.deco-emo-heart-broken::after,.sticker.deco-emo-heart-broken::after{content:"💔"}
+.deco-swatch.deco-emo-star::after,.sticker.deco-emo-star::after{content:"⭐"}
+.deco-swatch.deco-emo-glow-star::after,.sticker.deco-emo-glow-star::after{content:"🌟"}
+.deco-swatch.deco-emo-thumbs-up::after,.sticker.deco-emo-thumbs-up::after{content:"👍"}
+.deco-swatch.deco-emo-clap::after,.sticker.deco-emo-clap::after{content:"👏"}
+.deco-swatch.deco-emo-wave-hand::after,.sticker.deco-emo-wave-hand::after{content:"👋"}
+.deco-swatch.deco-emo-peace::after,.sticker.deco-emo-peace::after{content:"✌️"}
+.deco-swatch.deco-emo-flex::after,.sticker.deco-emo-flex::after{content:"💪"}
+.deco-swatch.deco-emo-pray::after,.sticker.deco-emo-pray::after{content:"🙏"}
+.deco-swatch.deco-emo-eyes::after,.sticker.deco-emo-eyes::after{content:"👀"}
+.deco-swatch.deco-emo-hundred::after,.sticker.deco-emo-hundred::after{content:"💯"}
+.deco-swatch.deco-emo-check::after,.sticker.deco-emo-check::after{content:"✅"}
+.deco-swatch.deco-emo-cross::after,.sticker.deco-emo-cross::after{content:"❌"}
+.deco-swatch.deco-emo-warning::after,.sticker.deco-emo-warning::after{content:"⚠️"}
+.deco-swatch.deco-emo-question::after,.sticker.deco-emo-question::after{content:"❓"}
+.deco-swatch.deco-emo-exclaim::after,.sticker.deco-emo-exclaim::after{content:"❗"}
+.deco-swatch.deco-emo-pencil::after,.sticker.deco-emo-pencil::after{content:"✏️"}
+.deco-swatch.deco-emo-notebook::after,.sticker.deco-emo-notebook::after{content:"📓"}
+.deco-swatch.deco-emo-backpack::after,.sticker.deco-emo-backpack::after{content:"🎒"}
+.deco-swatch.deco-emo-laptop::after,.sticker.deco-emo-laptop::after{content:"💻"}
+.deco-swatch.deco-emo-phone::after,.sticker.deco-emo-phone::after{content:"📱"}
+.deco-swatch.deco-emo-headphones::after,.sticker.deco-emo-headphones::after{content:"🎧"}
+.deco-swatch.deco-emo-calculator::after,.sticker.deco-emo-calculator::after{content:"🧮"}
+.deco-swatch.deco-emo-microscope::after,.sticker.deco-emo-microscope::after{content:"🔬"}
+.deco-swatch.deco-emo-flask::after,.sticker.deco-emo-flask::after{content:"🧪"}
+.deco-swatch.deco-emo-globe::after,.sticker.deco-emo-globe::after{content:"🌍"}
+.deco-swatch.deco-emo-art::after,.sticker.deco-emo-art::after{content:"🎨"}
+.deco-swatch.deco-emo-guitar::after,.sticker.deco-emo-guitar::after{content:"🎸"}
+.deco-swatch.deco-emo-mic::after,.sticker.deco-emo-mic::after{content:"🎤"}
+.deco-swatch.deco-emo-soccer::after,.sticker.deco-emo-soccer::after{content:"⚽"}
+.deco-swatch.deco-emo-tennis::after,.sticker.deco-emo-tennis::after{content:"🎾"}
+.deco-swatch.deco-emo-bike::after,.sticker.deco-emo-bike::after{content:"🚲"}
+.deco-swatch.deco-emo-bus::after,.sticker.deco-emo-bus::after{content:"🚌"}
+.deco-swatch.deco-emo-train::after,.sticker.deco-emo-train::after{content:"🚆"}
+.deco-swatch.deco-emo-plane::after,.sticker.deco-emo-plane::after{content:"✈️"}
+.deco-swatch.deco-emo-burger::after,.sticker.deco-emo-burger::after{content:"🍔"}
+.deco-swatch.deco-emo-fries::after,.sticker.deco-emo-fries::after{content:"🍟"}
+.deco-swatch.deco-emo-sushi::after,.sticker.deco-emo-sushi::after{content:"🍣"}
+.deco-swatch.deco-emo-rice::after,.sticker.deco-emo-rice::after{content:"🍚"}
+.deco-swatch.deco-emo-egg::after,.sticker.deco-emo-egg::after{content:"🍳"}
+.deco-swatch.deco-emo-donut::after,.sticker.deco-emo-donut::after{content:"🍩"}
+.deco-swatch.deco-emo-cake::after,.sticker.deco-emo-cake::after{content:"🍰"}
+.deco-swatch.deco-emo-icecream::after,.sticker.deco-emo-icecream::after{content:"🍦"}
+.deco-swatch.deco-emo-cookie::after,.sticker.deco-emo-cookie::after{content:"🍪"}
+.deco-swatch.deco-emo-watermelon::after,.sticker.deco-emo-watermelon::after{content:"🍉"}
+.deco-swatch.deco-emo-apple::after,.sticker.deco-emo-apple::after{content:"🍎"}
+.deco-swatch.deco-emo-banana::after,.sticker.deco-emo-banana::after{content:"🍌"}
+.deco-swatch.deco-emo-tea::after,.sticker.deco-emo-tea::after{content:"🍵"}
+.deco-swatch.deco-emo-dog::after,.sticker.deco-emo-dog::after{content:"🐶"}
+.deco-swatch.deco-emo-bear::after,.sticker.deco-emo-bear::after{content:"🐻"}
+.deco-swatch.deco-emo-panda::after,.sticker.deco-emo-panda::after{content:"🐼"}
+.deco-swatch.deco-emo-rabbit::after,.sticker.deco-emo-rabbit::after{content:"🐰"}
+.deco-swatch.deco-emo-frog::after,.sticker.deco-emo-frog::after{content:"🐸"}
+.deco-swatch.deco-emo-chick::after,.sticker.deco-emo-chick::after{content:"🐥"}
+.deco-swatch.deco-emo-owl::after,.sticker.deco-emo-owl::after{content:"🦉"}
+.deco-swatch.deco-emo-butterfly::after,.sticker.deco-emo-butterfly::after{content:"🦋"}
+.deco-swatch.deco-emo-tulip::after,.sticker.deco-emo-tulip::after{content:"🌷"}
+.deco-swatch.deco-emo-sunflower::after,.sticker.deco-emo-sunflower::after{content:"🌻"}
+.deco-swatch.deco-emo-cactus::after,.sticker.deco-emo-cactus::after{content:"🌵"}
+.deco-swatch.deco-emo-palm::after,.sticker.deco-emo-palm::after{content:"🌴"}
+.deco-swatch.deco-emo-mountain::after,.sticker.deco-emo-mountain::after{content:"⛰️"}
+.deco-swatch.deco-emo-ocean::after,.sticker.deco-emo-ocean::after{content:"🌊"}
+.deco-swatch.deco-emo-cloud::after,.sticker.deco-emo-cloud::after{content:"☁️"}
+.deco-swatch.deco-emo-lightning::after,.sticker.deco-emo-lightning::after{content:"⚡"}
+.deco-swatch.deco-emo-snowflake::after,.sticker.deco-emo-snowflake::after{content:"❄️"}
+.deco-swatch.deco-emo-umbrella::after,.sticker.deco-emo-umbrella::after{content:"☂️"}
+.deco-swatch.deco-emo-gift::after,.sticker.deco-emo-gift::after{content:"🎁"}
+.deco-swatch.deco-emo-confetti-ball::after,.sticker.deco-emo-confetti-ball::after{content:"🎉"}
+.deco-swatch.deco-emo-bell::after,.sticker.deco-emo-bell::after{content:"🔔"}
+.deco-swatch.deco-emo-key::after,.sticker.deco-emo-key::after{content:"🔑"}
+.deco-swatch.deco-emo-alarm::after,.sticker.deco-emo-alarm::after{content:"⏰"}
+.deco-swatch.deco-emo-hourglass::after,.sticker.deco-emo-hourglass::after{content:"⏳"}
+.deco-swatch.deco-emo-battery::after,.sticker.deco-emo-battery::after{content:"🔋"}
+.deco-swatch.deco-emo-gem::after,.sticker.deco-emo-gem::after{content:"💎"}
+.deco-swatch.deco-emo-crystal::after,.sticker.deco-emo-crystal::after{content:"🔮"}
+.deco-swatch.deco-emo-moneybag::after,.sticker.deco-emo-moneybag::after{content:"💰"}
+.deco-swatch[class*="deco-tag-"]::after,.sticker[class*="deco-tag-"]::after{white-space:nowrap;background:var(--tb);color:var(--tc);font-weight:700;font-size:.7em;letter-spacing:.12em;padding:.2em .8em;border-radius:.2em}
+.deco-swatch[class*="deco-tag-"]::after{position:absolute;right:.5em;top:.5em;pointer-events:none}
+.deco-swatch.deco-tag-help::after,.sticker.deco-tag-help::after{content:"HELP";--tb:#dc2626;--tc:#fff}
+.deco-swatch.deco-tag-open::after,.sticker.deco-tag-open::after{content:"OPEN";--tb:#16a34a;--tc:#fff}
+.deco-swatch.deco-tag-done::after,.sticker.deco-tag-done::after{content:"DONE";--tb:#2563eb;--tc:#fff}
+.deco-swatch.deco-tag-top::after,.sticker.deco-tag-top::after{content:"TOP";--tb:#7c3aed;--tc:#fff}
+.deco-swatch.deco-tag-tips::after,.sticker.deco-tag-tips::after{content:"TIPS";--tb:#0891b2;--tc:#fff}
+.deco-swatch.deco-tag-free::after,.sticker.deco-tag-free::after{content:"FREE";--tb:#16a34a;--tc:#fff}
+.deco-swatch.deco-tag-event::after,.sticker.deco-tag-event::after{content:"EVENT";--tb:#ea580c;--tc:#fff}
+.deco-swatch.deco-tag-quiz::after,.sticker.deco-tag-quiz::after{content:"QUIZ";--tb:#111827;--tc:#fde047}
+.deco-swatch.deco-tag-info::after,.sticker.deco-tag-info::after{content:"INFO";--tb:#2563eb;--tc:#fff}
+.deco-swatch.deco-tag-crush::after,.sticker.deco-tag-crush::after{content:"CRUSH";--tb:#db2777;--tc:#fff}
+.deco-swatch.deco-tag-meme::after,.sticker.deco-tag-meme::after{content:"MEME";--tb:#fde047;--tc:#111827}
+.deco-swatch.deco-tag-secret::after,.sticker.deco-tag-secret::after{content:"SECRET";--tb:#111827;--tc:#fff}
+.deco-swatch.deco-tag-study::after,.sticker.deco-tag-study::after{content:"STUDY";--tb:#0f766e;--tc:#fff}
+.deco-swatch.deco-tag-lfg::after,.sticker.deco-tag-lfg::after{content:"LFG";--tb:#4f46e5;--tc:#fff}
+.note.deco-tape-mint::after,.deco-swatch.deco-tape-mint::after,.note.deco-tape-yellow::after,.deco-swatch.deco-tape-yellow::after,.note.deco-tape-lilac::after,.deco-swatch.deco-tape-lilac::after,.note.deco-tape-red-stripe::after,.deco-swatch.deco-tape-red-stripe::after,.note.deco-tape-green-stripe::after,.deco-swatch.deco-tape-green-stripe::after,.note.deco-tape-blue-stripe::after,.deco-swatch.deco-tape-blue-stripe::after,.note.deco-tape-orange-dots::after,.deco-swatch.deco-tape-orange-dots::after,.note.deco-tape-black::after,.deco-swatch.deco-tape-black::after{content:"";position:absolute;left:50%;top:-.5em;width:46%;height:1.5em;transform:translateX(-50%) rotate(-2deg);opacity:.9;pointer-events:none;background:var(--tp);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.note.deco-tape-mint::after,.deco-swatch.deco-tape-mint::after{--tp:#a7f3d0}
+.note.deco-tape-yellow::after,.deco-swatch.deco-tape-yellow::after{--tp:#fde68a}
+.note.deco-tape-lilac::after,.deco-swatch.deco-tape-lilac::after{--tp:#ddd6fe}
+.note.deco-tape-red-stripe::after,.deco-swatch.deco-tape-red-stripe::after{--tp:repeating-linear-gradient(45deg,#fca5a5 0 .4em,#fee2e2 .4em .8em)}
+.note.deco-tape-green-stripe::after,.deco-swatch.deco-tape-green-stripe::after{--tp:repeating-linear-gradient(45deg,#86efac 0 .4em,#dcfce7 .4em .8em)}
+.note.deco-tape-blue-stripe::after,.deco-swatch.deco-tape-blue-stripe::after{--tp:repeating-linear-gradient(45deg,#93c5fd 0 .4em,#dbeafe .4em .8em)}
+.note.deco-tape-orange-dots::after,.deco-swatch.deco-tape-orange-dots::after{--tp:radial-gradient(circle,#fff .12em,transparent .14em) 0 0/.7em .7em,#fdba74}
+.note.deco-tape-black::after,.deco-swatch.deco-tape-black::after{--tp:#374151}
+.note.deco-border-thin,.deco-swatch.deco-border-thin{--sh-border:inset 0 0 0 .1em rgba(43,37,32,.7)}
+.note.deco-border-blue,.deco-swatch.deco-border-blue{--sh-border:inset 0 0 0 .2em #60a5fa}
+.note.deco-border-pink,.deco-swatch.deco-border-pink{--sh-border:inset 0 0 0 .2em #f472b6}
+.note.deco-border-green,.deco-swatch.deco-border-green{--sh-border:inset 0 0 0 .2em #4ade80}
+.note.deco-border-orange,.deco-swatch.deco-border-orange{--sh-border:inset 0 0 0 .2em #fb923c}
+.note.deco-border-purple,.deco-swatch.deco-border-purple{--sh-border:inset 0 0 0 .2em #a78bfa}
+.note.deco-border-red,.deco-swatch.deco-border-red{--sh-border:inset 0 0 0 .2em #f87171}
+.note.deco-border-teal,.deco-swatch.deco-border-teal{--sh-border:inset 0 0 0 .2em #2dd4bf}
+.note.deco-border-glow-yellow,.deco-swatch.deco-border-glow-yellow{--sh-border:inset 0 0 1em rgba(250,204,21,.65)}
+.note.deco-border-glow-blue,.deco-swatch.deco-border-glow-blue{--sh-border:inset 0 0 1em rgba(59,130,246,.45)}
+.note.deco-border-double-blue,.deco-swatch.deco-border-double-blue{--sh-border:inset 0 0 0 .12em #3b82f6,inset 0 0 0 .38em transparent,inset 0 0 0 .5em #3b82f6}
+.note.deco-border-shadow-blue,.deco-swatch.deco-border-shadow-blue{--sh-border:.35em .35em 0 rgba(37,99,235,.6)}
+.note.deco-border-shadow-pink,.deco-swatch.deco-border-shadow-pink{--sh-border:.35em .35em 0 rgba(219,39,119,.55)}
+.note.deco-bg-grid-green,.deco-swatch.deco-bg-grid-green{--bi-bg:linear-gradient(rgba(22,163,74,.2) 1px,transparent 1px),linear-gradient(90deg,rgba(22,163,74,.2) 1px,transparent 1px);--bp-bg:0 0,0 0;--br-bg:repeat,repeat;--bs-bg:1.2em 1.2em,1.2em 1.2em}
+.note.deco-bg-grid-pink,.deco-swatch.deco-bg-grid-pink{--bi-bg:linear-gradient(rgba(236,72,153,.2) 1px,transparent 1px),linear-gradient(90deg,rgba(236,72,153,.2) 1px,transparent 1px);--bp-bg:0 0,0 0;--br-bg:repeat,repeat;--bs-bg:1.2em 1.2em,1.2em 1.2em}
+.note.deco-bg-lined-pink,.deco-swatch.deco-bg-lined-pink{--bi-bg:repeating-linear-gradient(transparent 0 1.4em,rgba(236,72,153,.28) 1.4em calc(1.4em + 1px));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-bg-lined-green,.deco-swatch.deco-bg-lined-green{--bi-bg:repeating-linear-gradient(transparent 0 1.4em,rgba(22,163,74,.28) 1.4em calc(1.4em + 1px));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-bg-diagonal-blue,.deco-swatch.deco-bg-diagonal-blue{--bi-bg:repeating-linear-gradient(45deg,rgba(59,130,246,.12) 0 .5em,transparent .5em 1em);--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-bg-crosshatch,.deco-swatch.deco-bg-crosshatch{--bi-bg:repeating-linear-gradient(45deg,rgba(43,37,32,.08) 0 1px,transparent 1px .6em),repeating-linear-gradient(-45deg,rgba(43,37,32,.08) 0 1px,transparent 1px .6em);--bp-bg:0 0,0 0;--br-bg:repeat,repeat;--bs-bg:auto,auto}
+.note.deco-bg-gingham,.deco-swatch.deco-bg-gingham{--bi-bg:linear-gradient(90deg,rgba(239,68,68,.16) 50%,transparent 50%),linear-gradient(rgba(239,68,68,.16) 50%,transparent 50%);--bp-bg:0 0,0 0;--br-bg:repeat,repeat;--bs-bg:1.4em 1.4em,1.4em 1.4em}
+.note.deco-bg-dots-blue,.deco-swatch.deco-bg-dots-blue{--bi-bg:radial-gradient(rgba(59,130,246,.22) .28em,transparent .3em);--bp-bg:0 0;--br-bg:repeat;--bs-bg:1.6em 1.6em}
+.note.deco-bg-dots-green,.deco-swatch.deco-bg-dots-green{--bi-bg:radial-gradient(rgba(22,163,74,.22) .28em,transparent .3em);--bp-bg:0 0;--br-bg:repeat;--bs-bg:1.6em 1.6em}
+.note.deco-bg-fade-peach,.deco-swatch.deco-bg-fade-peach{--bi-bg:linear-gradient(180deg,transparent 40%,rgba(251,146,60,.28));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-bg-fade-mint,.deco-swatch.deco-bg-fade-mint{--bi-bg:linear-gradient(180deg,transparent 40%,rgba(52,211,153,.3));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-bg-fade-sky,.deco-swatch.deco-bg-fade-sky{--bi-bg:linear-gradient(180deg,transparent 40%,rgba(56,189,248,.3));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-bg-fade-lilac,.deco-swatch.deco-bg-fade-lilac{--bi-bg:linear-gradient(180deg,transparent 40%,rgba(167,139,250,.3));--bp-bg:0 0;--br-bg:repeat;--bs-bg:auto}
+.note.deco-bg-waves,.deco-swatch.deco-bg-waves{--bi-bg:radial-gradient(circle at 50% 100%,transparent .6em,rgba(59,130,246,.2) .62em .8em,transparent .82em);--bp-bg:0 0;--br-bg:repeat;--bs-bg:1.6em .8em}
+.note.deco-bg-stars-faint,.deco-swatch.deco-bg-stars-faint{--bi-bg:radial-gradient(circle at 20% 30%,rgba(217,119,6,.3) .1em,transparent .13em),radial-gradient(circle at 70% 70%,rgba(217,119,6,.3) .1em,transparent .13em);--bp-bg:0 0,0 0;--br-bg:repeat,repeat;--bs-bg:2.4em 2.4em,3.1em 3.1em}
+.note.deco-theme-bar-blue,.deco-swatch.deco-theme-bar-blue{--sh-theme:inset 0 .5em 0 #3b82f6}
+.note.deco-theme-bar-green,.deco-swatch.deco-theme-bar-green{--sh-theme:inset 0 .5em 0 #22c55e}
+.note.deco-theme-bar-pink,.deco-swatch.deco-theme-bar-pink{--sh-theme:inset 0 .5em 0 #ec4899}
+.note.deco-theme-bar-purple,.deco-swatch.deco-theme-bar-purple{--sh-theme:inset 0 .5em 0 #8b5cf6}
+.note.deco-theme-bar-red,.deco-swatch.deco-theme-bar-red{--sh-theme:inset 0 .5em 0 #ef4444}
+.note.deco-theme-side-teal,.deco-swatch.deco-theme-side-teal{--sh-theme:inset .5em 0 0 #14b8a6}
+.note.deco-theme-vignette,.deco-swatch.deco-theme-vignette{--sh-theme:inset 0 0 2em rgba(0,0,0,.18)}
+.note.deco-theme-glow-pink,.deco-swatch.deco-theme-glow-pink{--bi-theme:radial-gradient(circle at 0 0,rgba(244,114,182,.5),transparent 55%);--bp-theme:0 0;--br-theme:no-repeat;--bs-theme:auto}
+.note.deco-theme-glow-mint,.deco-swatch.deco-theme-glow-mint{--bi-theme:radial-gradient(circle at 100% 100%,rgba(52,211,153,.5),transparent 55%);--bp-theme:0 0;--br-theme:no-repeat;--bs-theme:auto}
+.note.deco-theme-sunrise,.deco-swatch.deco-theme-sunrise{--bi-theme:linear-gradient(0deg,rgba(251,146,60,.38),transparent 55%);--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-theme-ocean,.deco-swatch.deco-theme-ocean{--bi-theme:linear-gradient(0deg,rgba(14,165,233,.38),transparent 55%);--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-theme-forest,.deco-swatch.deco-theme-forest{--bi-theme:linear-gradient(0deg,rgba(22,163,74,.34),transparent 55%);--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-theme-twilight,.deco-swatch.deco-theme-twilight{--bi-theme:linear-gradient(180deg,rgba(124,58,237,.3),transparent 55%);--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-season-snow,.deco-swatch.deco-season-snow{--bi-theme:radial-gradient(circle at 15% 20%,#fff .14em,transparent .17em),radial-gradient(circle at 75% 35%,#fff .18em,transparent .21em),radial-gradient(circle at 40% 80%,#fff .14em,transparent .17em),radial-gradient(circle at 90% 85%,#fff .18em,transparent .21em);--bp-theme:0 0,0 0,0 0,0 0;--br-theme:repeat,repeat,repeat,repeat;--bs-theme:auto}
+.note.deco-season-autumn,.deco-swatch.deco-season-autumn{--bi-theme:linear-gradient(0deg,rgba(234,88,12,.3),rgba(250,204,21,.12) 45%,transparent 70%);--bp-theme:0 0;--br-theme:repeat;--bs-theme:auto}
+.note.deco-season-ramadan,.deco-swatch.deco-season-ramadan{--bi-theme:linear-gradient(#16a34a 60%,#fbbf24 60%);--bp-theme:left top;--br-theme:no-repeat;--bs-theme:100% .7em}

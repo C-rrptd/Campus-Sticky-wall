@@ -9,8 +9,7 @@ import { rpc } from "./supabase-client.js";
 import { copyText, el, errorMessage, formatDate, local, refs } from "./utils.js";
 
 const KEY = "csw.ref";
-const MAX_AGE_MS = 30 * 24 * 3600 * 1000;
-const CODE = /^[A-Z2-9]{8}$/;
+const CODE = /^[A-Z0-9_-]{3,24}$/; // personal codes (8 letters/digits) and the owner's custom codes
 
 export function captureReferral(href = window.location.href) {
   const url = new URL(href);
@@ -24,7 +23,7 @@ export function captureReferral(href = window.location.href) {
 
 export function pendingReferralCode() {
   const saved = local.get(KEY, null);
-  if (!saved || !CODE.test(saved.code ?? "") || Date.now() - Number(saved.at) > MAX_AGE_MS) return null;
+  if (!saved || !CODE.test(saved.code ?? "")) return null; // a saved code never expires
   return saved.code;
 }
 

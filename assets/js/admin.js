@@ -161,6 +161,42 @@ function amountInput(name, value, placeholder = "") {
   return el("input", { name, value: value ?? "", inputmode: "numeric", placeholder, class: "input--small" });
 }
 
+/** Owner only: custom referral codes. They pay out on email verification alone, never expire, and stop at the usage limit. */
+async function ownerReferralCodes(reload) {
+  const codes = await api("list_owner_referral_codes");
+  const f = { code: el("input", { placeholder: "e.g. KAMPUS2026", maxlength: "24" }),
+    posts: el("input", { inputmode: "numeric", value: "3" }), decos: el("input", { inputmode: "numeric", value: "10" }),
+    max: el("input", { inputmode: "numeric", placeholder: "blank = unlimited" }), note: el("input", { maxlength: "200" }) };
+  const lab = (text, node) => el("label", { class: "field" }, el("span", { class: "field__label" }, text), node);
+  const create = button("Create code", async () => {
+    await api("create_owner_referral_code", { code: f.code.value, posts: Number(f.posts.value), decos: Number(f.decos.value),
+      max_uses: f.max.value.trim() || null, note: f.note.value.trim() || null });
+    toast("Code created.", "success"); reload();
+  }, "btn btn--primary btn--small");
+  const limitCell = (r) => {
+    const input = el("input", { inputmode: "numeric", value: r.max_uses ?? "", placeholder: "unlimited", "aria-label": `Usage limit for ${r.code}`, size: "8" });
+    return el("span", { class: "row" }, input, button("Save", async () => {
+      await api("update_owner_referral_code", { code: r.code, enabled: r.enabled, max_uses: input.value.trim() || null });
+      toast("Limit saved.", "success"); reload();
+    }));
+  };
+  return el("div", { class: "stack" },
+    el("h2", {}, "Your referral codes"),
+    el("p", { class: "notice" }, "Your own code and these custom codes give friends their credits as soon as their email is verified: no payment needed. The credits never expire. Your personal code gives 3 free posts and 10 free decorations; a custom code gives what you set here."),
+    el("div", { class: "row" }, lab("Code (3-24 letters/digits/-/_)", f.code), lab("Free posts", f.posts), lab("Free decorations", f.decos),
+      lab("Max uses in total", f.max), lab("Note (private)", f.note), create),
+    table([
+      { label: "Code", key: "code" },
+      { label: "Free posts", key: "post_credits" },
+      { label: "Free decorations", key: "deco_credits" },
+      { label: "Used", render: (r) => `${r.uses}${r.max_uses ? ` / ${r.max_uses}` : ""}` },
+      { label: "Usage limit", render: limitCell },
+      { label: "Note", key: "note" },
+      { label: "On", render: (r) => button(r.enabled ? "Disable" : "Enable", async () => { await api("update_owner_referral_code", { code: r.code, enabled: !r.enabled, max_uses: r.max_uses }); reload(); }) },
+    ], codes, "No custom codes yet."),
+    el("h2", {}, "All referrals"));
+}
+
 const panels = {
   async overview(panel, reload, state) {
     const jakarta = (offsetDays) => new Date(Date.now() + 7 * 3600e3 + offsetDays * 864e5).toISOString().slice(0, 10);
@@ -1120,7 +1156,7 @@ const panels = {
 
   async referrals(panel, reload, state) {
     const rows = await api("list_referrals", { limit: 200 });
-    panel.replaceChildren(table([
+    panel.replaceChildren(...(state.owner ? [await ownerReferralCodes(reload)] : []), table([
       { label: "Referred", key: "referred_name" },
       { label: "Referrer", key: "referrer_name" },
       { label: "Code", key: "code" },
@@ -1219,7 +1255,7 @@ const GUIDE = {
   suggestions: { what: "Ideas sent by members. Decoration ideas may include a requirements file.",
     steps: ["Filter by status. Open shows the attached file (private, link works for 2 minutes).", "Set status: pick a status and an optional note. The member sees both under Suggestions."] },
   referrals: { what: "Who invited whom, and the credits earned.",
-    steps: ["Check Status and reject reason to see if a referral counted.", "Credits are used to pay for posts. Revoke referral credits takes back unused credits from fraud or abuse (reason required). Credits already spent stay spent.", "“Credit (old)” and “Revoke credit” are for the old credit system."] },
+    steps: ["Owner only: “Your referral codes” makes custom codes with a usage limit and your own credit amounts. They pay out on email verification alone and never expire. Status “rejected (code_full)” means the limit was reached.", "Check Status and reject reason to see if a referral counted.", "Credits are used to pay for posts. Revoke referral credits takes back unused credits from fraud or abuse (reason required). Credits already spent stay spent.", "“Credit (old)” and “Revoke credit” are for the old credit system."] },
   campaigns: { what: "Advertiser campaigns. Review, approve and control every ad.",
     steps: ["Status filter starts on Pending approval. Read the ad, check the creative image and the link.", "Approve a good ad. The advertiser then has a set number of days to pay (see Prices & settings). Reject a bad one and give a reason.", "Pending review + paid: approve to schedule it.", "Pause stops a running ad. Resume restarts it. Cancel ends it for good.", "Stats column is views / clicks."] },
   adinsights: { what: "Performance per ad spot and location, plus a price suggestion.",

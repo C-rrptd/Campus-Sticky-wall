@@ -172,7 +172,7 @@ export async function mountAuthView(view, { params, signal }) {
     if (!isUsername(username)) { r.error.textContent = "Username must be 3–30 characters: letters, digits, _ . -"; return; }
     if (!isEmail(email)) { r.error.textContent = "Enter a valid email address."; return; }
     if (pwError) { r.error.textContent = pwError; return; }
-    if (referral && !/^[A-Z2-9]{8}$/.test(referral)) { r.error.textContent = "Referral codes have 8 letters/digits."; return; }
+    if (referral && !/^[A-Z0-9_-]{3,24}$/.test(referral)) { r.error.textContent = "Referral codes use 3–24 letters, digits, - or _."; return; }
     busy(r.register.querySelector("button[type=submit]"), async () => {
       r.error.textContent = "";
       if (!(await rpc("username_available", { p_username: username }))) { r.error.textContent = "That username is taken."; return; }

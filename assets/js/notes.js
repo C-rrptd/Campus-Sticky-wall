@@ -660,7 +660,11 @@ export async function mountComposer(view, { signal, navigate }) {
       for (const d of list) groups.set(d.category || "Other", [...(groups.get(d.category || "Other") ?? []), d]);
       return [...groups].sort((a, b) => rank(a[0]) - rank(b[0]));
     };
-    const usable = state.decorations.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id));
+    // Cheapest first inside every group: free ones on top, then by price (locked ones after the open ones at the same price).
+    // Array.sort is stable, so the catalog's own sort_order still breaks ties.
+    const isLocked = (d) => Boolean(d.unlock_achievement) && !earned.has(d.unlock_achievement);
+    const usable = state.decorations.filter((d) => /^[a-z0-9-]{2,40}$/.test(d.id))
+      .sort((a, b) => Number(a.price) - Number(b.price) || isLocked(a) - isLocked(b));
     const wholeNote = byCategory(usable.filter((d) => !d.placeable));
     singles = wholeNote.map(([, list]) => decoPicker({ options: list.map((d) => ({ ...option(d), cat: undefined })), placeholder: "None", label: list[0].category || "Other", signal,
       onChange: (v) => { playSound(v); renderStickerList(); recompute(); } })); // picking a sound previews it

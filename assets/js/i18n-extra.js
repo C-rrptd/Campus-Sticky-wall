@@ -788,7 +788,7 @@ export const ID_EXTRA = {
   "An account with this email already exists. Try signing in.": "Akun dengan email ini sudah ada. Coba masuk.",
   "Welcome back!": "Selamat datang kembali!",
   "Enter a valid email address.": "Masukkan alamat email yang valid.",
-  "Referral codes have 8 letters/digits.": "Kode referral terdiri dari 8 huruf/angka.",
+  "Referral codes use 3–24 letters, digits, - or _.": "Kode referral terdiri dari 3–24 huruf, angka, - atau _.",
   "Account created!": "Akun dibuat!",
   "If an account exists for that email, a reset link is on its way.": "Kalau ada akun dengan email itu, tautan atur ulang sedang dikirim.",
   "Password updated.": "Kata sandi diperbarui.",

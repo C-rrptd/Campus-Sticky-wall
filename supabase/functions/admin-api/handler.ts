@@ -166,6 +166,20 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_expires: p.expires_at ? v.isoDate(p.expires_at, "expires_at") : null,
   })],
   set_promo_enabled: ["admin_set_promo_enabled", (p) => ({ p_id: v.uuid(p.id, "id"), p_enabled: v.bool(p.enabled, "enabled", true) })],
+  // Owner-only: SQL re-checks require_owner(); an Admin's call is rejected with 403. null max_uses = unlimited.
+  list_owner_referral_codes: ["owner_list_referral_codes", () => ({})],
+  create_owner_referral_code: ["owner_create_referral_code", (p) => ({
+    p_code: v.str(p.code, "code", { min: 3, max: 24 }),
+    p_posts: int(p.posts, 3, 100),
+    p_decos: int(p.decos, 10, 100),
+    p_max_uses: p.max_uses === null || p.max_uses === undefined || p.max_uses === "" ? null : int(p.max_uses, 1, 1000000) || null,
+    p_note: optStr(p.note, "note", 200),
+  })],
+  update_owner_referral_code: ["owner_update_referral_code", (p) => ({
+    p_code: v.str(p.code, "code", { min: 3, max: 24 }),
+    p_enabled: v.bool(p.enabled, "enabled", true),
+    p_max_uses: p.max_uses === null || p.max_uses === undefined || p.max_uses === "" ? null : int(p.max_uses, 1, 1000000) || null,
+  })],
   audit_log: ["admin_audit_entries", (p) => ({ p_limit: int(p.limit, 100, 500), p_offset: int(p.offset, 0, 100000) })],
   leaderboard_diagnostics: ["admin_leaderboard_diagnostics", () => ({})],
   revoke_referral_credits: ["admin_revoke_referral_credits", (p) => ({
