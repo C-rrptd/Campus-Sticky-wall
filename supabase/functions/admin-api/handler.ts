@@ -16,6 +16,8 @@ import { runAdJobs } from "../_shared/ad_jobs.ts";
 type P = Record<string, unknown>;
 const int = (x: unknown, d: number, max: number) =>
   typeof x === "number" && Number.isInteger(x) && x >= 0 ? Math.min(x, max) : d;
+// The admin form sends the limit as text ("200"); int() alone would turn that into 1.
+const limit = (x: unknown) => (x === null || x === undefined || x === "" ? null : int(Number(x), 1, 1000000) || null);
 const optStr = (x: unknown, field: string, max = 200) => v.str(x, field, { max, optional: true });
 const reason = (x: unknown) => v.str(x, "Reason", { max: 500, optional: true, multiline: true });
 const optDate = (x: unknown, field: string) => {
@@ -161,7 +163,7 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_code: v.str(p.code, "code", { min: 4, max: 24 }),
     p_kind: v.oneOf(p.kind, "kind", ["percent", "fixed"] as const),
     p_value: Number.isSafeInteger(p.value) && (p.value as number) > 0 ? p.value : (() => { throw new HttpError(400, "INVALID_FIELD", "value must be a positive whole number."); })(),
-    p_max_uses: p.max_uses === null || p.max_uses === undefined || p.max_uses === "" ? null : int(p.max_uses, 1, 1000000) || null,
+    p_max_uses: limit(p.max_uses),
     p_per_user: int(p.per_user, 1, 1000) || 1,
     p_expires: p.expires_at ? v.isoDate(p.expires_at, "expires_at") : null,
   })],
@@ -172,13 +174,13 @@ const SQL_ACTIONS: Record<string, [string, (p: P) => P]> = {
     p_code: v.str(p.code, "code", { min: 3, max: 24 }),
     p_posts: int(p.posts, 3, 100),
     p_decos: int(p.decos, 10, 100),
-    p_max_uses: p.max_uses === null || p.max_uses === undefined || p.max_uses === "" ? null : int(p.max_uses, 1, 1000000) || null,
+    p_max_uses: limit(p.max_uses),
     p_note: optStr(p.note, "note", 200),
   })],
   update_owner_referral_code: ["owner_update_referral_code", (p) => ({
     p_code: v.str(p.code, "code", { min: 3, max: 24 }),
     p_enabled: v.bool(p.enabled, "enabled", true),
-    p_max_uses: p.max_uses === null || p.max_uses === undefined || p.max_uses === "" ? null : int(p.max_uses, 1, 1000000) || null,
+    p_max_uses: limit(p.max_uses),
   })],
   audit_log: ["admin_audit_entries", (p) => ({ p_limit: int(p.limit, 100, 500), p_offset: int(p.offset, 0, 100000) })],
   leaderboard_diagnostics: ["admin_leaderboard_diagnostics", () => ({})],
