@@ -205,7 +205,7 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 20px; hei
 .main-nav a { color: var(--bar-ink); text-decoration: none; font-weight: 700; font-size: 0.92rem; padding: 5px 7px; border: 0; transform: skewX(-8deg); transition: background 0.1s ease; }
 .main-nav a:hover { background: rgba(255, 255, 255, 0.14); color: var(--bar-ink); }
 .main-nav a[aria-current="page"] { background: var(--accent); color: var(--accent-ink); }
-.main-nav a.settings-link, .main-nav a.btn { transform: none; color: var(--accent-ink); padding: 0 var(--space-3); margin: 0 var(--space-1); }
+.main-nav a.btn { transform: none; color: var(--accent-ink); padding: 0 var(--space-3); margin: 0 var(--space-1); }
 .main-nav a.btn:hover { background: var(--accent-strong); }
 .main-nav > .main-nav__spacer { flex: 1; min-width: 0; }
 .account-menu { display: flex; gap: var(--space-3); align-items: center; }
@@ -359,6 +359,6 @@ input[type="file"]::file-selector-button:hover { background: var(--accent); colo
 .poll-builder__row > input:first-child { flex: 1; min-width: 0; }
 .poll-builder__ok { white-space: nowrap; font-size: 0.85rem; }
 
-.settings-link { display: inline-grid; place-items: center; text-decoration: none; font-size: 1.15rem; }
-.main-nav a.settings-link { color: var(--bar-ink); padding: 0 8px; min-width: 40px; border: 2px solid var(--edge); }
-.main-nav a.settings-link[aria-current="page"] { background: var(--accent); }
+.settings-menu__tab::after { content: none; }
+.settings-menu__tab { font-size: 1.1rem; min-width: 42px; justify-content: center; }
+.settings-menu__panel { width: min(260px, 90vw); }
