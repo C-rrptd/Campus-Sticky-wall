@@ -74,7 +74,8 @@ async function renderHeader() {
     const dark = root.dataset.theme === "dark";
     r.themeToggle.firstElementChild.textContent = dark ? "☀" : "☾";
     r.themeToggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f1424" : "#ece3b0");
+    const neo = root.dataset.skin === "neo";
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", neo ? (dark ? "#060414" : "#15112e") : (dark ? "#0f1424" : "#ece3b0"));
   };
   r.langToggle.textContent = lang === "id" ? "ID · EN" : "EN · ID";
   r.langToggle.addEventListener("click", () => setLang(lang === "id" ? "en" : "id"));
@@ -109,6 +110,15 @@ async function renderFooter() {
   clear(host);
   host.append(cloneTemplate("tpl-footer"));
   const r = refs(host);
+  const skin = document.documentElement.dataset.skin ?? "paper";
+  host.querySelectorAll("[data-skin-set]").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.skinSet === skin));
+    b.addEventListener("click", () => {
+      if (b.dataset.skinSet === skin) return;
+      try { localStorage.setItem("csw-skin", b.dataset.skinSet); } catch { /* storage blocked: the switch cannot persist */ }
+      window.location.reload(); // the skin decides which stylesheets load, so a reload is the simplest correct switch
+    });
+  });
   try {
     const rows = await query(getClient().from("site_config").select("key,value").in("key", ["official_social_links", "contact_email"]));
     const cfg = Object.fromEntries(rows.map((row) => [row.key, row.value]));

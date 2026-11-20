@@ -873,4 +873,7 @@ export const ID = {
   "Be a member for 30 days.": "Jadi anggota selama 30 hari.",
   "One year in": "Setahun bergabung",
   "Be a member for a year.": "Jadi anggota selama setahun.",
+  "Skin": "Tampilan",
+  "Classic": "Klasik",
+  "Neo": "Neo",
 };

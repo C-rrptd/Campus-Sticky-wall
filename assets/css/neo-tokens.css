@@ -1,0 +1,76 @@
+/* Design tokens + fonts. The only file that holds raw colours, type and shadows.
+   Everything else reads var(--…). Look: Neo-Japanese digital culture x editorial zine x game HUD.
+   Fonts are self-hosted (CSP: font-src 'self'): assets/fonts/*.woff2, subset to Latin + kana + the kanji used for decoration. */
+
+@font-face { font-family: "Dela Gothic One"; src: url("../fonts/dela.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "DotGothic16"; src: url("../fonts/dot.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Zen Kaku Gothic New"; src: url("../fonts/zen-500.woff2") format("woff2"); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: "Zen Kaku Gothic New"; src: url("../fonts/zen-700.woff2") format("woff2"); font-weight: 600 900; font-display: swap; }
+
+:root {
+  /* Light: "fog" night-market paper, indigo sumi ink, hot-pink + soda-cyan + sun-yellow signage. */
+  --ink: #15112e;
+  --ink-soft: #3d3866;
+  --muted: #58537e;
+  --paper: #dfe2f4;
+  --paper-dark: #cbd0ea;
+  --card: #fbfbff;
+  --line: #a7abd0;          /* quiet dividers */
+  --edge: #15112e;          /* hard outlines on buttons, cards, inputs */
+  --pop: #15112e;           /* hard offset shadow colour */
+  --pop-2: #15112e;         /* hard shadow under primary buttons */
+  --bar: #15112e;           /* header / footer / table heads: always dark */
+  --bar-ink: #f6f3ff;
+
+  --accent: #d4115f;
+  --accent-strong: #a80b49;
+  --accent-ink: #ffffff;
+  --accent-soft: #ffd6e6;
+  --cyan: #00b3d1;
+  --cyan-soft: #cdf4fb;
+  --sun: #ffd21f;
+  --focus: #0050d6;
+  --ok: #0b7a43;   --ok-soft: #d2f6e1;
+  --err: #c4122f;  --err-soft: #ffdce2;
+  --info-soft: #cdf4fb;
+  --pinned: #fff0a6;
+  --hl: rgba(255, 210, 31, 0.7);
+  --grid: 60, 56, 140;
+  --header-bg: var(--bar);
+
+  --note-yellow: #ffe45e;
+  --note-pink: #ffb3d1;
+  --note-blue: #a9dcff;
+  --note-green: #b9f0a8;
+  --note-orange: #ffc58a;
+  --note-purple: #d2bfff;
+
+  --radius: 3px;
+  --radius-small: 2px;
+  --shadow: 4px 4px 0 var(--pop);
+  --shadow-note: 4px 5px 0 var(--pop);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px;
+  --max: 1240px;
+
+  --font-ui: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Dela Gothic One", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --font-hud: "DotGothic16", "Zen Kaku Gothic New", ui-monospace, monospace;
+  --font-note: var(--font-ui);
+  color-scheme: light;
+}
+
+/* Dark: arcade night. Shadows become coloured glow-blocks, since black on black cannot be seen. */
+:root[data-theme="dark"] {
+  --ink: #f2efff; --ink-soft: #c9c3ee; --muted: #a29cd2;
+  --paper: #0b0920; --paper-dark: #151236; --card: #15123a; --line: #332e6e;
+  --edge: #8c84e8; --pop: #5a44e0; --pop-2: #00c7e6;
+  --bar: #060414; --bar-ink: #f6f3ff;
+  --accent: #ff4f9a; --accent-strong: #ff7ab3; --accent-ink: #1b0716; --accent-soft: #3d1342;
+  --cyan: #29d9f5; --cyan-soft: #0f3550; --sun: #ffd21f;
+  --focus: #ffd21f;
+  --ok: #6ee7a0; --ok-soft: #10331f; --err: #ff8a98; --err-soft: #40131c; --info-soft: #0f3550;
+  --pinned: #2b2560; --hl: rgba(255, 79, 154, 0.5);
+  --grid: 120, 110, 240;
+  color-scheme: dark;
+}

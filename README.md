@@ -40,6 +40,7 @@ Related documents:
 | `index.html` | Small shell: mount points, stylesheets, module entry. |
 | `components/*.html` | `<template>`-only fragments. Each view has one: `core`, `wall`, `note-card`, `note-composer`, `promotions`, `promotion-card`, `announcements`, `auth`, `account`, `profile`, `referrals`, `leaderboard`, `checkout`, `donations`, `admin`, `footer`, `legal`. |
 | `assets/css/` | `base.css` holds tokens and reset. `components.css`, `pages.css` and `responsive.css` hold the rest. |
+| `assets/css/neo-*.css`, `assets/fonts/` | The opt-in Neo skin. Switch is in the footer; loader is `theme-init.js`. See `docs/DESIGN.md`. |
 | `assets/js/app.js` | Boots the app. It checks config, handles URL callbacks (PKCE, `?ref=`, DOKU return), restores the session, renders the shell and starts the router. |
 | `assets/js/router.js` | Hash router. It lazy-loads views, aborts listeners and requests on navigation, and ignores stale renders. |
 | `assets/js/component-loader.js` | Loads trusted fragments and rejects scripts and inline handlers. |

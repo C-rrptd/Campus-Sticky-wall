@@ -1,0 +1,67 @@
+/* Neo skin: signature pieces: the things that make this site look like itself. Loaded last.
+   1. Masthead on the wall (obi ribbon + extruded title).  2. Ranks on leaderboards.
+   3. One page-load moment: notes get pinned to the board.  Everything else lives in components.css / pages.css. */
+
+/* 1. Masthead. The 帯 (obi) is the paper band wrapped round a Japanese book: here it hangs from the top edge as a ribbon. */
+.wall-toolbar { gap: var(--space-4); }
+.wall-toolbar--masthead {
+  position: relative; align-items: center; padding: var(--space-5) var(--space-5) var(--space-5) calc(var(--space-5) + 64px);
+  background: var(--card); border: 2px solid var(--edge); border-radius: var(--radius); box-shadow: 8px 8px 0 var(--pop);
+  margin-bottom: var(--space-6);
+}
+.wall-toolbar--masthead::after { /* halftone fade in the top-right corner */
+  content: ""; position: absolute; top: 0; right: 0; width: 38%; height: 100%; pointer-events: none;
+  background: radial-gradient(circle, rgba(var(--grid), 0.3) 1.6px, transparent 2.1px) 0 0 / 10px 10px;
+  -webkit-mask: linear-gradient(225deg, #000, transparent 62%); mask: linear-gradient(225deg, #000, transparent 62%);
+}
+.wall-toolbar--masthead > * { position: relative; z-index: 1; }
+.wall-toolbar--masthead .page-title { font-size: clamp(2.4rem, 6.2vw, 4.4rem); line-height: 1.05; text-shadow: 3px 3px 0 var(--cyan), 6px 6px 0 var(--accent); margin-bottom: var(--space-3); }
+.wall-toolbar--masthead .page-lead { margin-bottom: 0; }
+.wall-toolbar--masthead::before { content: "今日の付箋"; content: "今日の付箋" / ""; position: absolute; left: var(--space-4); top: -2px; z-index: 2; width: 48px; padding: var(--space-4) 0 calc(var(--space-4) + 14px);
+  display: grid; place-items: center; background: var(--accent); color: var(--accent-ink);
+  font: 400 1.35rem / 1.1 var(--font-display); letter-spacing: 0.18em; writing-mode: vertical-rl;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 14px), 0 100%); }
+
+/* 2. Ranks. The # column on leaderboards becomes a rank tile; first three get medal colours. */
+.leaderboard-view .table tbody td:first-child:not([colspan]) { width: 4.5rem; font: 400 1.15rem var(--font-hud); }
+.leaderboard-view .table tbody tr:nth-child(-n+3) td:first-child:not([colspan]) { font: 400 1.6rem var(--font-display); }
+.leaderboard-view .table tbody tr:nth-child(1) td:first-child:not([colspan]) { color: #c98a00; }
+.leaderboard-view .table tbody tr:nth-child(2) td:first-child:not([colspan]) { color: var(--ink-soft); }
+.leaderboard-view .table tbody tr:nth-child(3) td:first-child:not([colspan]) { color: #b2542a; }
+.leaderboard-view .table tbody tr:nth-child(1) td:not([colspan]) { background: rgba(255, 210, 31, 0.22); }
+.leaderboard-view .table tbody td:nth-child(3) { font-family: var(--font-hud); font-size: 1.05rem; }
+:root[data-theme="dark"] .leaderboard-view .table tbody tr:nth-child(1) td:first-child:not([colspan]) { color: var(--sun); }
+:root[data-theme="dark"] .leaderboard-view .table tbody tr:nth-child(3) td:first-child:not([colspan]) { color: #ff9a62; }
+
+/* Wall rhythm: every third note sits lower, so the board reads as pinned by hand, not as a table. */
+@media (min-width: 641px) {
+  .wall .note:nth-child(3n + 2) { margin-top: 26px; }
+  .wall .note:nth-child(5n) { margin-top: 10px; }
+}
+.wall-more .btn { min-height: 54px; padding: 0 var(--space-6); font: 400 1.1rem var(--font-display); }
+.wall-toolbar--masthead .wall-search { min-width: 12rem; }
+
+/* 3. The one orchestrated moment: notes are pinned onto the board, first eight staggered. */
+@keyframes pin-down {
+  from { opacity: 0; transform: translateY(-30px) rotate(calc(var(--tilt) - 7deg)) scale(1.07); }
+  60% { opacity: 1; }
+  to { transform: rotate(var(--tilt)); }
+}
+.wall .note { animation: pin-down 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards; }
+.wall .note:nth-child(2) { animation-delay: 0.05s; }
+.wall .note:nth-child(3) { animation-delay: 0.1s; }
+.wall .note:nth-child(4) { animation-delay: 0.15s; }
+.wall .note:nth-child(5) { animation-delay: 0.2s; }
+.wall .note:nth-child(6) { animation-delay: 0.25s; }
+.wall .note:nth-child(7) { animation-delay: 0.3s; }
+.wall .note:nth-child(8) { animation-delay: 0.35s; }
+
+@media (max-width: 900px) {
+  .site-footer::before { font-size: 5rem; }
+}
+@media (max-width: 640px) {
+  .wall-toolbar--masthead { padding: var(--space-4); box-shadow: 5px 5px 0 var(--pop); margin-bottom: var(--space-4); }
+  .wall-toolbar--masthead::before { display: none; }
+  .wall-toolbar--masthead .page-title { text-shadow: 2px 2px 0 var(--cyan), 4px 4px 0 var(--accent); }
+  body::before { font-size: 30vw; }
+}

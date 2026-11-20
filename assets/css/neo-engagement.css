@@ -1,0 +1,44 @@
+/* Daily-return HUD: notification bell, streak combo, daily quest, campus race. Builds on .dropdown (components.css). */
+.notif .dropdown__tab::after { content: none; }
+.notif__tab { position: relative; }
+.notif__badge { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px; background: var(--accent); color: var(--accent-ink); border: 2px solid var(--bar-ink); font: 400 0.8rem/16px var(--font-hud); text-align: center; }
+.notif__badge[hidden] { display: none; }
+.notif__panel { gap: var(--space-2); width: min(340px, 92vw); max-height: min(70vh, 420px); overflow-y: auto; }
+.notif__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+/* .notif prefix beats ".main-nav a" (the bell lives inside the nav). */
+.notif .notif__item { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 0; border-left: 5px solid transparent; transform: none; color: var(--ink); font-weight: 500; text-decoration: none; }
+.notif .notif__item.is-unread { background: var(--accent-soft); border-left-color: var(--accent); }
+.notif a.notif__item:hover { background: var(--sun); color: #15112e; }
+.notif__title { font-weight: 700; font-size: 0.92rem; }
+.notif__snippet { color: var(--ink-soft); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif__time { color: var(--muted); font: 400 0.8rem var(--font-hud); }
+.notif__empty { color: var(--ink-soft); font-size: 0.9rem; padding: var(--space-2); }
+@media (max-width: 1120px) {
+  /* Inside the opened phone menu the panel grows in place instead of floating. */
+  .notif .dropdown__panel { position: static; width: auto; margin-top: var(--space-2); }
+}
+
+/* Streak: a combo counter. Sits in the dark header, so it reads in sun-yellow. */
+.streak, button.streak { font: 400 1rem var(--font-hud); white-space: nowrap; color: var(--sun); background: rgba(255, 210, 31, 0.12); border: 2px solid var(--sun); border-radius: var(--radius-small); padding: 2px 10px; cursor: default; }
+button.streak { cursor: pointer; }
+button.streak:hover { background: var(--sun); color: #15112e; }
+.streak[hidden] { display: none; }
+
+/* Daily quest: hazard-striped banner. Its label rides in a slanted tab. */
+.daily-prompt { --card: #fbfbff; --ink: #15112e; --edge: #15112e; --pop: #15112e; --pop-2: #15112e; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-5); padding: var(--space-3) var(--space-4);
+  color: #15112e; background: repeating-linear-gradient(135deg, var(--sun) 0 16px, #ffe46b 16px 32px);
+  border: 2px solid var(--edge); border-radius: var(--radius-small); box-shadow: 5px 5px 0 var(--pop); }
+.daily-prompt__label { padding: 2px 14px; background: #15112e; color: var(--sun); font: 400 0.95rem var(--font-hud); transform: skewX(-10deg); }
+.daily-prompt strong { flex: 1 1 220px; font-size: 1.1rem; }
+.daily-prompt .btn--primary { color: #fff; }
+
+/* Campus race / today's pulse */
+.fomo { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-5); padding: var(--space-3) var(--space-4); background: var(--card); border: 2px solid var(--edge); border-left: 10px solid var(--cyan); border-radius: var(--radius-small); box-shadow: 4px 4px 0 var(--pop); }
+.fomo[hidden], .fomo [hidden] { display: none; }
+.fomo__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); width: 100%; }
+.fomo__main { flex: 1 1 240px; font: 400 1.05rem var(--font-display); }
+.fomo__ends, .fomo__pulse { margin: 0; color: var(--ink-soft); font-size: 0.88rem; }
+.fomo__ends { font-family: var(--font-hud); }
+
+/* Tiny profile picture beside the name on notes linked to a profile. */
+.avatar--tiny { display: inline-grid; width: 1.3rem; height: 1.3rem; margin-right: 0.3rem; vertical-align: middle; font-size: 0.7rem; box-shadow: none; border-width: 1px; }

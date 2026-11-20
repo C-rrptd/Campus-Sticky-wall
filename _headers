@@ -30,3 +30,7 @@
 # Vendored, version in the file name: a new version is a new URL, so it can be cached for a year.
 /assets/vendor/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Self-hosted skin fonts (file names carry no hash, so a shorter cache than /assets/js).
+/assets/fonts/*
+  Cache-Control: public, max-age=604800
