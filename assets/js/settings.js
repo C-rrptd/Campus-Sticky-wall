@@ -6,7 +6,7 @@ import { lang, setLang } from "./i18n.js";
 
 const root = document.documentElement;
 const store = (key, value) => { try { localStorage.setItem(key, value); } catch { /* storage blocked: the choice lasts this visit */ } };
-const THEME_COLOR = { paper: { light: "#e7dfc6", dark: "#121118" }, neo: { light: "#15112e", dark: "#060414" } };
+const THEME_COLOR = { paper: { light: "#ece3b0", dark: "#0f1424" }, neo: { light: "#15112e", dark: "#060414" } };
 
 /** Browser UI colour for the current skin + theme. Also called once at boot from app.js. */
 export function paintThemeColor() {
