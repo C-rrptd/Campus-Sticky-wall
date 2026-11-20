@@ -36,3 +36,7 @@ button.streak { background: none; border: 0; padding: 0; font: inherit; font-wei
 
 /* Tiny profile picture beside the name on notes linked to a profile. */
 .avatar--tiny { display: inline-grid; width: 1.3rem; height: 1.3rem; margin-right: 0.3rem; vertical-align: middle; font-size: 0.7rem; box-shadow: none; }
+
+@media (max-width: 1240px) {
+  .notif .dropdown__panel { position: static; width: auto; margin-top: var(--space-2); }
+}

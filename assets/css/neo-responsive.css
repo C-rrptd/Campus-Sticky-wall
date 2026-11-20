@@ -7,7 +7,7 @@
 
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1240px) {
   .nav-toggle { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; }
   .site-header__inner { flex-wrap: wrap; }
   .main-nav { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: var(--space-1); padding-bottom: var(--space-3); }

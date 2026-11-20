@@ -161,8 +161,10 @@
 .achievement__done { font-size: .8rem; font-weight: 700; color: var(--accent-strong); }
 .achievement progress { width: 6rem; vertical-align: middle; accent-color: var(--accent); }
 
-/* Skin switcher (footer) */
-.skin-switch { display: flex; align-items: center; gap: var(--space-2); }
-.skin-switch button { font: inherit; font-weight: 700; color: var(--bar-ink); background: none; border: 2px solid var(--bar-ink); border-radius: var(--radius-small); padding: 0 var(--space-3); min-height: 34px; cursor: pointer; }
-.skin-switch button:hover { background: var(--sun); color: #15112e; }
-.skin-switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+/* Settings page */
+.setting { border: 0; padding: 0; margin: 0 0 var(--space-5); }
+.setting:last-child { margin-bottom: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.seg button { font: inherit; font-weight: 700; color: var(--ink); background: var(--card); border: 2px solid var(--edge); border-radius: var(--radius-small); box-shadow: 2px 2px 0 var(--pop); padding: 0 var(--space-4); min-height: 42px; cursor: pointer; }
+.seg button:hover { background: var(--sun); color: #15112e; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--pop); }

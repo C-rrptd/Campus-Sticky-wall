@@ -13,7 +13,7 @@
 .notif__snippet { color: var(--ink-soft); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .notif__time { color: var(--muted); font: 400 0.8rem var(--font-hud); }
 .notif__empty { color: var(--ink-soft); font-size: 0.9rem; padding: var(--space-2); }
-@media (max-width: 1120px) {
+@media (max-width: 1240px) {
   /* Inside the opened phone menu the panel grows in place instead of floating. */
   .notif .dropdown__panel { position: static; width: auto; margin-top: var(--space-2); }
 }

@@ -312,3 +312,11 @@ input[type="checkbox"], input[type="radio"] { min-height: auto; width: 18px; hei
 .poll-builder__row > input:first-child { flex: 1; min-width: 0; }
 .poll-builder__ok { white-space: nowrap; font-size: 0.85rem; }
 .picker__opt.is-locked { opacity: .55; cursor: not-allowed; }
+
+/* Header: one-line items, icon cog link */
+.site-header a, .site-header button { white-space: nowrap; }
+.main-nav > * { flex: none; }
+.main-nav > .main-nav__spacer { flex: 1; min-width: 0; }
+.settings-link { display: inline-grid; place-items: center; text-decoration: none; font-size: 1.15rem; }
+.site-header__inner { gap: var(--space-3); }
+.main-nav { gap: var(--space-2); }

@@ -7,7 +7,7 @@ import { currentUser, initAuth, isAdmin, onUserChange, signOut } from "./auth.js
 import { onRouteChange, parseHash, rerender, startRouter } from "./router.js";
 import { captureReferral } from "./referrals.js";
 import { getClient, query } from "./supabase-client.js";
-import { lang, setLang } from "./i18n.js";
+import { paintThemeColor } from "./settings.js";
 import { clear, el, refs, safeUrl, toast } from "./utils.js";
 import { mountNotifications } from "./notifications.js";
 
@@ -69,22 +69,7 @@ async function renderHeader() {
   });
   r.signOut.addEventListener("click", () => signOut());
   const notif = mountNotifications(r.accountMenu);
-  const root = document.documentElement;
-  const paintTheme = () => {
-    const dark = root.dataset.theme === "dark";
-    r.themeToggle.firstElementChild.textContent = dark ? "☀" : "☾";
-    r.themeToggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-    const neo = root.dataset.skin === "neo";
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", neo ? (dark ? "#060414" : "#15112e") : (dark ? "#0f1424" : "#ece3b0"));
-  };
-  r.langToggle.textContent = lang === "id" ? "ID · EN" : "EN · ID";
-  r.langToggle.addEventListener("click", () => setLang(lang === "id" ? "en" : "id"));
-  r.themeToggle.addEventListener("click", () => {
-    root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
-    try { localStorage.setItem("csw-theme", root.dataset.theme); } catch { /* storage blocked: choice lasts this visit */ }
-    paintTheme();
-  });
-  paintTheme();
+  paintThemeColor();
   const update = async () => {
     const user = currentUser();
     r.signInLink.hidden = Boolean(user);
@@ -110,15 +95,6 @@ async function renderFooter() {
   clear(host);
   host.append(cloneTemplate("tpl-footer"));
   const r = refs(host);
-  const skin = document.documentElement.dataset.skin ?? "paper";
-  host.querySelectorAll("[data-skin-set]").forEach((b) => {
-    b.setAttribute("aria-pressed", String(b.dataset.skinSet === skin));
-    b.addEventListener("click", () => {
-      if (b.dataset.skinSet === skin) return;
-      try { localStorage.setItem("csw-skin", b.dataset.skinSet); } catch { /* storage blocked: the switch cannot persist */ }
-      window.location.reload(); // the skin decides which stylesheets load, so a reload is the simplest correct switch
-    });
-  });
   try {
     const rows = await query(getClient().from("site_config").select("key,value").in("key", ["official_social_links", "contact_email"]));
     const cfg = Object.fromEntries(rows.map((row) => [row.key, row.value]));

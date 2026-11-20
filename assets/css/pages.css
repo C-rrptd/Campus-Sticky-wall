@@ -160,7 +160,10 @@
 .achievement__done { font-size: .8rem; font-weight: 700; color: var(--accent-strong); }
 .achievement progress { width: 6rem; vertical-align: middle; accent-color: var(--accent); }
 
-/* Skin switcher (footer) */
-.skin-switch { display: flex; align-items: center; gap: var(--space-2); }
-.skin-switch button { font: inherit; color: inherit; background: none; border: 1px solid currentColor; border-radius: 999px; padding: 0 var(--space-3); min-height: 32px; cursor: pointer; }
-.skin-switch button[aria-pressed="true"] { font-weight: 700; border-width: 2px; text-decoration: underline; text-underline-offset: 3px; }
+/* Settings page */
+.setting { border: 0; padding: 0; margin: 0 0 var(--space-5); }
+.setting:last-child { margin-bottom: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.seg button { font: inherit; color: var(--ink); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 0 var(--space-4); min-height: 40px; cursor: pointer; }
+.seg button:hover { border-color: var(--accent); }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
