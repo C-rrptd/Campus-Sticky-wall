@@ -7,7 +7,7 @@ import { currentUser, initAuth, isAdmin, onUserChange, signOut } from "./auth.js
 import { onRouteChange, parseHash, rerender, startRouter } from "./router.js";
 import { captureReferral } from "./referrals.js";
 import { getClient, query } from "./supabase-client.js";
-import { paintThemeColor } from "./settings.js";
+import { mountSettings, paintThemeColor } from "./settings.js";
 import { clear, el, refs, safeUrl, toast } from "./utils.js";
 import { mountNotifications } from "./notifications.js";
 
@@ -70,6 +70,7 @@ async function renderHeader() {
   r.signOut.addEventListener("click", () => signOut());
   const notif = mountNotifications(r.accountMenu);
   paintThemeColor();
+  mountSettings(r.settings);
   const update = async () => {
     const user = currentUser();
     r.signInLink.hidden = Boolean(user);
